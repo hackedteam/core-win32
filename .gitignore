@@ -1,0 +1,17 @@
+*.cer
+*.zip
+*.obj
+*.dll
+*.exe
+*.tlog
+*.ncb
+*.suo
+*.lib
+*.res
+*.pdb
+*.tlh
+*.tli
+*.opensdf
+*.manifest
+*.exp
+*.lastbuildstate
