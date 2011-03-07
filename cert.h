@@ -1,0 +1,3 @@
+BYTE public_key[280]="HT_CERT_PUBLIC_KEY01";
+
+

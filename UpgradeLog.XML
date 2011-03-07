@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="H4DLL">
+</Property><Property Name="Solution File" Value="G:\ORNELLA 2\H4DLL\H4DLL.sln">
+</Property><Property Name="Date" Value="venerdì 26 novembre 2010">
+</Property><Property Name="Time" Value="10:04">
+</Property></Properties><Event ErrorLevel="0" Project="H4DLL" Source="H4DLL.vcproj" Description="Converting project file 'G:\ORNELLA 2\H4DLL\H4DLL.vcproj'.">
+</Event><Event ErrorLevel="1" Project="H4DLL" Source="H4DLL.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="1" Project="H4DLL" Source="H4DLL.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="1" Project="H4DLL" Source="H4DLL.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="0" Project="H4DLL" Source="H4DLL.vcproj" Description="Done converting to new project file 'G:\ORNELLA 2\H4DLL\H4DLL.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="H4DLL" Source="H4DLL.vcproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="" Source="H4DLL.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="H4DLL.sln" Description="Converted">
+</Event></UpgradeLog>

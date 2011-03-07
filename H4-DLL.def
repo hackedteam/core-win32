@@ -1,0 +1,10 @@
+LIBRARY	H4DLL
+EXPORTS 
+	HFF1 = HM_sCreateHookA
+	HFF2 = HM_sStartHookingThread
+	HFF3 = HM_sInBundleHook
+	HFF4 = HM_sInBundleService
+	HFF5 = HM_RunCore
+	HFF6 = Log_PrintDC
+	HFF7 = ASP_MainLoop
+	HFF8 = HM_sMain
