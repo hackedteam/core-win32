@@ -15,3 +15,6 @@
 *.manifest
 *.exp
 *.lastbuildstate
+*.sdf
+*.log
+*.ipch
