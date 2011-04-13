@@ -1,4 +1,4 @@
-#define DEMO_VERSION 
+//#define DEMO_VERSION 
 
 #include <windows.h>
 
