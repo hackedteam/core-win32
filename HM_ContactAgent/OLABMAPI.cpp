@@ -388,11 +388,25 @@ BOOL OL_OpenAddressBook(IMAPISession* mapi_session, HANDLE hfile)
 static BOOL IsOutlookInstalled()
 {
 	HKEY hKey;
+	BYTE key_value[1024];
+	DWORD key_len = sizeof(key_value);
+	HMODULE hdll;
 
-	if(FNC(RegOpenKeyExW)(HKEY_LOCAL_MACHINE, L"Software\\Clients\\Mail\\Microsoft Outlook", 0, KEY_READ, &hKey) != ERROR_SUCCESS) 
+	ZeroMemory(key_value, sizeof(key_value));
+	if(FNC(RegOpenKeyExW)(HKEY_LOCAL_MACHINE, L"Software\\Clients\\Mail\\Microsoft Outlook", 0, KEY_READ | KEY_QUERY_VALUE, &hKey) != ERROR_SUCCESS) 
 		return FALSE;
 
+	if (FNC(RegQueryValueExW)(hKey, L"DLLPathEx", NULL, NULL, key_value, &key_len) != ERROR_SUCCESS) {
+		FNC(RegCloseKey)(hKey);
+		return FALSE;
+	}
+
 	FNC(RegCloseKey)(hKey);
+	hdll = LoadLibraryW((WCHAR *)key_value);
+	if (!hdll)
+		return FALSE;
+	FreeLibrary(hdll);
+
 	return TRUE;
 }
 
