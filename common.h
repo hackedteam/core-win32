@@ -93,7 +93,7 @@ extern char EXE_INSTALLER_NAME[];
 #define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
 
 // Versione del client 
-#define CLIENT_VERSION "2011032103"
+#define CLIENT_VERSION "2011051901"
 
 // Chiave UNIVOCA fra server e client
 #define CLIENT_KEY "A02H90JL00000000"

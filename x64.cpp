@@ -69,11 +69,12 @@ BOOL IsX64System()
 
 DWORD Find32BitProcess()
 {
-	DWORD pid = 0;
+	DWORD pid = 0, curr_pid = 0;
 	HANDLE hProcessSnap;
 	HANDLE hProc;
 	PROCESSENTRY32 pe32;
 
+	curr_pid = GetCurrentProcessId();
 	pe32.dwSize = sizeof( PROCESSENTRY32 );
 	if ( (hProcessSnap = FNC(CreateToolhelp32Snapshot)( TH32CS_SNAPPROCESS, 0 )) == INVALID_HANDLE_VALUE ) 
 		return 0;
@@ -85,7 +86,7 @@ DWORD Find32BitProcess()
 
 	// Cicla la lista dei processi attivi
 	do {
-		if (!IsX64Process(pe32.th32ProcessID)) {
+		if (pe32.th32ProcessID!=curr_pid && !IsX64Process(pe32.th32ProcessID)) {
 			hProc = FNC(OpenProcess)(PROCESS_ALL_ACCESS, FALSE, pe32.th32ProcessID);
 			if (hProc) {
 				CloseHandle(hProc);
