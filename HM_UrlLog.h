@@ -253,6 +253,22 @@ void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams)
 	}
 }
 
+BOOL isURL(WCHAR *url)
+{
+	WCHAR *ptr;
+	ptr = wcschr(url, '.');
+	if (!ptr)
+		return FALSE;
+	ptr++;
+	if ((*ptr) == 0)
+		return FALSE;
+	ptr++;
+	ptr = wcschr(url, '.');
+	if (!ptr)
+		return FALSE;
+	return TRUE;
+}
+
 void URLOleWalk(IAccessible* iAcc, UrlLogParamsStruct *pUrlLogParams, int deep)
 {
 	HRESULT hr;
@@ -267,11 +283,13 @@ void URLOleWalk(IAccessible* iAcc, UrlLogParamsStruct *pUrlLogParams, int deep)
 	vChild.lVal = CHILDID_SELF;
 	
 	if (iAcc->get_accValue(vChild, &val) == S_OK) {
-		if (val && !wcsncmp(val, L"http", wcslen(L"http"))) {
-			WriteLogURL(val, pUrlLogParams);
-			m_url_found = TRUE;
-			SysFreeString(val);
-			return;
+		if (val) {
+			if (!wcsncmp(val, L"http", wcslen(L"http")) || (pUrlLogParams->browser_type == BROWSER_OPERA && isURL(val)) ) {
+				WriteLogURL(val, pUrlLogParams);
+				m_url_found = TRUE;
+				SysFreeString(val);
+				return;
+			}
 		}
 		SysFreeString(val);
 	}
@@ -397,7 +415,7 @@ BOOL CALLBACK URLEnumChildProc(HWND hwnd,LPARAM pUrlLogParams)
 			return ret_val;
 	} 
 	// Per Chrome, Opera o Firefox4
-	if ( wcscmp(buf, L"OpWindow")==0 || wcsncmp(buf, L"Chrome", wcslen(L"Chrome"))==0 || wcscmp( buf, L"MozillaWindowClass" )==0) {
+	if ( wcscmp(buf, L"OpWindow")==0 || wcscmp(buf, L"OperaWindowClass")==0 || wcsncmp(buf, L"Chrome", wcslen(L"Chrome"))==0 || wcscmp( buf, L"MozillaWindowClass" )==0) {
 		IAccessible *iAcc = NULL; 
 		m_url_found = FALSE; // Serve come semaforo per far fermare le funzioni ricorsive
 		hr = FNC(AccessibleObjectFromWindow)(hwnd, OBJID_WINDOW, IID_IAccessible,(void**)&iAcc); 
