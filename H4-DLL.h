@@ -106,6 +106,7 @@ typedef struct {
 typedef struct {COMMONDATA;} HMCommonDataStruct;
 
 void __stdcall HM_CreateProcess(char *, DWORD, STARTUPINFO *, PROCESS_INFORMATION *, DWORD);
+void __stdcall HM_CreateProcessAsUser(char *, DWORD, STARTUPINFO *, PROCESS_INFORMATION *, DWORD, HANDLE);
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////

