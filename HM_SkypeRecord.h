@@ -1373,6 +1373,7 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 
 		if ((*Active_IM)) {
 			if ( (msg_body[0]=='C' && msg_body[1]=='H' && msg_body[2]=='A' && msg_body[3]=='T')  ||
+				 (msg_body[0]=='M' && msg_body[1]=='E' && msg_body[2]=='S' && msg_body[3]=='S')  ||
 				 (msg_body[1]=='I' && msg_body[2]=='M' && msg_body[3]=='A' && msg_body[4]=='G'))
 				pData->pHM_IpcCliWrite(PM_IMAGENT, (BYTE *)cdata->lpData, cdata->cbData, FLAGS_SKAPI_MSG, IPC_HI_PRIORITY);
 		}
@@ -2417,7 +2418,7 @@ DWORD __stdcall PM_VoipRecordStartStop(BOOL bStartFlag, BOOL bReset)
 	} else { // bStartFlag == TRUE
 		DWORD dummy;
 		// Startiamo il thread che monitora lo skypePM
-		hSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, (DWORD *)&bPM_spmcp);
+		hSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, (DWORD *)&bPM_spmcp, 0, 0);
 	}
 
 	return 1;

