@@ -178,3 +178,4 @@ typedef DWORD (__stdcall *HM_CreateService_t)(DWORD, HMServiceStruct *);
 																				HM_sCreateHookA(DWPID, APINAME, DLLNAME, (BYTE *)HOOKADD, HOOKDATA.dwHookLen, (BYTE *)&HOOKDATA, sizeof(HOOKDATA))); 
 																		
 																		
+HANDLE GetMediumLevelToken();

@@ -2120,6 +2120,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 		if (hSkype = OpenProcess(PROCESS_TERMINATE, FALSE, skype_pid)) {
 			STARTUPINFO si;
 			PROCESS_INFORMATION pi;
+			HANDLE hToken;
 
 			TerminateProcess(hSkype, 0);
 			CloseHandle(hSkype);
@@ -2127,7 +2128,10 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 		    si.cb = sizeof(si);
 			//si.wShowWindow = SW_SHOW;
 			//si.dwFlags = STARTF_USESHOWWINDOW;
-			HM_CreateProcess(skype_exe_path, 0, &si, &pi, 0);
+			if (hToken = GetMediumLevelToken()) {
+				HM_CreateProcessAsUser(skype_exe_path, 0, &si, &pi, 0, hToken);
+				CloseHandle(hToken);
+			}
 		}
 	}
 }
