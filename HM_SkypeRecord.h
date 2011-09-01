@@ -2065,7 +2065,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 		WriteFile(hFile, "<C>\r\n", strlen("<C>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "<AccessControlList>\r\n", strlen("<AccessControlList>\r\n"), &dummy, NULL);
-	WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
+	WriteFile(hFile, "<Client1>\r\n<Key1>", strlen("<Client1>\r\n<Key1>"), &dummy, NULL);
 	WriteFile(hFile, key1, strlen(key1), &dummy, NULL);
 	WriteFile(hFile, "</Key1>\r\n", strlen("</Key1>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Key2>", strlen("<Key2>"), &dummy, NULL);
@@ -2079,7 +2079,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	WriteFile(hFile, "</Key4>\r\n", strlen("</Key4>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Path>", strlen("<Path>"), &dummy, NULL);
 	WriteFile(hFile, path, strlen(path), &dummy, NULL);
-	WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "</Path>\r\n</Client1>\r\n", strlen("</Path>\r\n</Client1>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "</AccessControlList>\r\n", strlen("</AccessControlList>\r\n"), &dummy, NULL);
 	if (c_missing)
@@ -2105,6 +2105,13 @@ BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m
 
 	sprintf_s(c_user_name, MAX_PATH, "%S", user_name);
 	sprintf_s(c_file_path, MAX_PATH, "%S", file_path);
+
+	ZeroMemory(m_key1, MAX_HASHKEY_LEN);
+	ZeroMemory(m_key2, MAX_HASHKEY_LEN);
+	ZeroMemory(m_key3, MAX_HASHKEY_LEN);
+	ZeroMemory(m_key4, MAX_HASHKEY_LEN);
+	ZeroMemory(m_path, MAX_HASHKEY_LEN);
+
 	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_path);
 }
 

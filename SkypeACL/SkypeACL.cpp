@@ -127,5 +127,5 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 	free(szUSERNAME);
 	free(szFILENAME);
 
-	return FALSE;
+	return TRUE;
 }
