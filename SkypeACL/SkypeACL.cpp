@@ -29,7 +29,7 @@ void StrToLowerCase(char *lpOutString, char *lpInString)
 //
 BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath)
 {
-	char szPluginDigest_SHA256[(SHA256_DIGEST_SIZE + 1) * 2];
+	char szPluginDigest_SHA256[(32*2) * 2];
 	char szPluginDigest_MD5[17 * 2];
 	char *szPassphrase1 = "Element'ry!penguiNs;-)SingingHarekrishna_";
 
@@ -48,7 +48,7 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 	StrToUpperCase(szUSERNAME, lpUserName);
 
 	char *result = NULL;
-	char temp[(SHA256_DIGEST_SIZE + 1) * 2];
+	char temp[512];
 
 	char tmp[1024];
 

@@ -17,6 +17,31 @@ void hex2ascii(char *lpOutput, char *lpInput, int size)
 	*lpOutput = 0x00;
 }
 
+void hex2ascii(char *lpOutput, wchar_t *lpInput, int size)
+{
+	char *ascii = "0123456789abcdef";
+
+	while(size-- > 0)
+	{
+		unsigned short c = (unsigned short) *lpInput;
+
+		if ((c & 0xff00) != 0)
+		{
+			if ((c & 0xf000) != 0)
+				*lpOutput++ = ascii[(c & 0xf000) >> 12];
+
+			*lpOutput++ = ascii[(c & 0x0f00) >> 8];
+		}
+
+		*lpOutput++ = ascii[(c & 0xf0) >> 4];
+		*lpOutput++ = ascii[(c & 0x0f)];
+		
+		lpInput++;
+	}
+
+	*lpOutput = 0x00;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // SHA256 of file
 //	Input:
@@ -148,7 +173,9 @@ BOOL SHA256_Plugin(char *lpFileName, char *lpOutChecksum)
 
 	Sha256_Final(&context, sha256_digest);
 
-	hex2ascii(lpOutChecksum, (char *) sha256_digest, sizeof(sha256_digest));
+	wchar_t unicodesha[32];
+	MultiByteToWideChar(CP_ACP, 0, (LPCSTR) sha256_digest, sizeof(sha256_digest), unicodesha, 32);
+	hex2ascii(lpOutChecksum, unicodesha, 32);
 
 	return TRUE;
 }
