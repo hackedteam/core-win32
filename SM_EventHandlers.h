@@ -496,7 +496,7 @@ DWORD MonitorProcesses(DWORD dummy)
 						continue;
 
 					// ...e li compara con quelli nella tabella
-					if (!wcsicmp(lppe.szExeFile, em_mp_process_table[index].proc_name)) {
+					if (CmpWildW(em_mp_process_table[index].proc_name, lppe.szExeFile)) {
 						// Se il processo e' presente e non era ancora stato rilevato, lancia il primo evento
 						if (!em_mp_process_table[index].present) {
 							em_mp_process_table[index].present = TRUE;

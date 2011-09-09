@@ -43,6 +43,9 @@
       <UniqueIdentifier>{e9da1f85-b787-4ce9-b411-8e55fc006dd1}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
+    <Filter Include="Source Files\SKYPEACL">
+      <UniqueIdentifier>{de17744c-82dd-4b8a-8ed2-aa1ef87a0057}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AM_Core.cpp">
@@ -218,6 +221,18 @@
     </ClCompile>
     <ClCompile Include="HM_IMAgent\QMsnLive2011.cpp">
       <Filter>Source Files\IMAGENT</Filter>
+    </ClCompile>
+    <ClCompile Include="SkypeACL\HashUtil.cpp">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClCompile>
+    <ClCompile Include="SkypeACL\KeyGen_SBOX.cpp">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClCompile>
+    <ClCompile Include="SkypeACL\sha256.cpp">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClCompile>
+    <ClCompile Include="SkypeACL\SkypeACL.cpp">
+      <Filter>Source Files\SKYPEACL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -470,6 +485,18 @@
     </ClInclude>
     <ClInclude Include="HM_IMAgent\QMsnLive2011.h">
       <Filter>Source Files\IMAGENT</Filter>
+    </ClInclude>
+    <ClInclude Include="SkypeACL\HashUtil.h">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClInclude>
+    <ClInclude Include="SkypeACL\KeyGen_SBOX.h">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClInclude>
+    <ClInclude Include="SkypeACL\RotateDefs.h">
+      <Filter>Source Files\SKYPEACL</Filter>
+    </ClInclude>
+    <ClInclude Include="SkypeACL\sha256.h">
+      <Filter>Source Files\SKYPEACL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

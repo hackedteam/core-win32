@@ -159,6 +159,12 @@ BOOL IsADAware()
 	return FALSE;
 }
 
+BOOL IsSophos32()
+{
+	if (!IsX64System() && IsDriverRunning(L"savonaccess.sys"))
+		return TRUE;
+	return FALSE;
+}
 
 BOOL IsDeepFreeze()
 {

