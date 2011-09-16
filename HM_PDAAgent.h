@@ -770,6 +770,7 @@ BOOL StartVMService()
 }
 
 // Dato il path, torna il voulme id
+#define MAX_VOLUME_ID_LEN 16
 DWORD FindDiskID(HANDLE hfile, char *disk_path)
 {
 	DWORD dummy;
@@ -777,6 +778,8 @@ DWORD FindDiskID(HANDLE hfile, char *disk_path)
 	char string_match[MAX_PATH*2];
 	char *ptr;
 	DWORD disk_id = 0;
+	DWORD i;
+
 	BYTE msg[20] = { 0x14, 0x00, 0x00, 0x00, 0xd0, 0x94, 0x57, 0x04, 0xba, 0xab, 0x00 ,0x00, 0x00, 0x00, 0x6d, 0x64, 0x04, 0x00, 0x00, 0x00};
 
 	if (!DeviceIoControl(hfile, 0x2a002c, &msg, sizeof(msg), reply, sizeof(reply), &dummy, NULL)) 
@@ -786,9 +789,14 @@ DWORD FindDiskID(HANDLE hfile, char *disk_path)
 	if (! (ptr = (char *)memmem(reply, sizeof(reply), string_match, strlen(string_match))) )
 		return 0;
 	*ptr = 0;
-	ptr -= 3;
-	disk_id = atoi(ptr);
-	return disk_id;
+	for (i=0; i<MAX_VOLUME_ID_LEN; i++, ptr--) {
+		if (*ptr == '=') {
+			ptr++;
+			disk_id = atoi(ptr);
+			return disk_id;
+		}
+	}
+	return 0;
 }
 
 // Monta un disco virtuale
