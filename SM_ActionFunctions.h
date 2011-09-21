@@ -13,6 +13,8 @@ extern void UnlockConfFile();
 #define AF_EXECUTE    4
 #define AF_UNINSTALL  5
 #define AF_LOGINFO    6
+#define AF_STARTEVENT 7
+#define AF_STOPEVENT  8
 #define AF_NONE 0xFFFFFFFF
 
 // Sono dichiarati in SM_Core.cpp di cui questo file e' un include
@@ -152,6 +154,28 @@ BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len)
 	return FALSE;
 }
 
+// Abilita un evento
+BOOL WINAPI DA_StartEvent(BYTE *event_id, DWORD param_len)
+{
+	// Verifica che il parametro agent_tag sia corretto (una DWORD)
+	if (!event_id || param_len!=4)
+		return FALSE;
+
+	SM_EventTableState(*(DWORD *)event_id, TRUE);
+	return FALSE;
+}
+
+
+// Disabilita un evento
+BOOL WINAPI DA_StopEvent(BYTE *event_id, DWORD param_len)
+{
+	// Verifica che il parametro agent_tag sia corretto (una DWORD)
+	if (!event_id || param_len!=4)
+		return FALSE;
+
+	SM_EventTableState(*(DWORD *)event_id, FALSE);
+	return FALSE;
+}
 
 // Esegue un comando in maniera nascosta
 BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)

