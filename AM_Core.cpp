@@ -295,15 +295,15 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 
 
 // Esegue l'init di un monitor
-DWORD AM_MonitorInit(DWORD dwTag, BYTE *conf_ptr, BOOL bStartFlag)
+DWORD AM_MonitorInit(DWORD dwTag, BYTE *conf_ptr, BOOL bStatus)
 {
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
 		if(dwTag == aDispatchArray[i].dwTAG) {
-			aDispatchArray[i].started = bStartFlag;
+			aDispatchArray[i].started = bStatus;
 			if (aDispatchArray[i].pInit)
-				aDispatchArray[i].pInit(conf_ptr, bStartFlag);
+				aDispatchArray[i].pInit(conf_ptr, bStatus);
 			break;
 		}
 	}
@@ -437,7 +437,7 @@ void UpdateAgentConf()
 			READ_DWORD(tag, conf_ptr);
 			READ_DWORD(is_active, conf_ptr);
 			READ_DWORD(param_len, conf_ptr);
-			AM_MonitorInit(tag, conf_ptr, is_active);
+			AM_MonitorInit(tag, conf_ptr, FALSE);
 			conf_ptr += param_len;
 		}
 

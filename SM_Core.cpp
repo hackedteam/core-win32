@@ -29,18 +29,6 @@ typedef BOOL (WINAPI *ActionFunc_t) (BYTE *, DWORD);
 
 ActionFunc_t ActionFuncGet(DWORD action_type);
 
-// Permette di gestire i repeat degli eventi
-void CreateRepeatThread(DWORD event_id, DWORD repeat_action, DWORD count, DWORD delay)
-{
-	if (repeat_action == AF_NONE || count == 0)
-		return;
-	// XXX il loop prima aspetta poi fa
-}
-
-void StopRepeatThread(DWORD event_id)
-{
-}
-
 
 // Gestione event monitor  ----------------------------------------------
 
@@ -51,14 +39,74 @@ typedef struct  {
 	EventMonitorStop_t pEventMonitorStop;
 } event_monitor_elem;
 
+// Struttura per gestire i thread di ripetizione
+typedef struct {
+	DWORD event_id;
+	DWORD repeat_action;
+	DWORD count; 
+	DWORD delay;
+	BOOL  semaphore;
+} repeated_event_struct;
+
+// Struttura della tabella degli eventi
+typedef struct {
+	BOOL event_enabled;
+	repeated_event_struct repeated_event;
+	HANDLE repeated_thread;
+} event_table_struct;
 
 // Tabella degli event monitor attualmente registrati
 DWORD event_monitor_count = 0;
 event_monitor_elem event_monitor_array[MAX_EVENT_MONITOR];
 
 // Tabella contenente lo stato di attivazione di tutti gli eventi nel file di configurazione
-BOOL *event_table = NULL;
+event_table_struct *event_table = NULL;
 DWORD event_count = 0;
+
+DWORD WINAPI RepeatThread(repeated_event_struct *repeated_event) {
+	DWORD i = 0;
+	LOOP {
+		CANCELLATION_SLEEP(repeated_event->semaphore, repeated_event->delay);
+		if (i < repeated_event->count) {
+			i++;
+			TriggerEvent(repeated_event->repeat_action, repeated_event->event_id);
+		}
+	}
+	return 0;
+}
+
+// Permette di gestire i repeat degli eventi
+void CreateRepeatThread(DWORD event_id, DWORD repeat_action, DWORD count, DWORD delay)
+{
+	DWORD dummy;
+
+	// Non c'e' nessuna azione da fare
+	if (repeat_action == AF_NONE || count == 0 || delay<1000)
+		return;
+	// L'evento non e' riconosciuto
+	if (event_id >= event_count)
+		return;
+	// C'e' gia' un thread attivo per quell'evento
+	if (event_table[event_id].repeated_thread)
+		return;
+
+	event_table[event_id].repeated_event.count = count;
+	event_table[event_id].repeated_event.delay = delay;
+	event_table[event_id].repeated_event.event_id = event_id;
+	event_table[event_id].repeated_event.repeat_action = repeat_action;
+	event_table[event_id].repeated_event.semaphore = FALSE;
+
+	event_table[event_id].repeated_thread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RepeatThread, &event_table[event_id].repeated_event, 0, &dummy);
+}
+
+void StopRepeatThread(DWORD event_id)
+{
+	// L'evento non e' riconosciuto
+	if (event_id >= event_count)
+		return;
+
+	QUERY_CANCELLATION(event_table[event_id].repeated_thread, event_table[event_id].repeated_event.semaphore);
+}
 
 // Registra un nuovo event monitor
 void EventMonitorRegister(DWORD event_type, EventMonitorAdd_t pEventMonitorAdd, 
@@ -99,17 +147,19 @@ void EventTableInit()
 // Setta lo stato iniziale di un evento
 void SM_EventTableState(DWORD event_id, BOOL state)
 {
-	BOOL *temp_event_table;
+	event_table_struct *temp_event_table;
 	// Alloca la tabella per contenere quel dato evento 
 	// La tabella e' posizionale
 	if (event_id >= event_count) {
-		temp_event_table = (BOOL *)realloc(event_table, (event_id + 1) * sizeof(BOOL));
+		temp_event_table = (event_table_struct *)realloc(event_table, (event_id + 1) * sizeof(event_table_struct));
 		if (!temp_event_table)
 			return;
 		event_table = temp_event_table;
 		event_count = event_id + 1;
+		event_table[event_id].repeated_thread = NULL;
+		ZeroMemory(&event_table[event_id].repeated_event, sizeof(repeated_event_struct));
 	}
-	event_table[event_id] = state;
+	event_table[event_id].event_enabled = state;
 }
 
 // Assegna una riga "evento" della configurazione al corretto event monitor
@@ -132,7 +182,7 @@ BOOL EventIsEnabled(DWORD event_id)
 	if (event_id >= event_count)
 		return FALSE;
 
-	return event_table[event_id];
+	return event_table[event_id].event_enabled;
 }
 //------------------------------------------------------------------
 
@@ -191,7 +241,6 @@ BOOL ReadEvent(DWORD *event_id)
 	i = 0;
 	return FALSE;
 }
-
 
 // Esegue le actions indicate
 void DispatchEvent(DWORD event_id)

