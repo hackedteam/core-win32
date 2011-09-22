@@ -16,7 +16,7 @@ extern BOOL LOG_HandleFileSystem(void);
 extern char *LOG_ScrambleName(char *, BYTE, BOOL);
 extern void Log_Sanitize(char *);
 extern void Log_SwitchQueue(void);
-extern BOOL Log_CopyFile(WCHAR *, WCHAR *, DWORD);
+extern BOOL Log_CopyFile(WCHAR *, WCHAR *, BOOL, DWORD);
 extern BOOL Log_SaveAgentState(DWORD, BYTE *, DWORD);
 extern BOOL Log_RestoreAgentState(DWORD, BYTE *, DWORD);
 extern void LOG_InitCryptKey(BYTE *, BYTE *);

