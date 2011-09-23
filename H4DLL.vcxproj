@@ -84,7 +84,7 @@
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
-      <AdditionalIncludeDirectories>C:\Programmi\Microsoft Visual Studio 9.0\VC\include\dx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\naga\Desktop\jbenet-bson-cpp-c3e78ea;C:\Programmi\Microsoft Visual Studio 9.0\VC\include\dx;C:\Users\naga\Desktop\jbenet-bson-cpp-c3e78ea\src;C:\Users\naga\Desktop\boost_1_47_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;H4DLL_EXPORTS;_WIN32_WINNT=_WIN32_WINNT_WINXP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -97,9 +97,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winhttp.lib;WS2_32.lib;shlwapi.lib;Vfw32.lib;oleacc.lib;psapi.lib;Strmiids.lib;gdiplus.lib;Delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>BSON-CPP.lib;winhttp.lib;WS2_32.lib;shlwapi.lib;Vfw32.lib;oleacc.lib;psapi.lib;Strmiids.lib;gdiplus.lib;Delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)H4DLL.dll</OutputFile>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\boost\boost_1_47\lib;C:\Users\naga\Desktop\jbenet-bson-cpp-c3e78ea;C:\Users\naga\Desktop\boost_1_47_0\libs;C:\Users\naga\Desktop\boost_1_47_0;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>H4-DLL.def</ModuleDefinitionFile>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>

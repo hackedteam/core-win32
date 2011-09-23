@@ -31,5 +31,6 @@ extern DWORD AM_Startup(void);
 extern void AM_SuspendRestart(DWORD);
 extern DWORD AM_MonitorStartStop(DWORD, BOOL);
 extern DWORD AM_MonitorRegister(DWORD, BYTE *, BYTE *, BYTE *, BYTE *);
+extern DWORD AM_MonitorRegisterBSON(char *, DWORD, BYTE *, BYTE *, BYTE *, BYTE *);
 extern void AM_IPCAgentStartStop(DWORD, BOOL);
 
