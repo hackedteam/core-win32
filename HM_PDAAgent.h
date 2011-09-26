@@ -821,7 +821,7 @@ BOOL FindVStoreDevice(WCHAR *dev_store)
 					WCHAR *ptr;
 					if(ptr = wcschr(szDriver, L'.')) {
 						*ptr = 0;
-						_snwprintf_s(dev_store, MAX_PATH, _TRUNCATE, L"\\\\\\\\.\\\\%s", ptr);		
+						_snwprintf_s(dev_store, MAX_PATH, _TRUNCATE, L"\\\\.\\%s", szDriver);		
 						free(drivers);
 						return TRUE;
 					}
@@ -894,7 +894,7 @@ BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
     msg.VolumeID = volume_id;
     msg.dw6 = 0x01;
 
-	// Manda la ioctl per montare il disco
+	// Manda la ioctl per smontare il disco
 	if (!FindVStoreDevice(vstore))
 		return FALSE;
 	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
