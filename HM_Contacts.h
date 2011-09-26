@@ -219,15 +219,13 @@ DWORD __stdcall PM_ContactsStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_ContactsInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_ContactsInit(JSONObject elem)
 {
-	PM_ContactsStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_ContactsRegister()
 {
-	AM_MonitorRegister(PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
-	PM_ContactsInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"addressbook", PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
 }

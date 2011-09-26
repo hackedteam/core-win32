@@ -147,9 +147,8 @@ DWORD __stdcall PM_PStoreAgentStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_PStoreAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_PStoreAgentInit(JSONObject elem)
 {
-	PM_PStoreAgentStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
@@ -161,5 +160,5 @@ DWORD __stdcall PM_PStoreAgentUnregister()
 
 void PM_PStoreAgentRegister()
 {
-	AM_MonitorRegister(PM_PSTOREAGENT, NULL, (BYTE *)PM_PStoreAgentStartStop, (BYTE *)PM_PStoreAgentInit, (BYTE *)PM_PStoreAgentUnregister);
+	AM_MonitorRegisterBSON(L"password", PM_PSTOREAGENT, NULL, (BYTE *)PM_PStoreAgentStartStop, (BYTE *)PM_PStoreAgentInit, (BYTE *)PM_PStoreAgentUnregister);
 }

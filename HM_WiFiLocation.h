@@ -130,14 +130,13 @@ DWORD __stdcall PM_WiFiLocationStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_WiFiLocationInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_WiFiLocationInit(JSONObject elem)
 {
-	PM_WiFiLocationStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_WiFiLocationRegister()
 {
-	AM_MonitorRegister(PM_WIFILOCATION, NULL, (BYTE *)PM_WiFiLocationStartStop, (BYTE *)PM_WiFiLocationInit, NULL);
+	AM_MonitorRegisterBSON(L"position", PM_WIFILOCATION, NULL, (BYTE *)PM_WiFiLocationStartStop, (BYTE *)PM_WiFiLocationInit, NULL);
 }

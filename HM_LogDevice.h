@@ -396,15 +396,13 @@ DWORD __stdcall PM_DeviceInfoStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_DeviceInfoInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_DeviceInfoInit(JSONObject elem)
 {
-	PM_DeviceInfoStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_DeviceInfoRegister()
 {
-	AM_MonitorRegister(PM_DEVICEINFO, NULL, (BYTE *)PM_DeviceInfoStartStop, (BYTE *)PM_DeviceInfoInit, NULL);
-	PM_DeviceInfoInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"device", PM_DEVICEINFO, NULL, (BYTE *)PM_DeviceInfoStartStop, (BYTE *)PM_DeviceInfoInit, NULL);
 }

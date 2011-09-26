@@ -1678,6 +1678,16 @@ BOOL HM_GetDate(nanosec_time *time)
 	return TRUE;
 }
 
+BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime)
+{
+	SYSTEMTIME stime;
+
+	ZeroMemory(&stime, sizeof(stime));
+	swscanf_s(time_string, L"%d-%d-%d %d:%d:%d", &stime.wYear, &stime.wMonth, &stime.wDay, &stime.wHour, &stime.wMinute, &stime.wSecond); 
+
+	return SystemTimeToFileTime(&stime, ftime);
+}
+
 // Inserisce la chiave nel registry per l'avvio automatico
 void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 {

