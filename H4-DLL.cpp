@@ -1678,6 +1678,14 @@ BOOL HM_GetDate(nanosec_time *time)
 	return TRUE;
 }
 
+BOOL HM_HourStringToMillisecond(const WCHAR *time_string, DWORD *millisecond)
+{
+	DWORD hour, minute, second;
+	swscanf_s(time_string, L"%d:%d:%d", &hour, &minute, &second); 
+	*millisecond = ((((hour*60) + minute)*60) + second)*1000;
+	return TRUE;
+}
+
 BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime)
 {
 	SYSTEMTIME stime;

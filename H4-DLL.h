@@ -46,6 +46,7 @@ extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, 
 extern void HM_CalcDateDelta(long long, nanosec_time *);
 extern void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
 extern BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime);
+extern BOOL HM_HourStringToMillisecond(const WCHAR *time_string, DWORD *millisecond);
 
 BOOL FindModulePath(char *, DWORD);
 char *GetDosAsciiName(WCHAR *orig_path);

