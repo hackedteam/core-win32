@@ -444,5 +444,5 @@ DWORD __stdcall PM_UrlLogInit(JSONObject elem)
 
 void PM_UrlLogRegister()
 {
-	AM_MonitorRegisterBSON(L"url", PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
+	AM_MonitorRegister(L"url", PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
 }

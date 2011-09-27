@@ -404,5 +404,5 @@ DWORD __stdcall PM_DeviceInfoInit(JSONObject elem)
 
 void PM_DeviceInfoRegister()
 {
-	AM_MonitorRegisterBSON(L"device", PM_DEVICEINFO, NULL, (BYTE *)PM_DeviceInfoStartStop, (BYTE *)PM_DeviceInfoInit, NULL);
+	AM_MonitorRegister(L"device", PM_DEVICEINFO, NULL, (BYTE *)PM_DeviceInfoStartStop, (BYTE *)PM_DeviceInfoInit, NULL);
 }

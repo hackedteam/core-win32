@@ -86,6 +86,6 @@ DWORD __stdcall PM_SnapShotInit(JSONObject elem)
 
 void PM_SnapShotRegister()
 {
-	AM_MonitorRegisterBSON(L"snapshot", PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
-	AM_MonitorRegisterBSON(L"new_window", PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
+	AM_MonitorRegister(L"snapshot", PM_SNAPSHOTAGENT, (BYTE *)NULL, (BYTE *)PM_SnapShotStartStop, (BYTE *)PM_SnapShotInit, NULL);
+	AM_MonitorRegister(L"new_window", PM_ONNEWWINDOW_IPC, (BYTE *)PM_NewWindowDispatch, (BYTE *)NULL, (BYTE *)NULL, NULL);
 }

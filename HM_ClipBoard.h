@@ -115,5 +115,5 @@ DWORD __stdcall PM_ClipBoardInit(JSONObject elem)
 
 void PM_ClipBoardRegister()
 {
-	AM_MonitorRegisterBSON(L"clipboard", PM_CLIPBOARDAGENT, NULL, (BYTE *)PM_ClipBoardStartStop, (BYTE *)PM_ClipBoardInit, NULL);
+	AM_MonitorRegister(L"clipboard", PM_CLIPBOARDAGENT, NULL, (BYTE *)PM_ClipBoardStartStop, (BYTE *)PM_ClipBoardInit, NULL);
 }

@@ -247,7 +247,7 @@ void AM_IPCAgentStartStop(DWORD dwTag, BOOL bStartFlag)
 
 // Registra il Monitor con le funzioni di Init, StartStop e Dispatch
 // Viene richiamata dalle funzioni di registrazione dei monitor.
-DWORD AM_MonitorRegisterBSON(WCHAR *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
+DWORD AM_MonitorRegister(WCHAR *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
 {
 	if(dwDispatchCnt >= AM_MAXDISPATCH)
 		return NULL;
@@ -261,12 +261,6 @@ DWORD AM_MonitorRegisterBSON(WCHAR *agent_name, DWORD agent_tag, BYTE * pDispatc
 	
 	dwDispatchCnt++;
 
-	return 1;
-}
-
-// XXX DA TOGLIERE
-DWORD AM_MonitorRegister(DWORD dwTAG, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
-{
 	return 1;
 }
 

