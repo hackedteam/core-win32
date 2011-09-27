@@ -38,6 +38,7 @@ extern HWND HM_GetProcessWindow(char *procname);
 extern BOOL HM_CheckNewConf(void);
 extern BOOL HM_GetDate(nanosec_time *);
 extern BYTE *HM_ReadClearConf(char *);
+extern char *HM_ReadClearConfBSON(char *);
 extern BOOL HM_ExpandStrings(char *source, char *dest, DWORD dsize);
 extern BOOL HM_ExpandStringsW(WCHAR *source, WCHAR *dest, DWORD dsize);
 extern BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size);

