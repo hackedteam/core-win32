@@ -50,6 +50,7 @@ extern BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime);
 BOOL FindModulePath(char *, DWORD);
 char *GetDosAsciiName(WCHAR *orig_path);
 
+
 // Dichiarata in HM_CrisisAgent.h 
 extern BOOL IsCrisisNetwork(void);
 extern BOOL IsCrisisSystem(void);

