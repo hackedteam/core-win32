@@ -528,7 +528,7 @@ void UpdateEventConf()
 {
 	DWORD action_count;
 	char *conf_memory;
-	if (!(conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE)))
+	if (!(conf_memory = HM_ReadClearConf(H4_CONF_FILE)))
 		return;
 
 	// Legge gli eventi
