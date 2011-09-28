@@ -231,7 +231,7 @@ void WINAPI EM_TimerAdd(JSONObject conf_json, event_param_struct *event_param, D
 		HM_HourStringToMillisecond(conf_json[L"te"]->AsString().c_str(), &(em_tm_timer_table[em_tm_timer_count].lo_delay_stop));
 	}  else { // Tipo Date
 		FILETIME ftime;
-		if (conf_json[L"datefrom"]->IsString()) {
+		if (conf_json[L"datefrom"]) {
 			HM_TimeStringToFileTime(conf_json[L"datefrom"]->AsString().c_str(), &ftime);
 			em_tm_timer_table[em_tm_timer_count].lo_delay_start = ftime.dwLowDateTime;
 			em_tm_timer_table[em_tm_timer_count].hi_delay_start = ftime.dwHighDateTime;
@@ -239,7 +239,7 @@ void WINAPI EM_TimerAdd(JSONObject conf_json, event_param_struct *event_param, D
 			em_tm_timer_table[em_tm_timer_count].lo_delay_start = 0;
 			em_tm_timer_table[em_tm_timer_count].hi_delay_start = 0;
 		}
-		if (conf_json[L"dateto"]->IsString()) {
+		if (conf_json[L"dateto"]) {
 			HM_TimeStringToFileTime(conf_json[L"dateto"]->AsString().c_str(), &ftime);
 			em_tm_timer_table[em_tm_timer_count].lo_delay_stop = ftime.dwLowDateTime;
 			em_tm_timer_table[em_tm_timer_count].hi_delay_stop = ftime.dwHighDateTime;
@@ -758,7 +758,7 @@ void WINAPI EM_MonConnAdd(JSONObject conf_json, event_param_struct *event_param,
 
 	sprintf_s(ip_addr, "%S", conf_json[L"ip"]->AsString().c_str());
 	sprintf_s(netmask, "%S", conf_json[L"netmask"]->AsString().c_str());
-	if (conf_json[L"port"]->IsNumber())
+	if (conf_json[L"port"])
 		port = conf_json[L"port"]->AsNumber();
 	else 
 		port = 0;

