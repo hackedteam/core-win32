@@ -717,6 +717,20 @@ struct _ioctl_dismount
     unsigned long    dw6;    
 };
 
+WCHAR *MultiByteParse(char *data)
+{
+	size_t length = strlen(data) + 1;
+	wchar_t *w_data = (wchar_t*)malloc(length * sizeof(wchar_t));
+	if (w_data == NULL)
+		return NULL;
+	size_t ret_value = 0;
+	if (mbstowcs_s(&ret_value, w_data, length, data, length) != 0) {
+		free(w_data);
+		return NULL;
+	}
+	return w_data;
+}
+
 // Cerca una drive letter libera
 char *FindFreeDriveLetter()
 {
@@ -980,10 +994,15 @@ void FindVMDisk(char *conf_path)
 	char *config_map, *ptr, *ptr_end;
 	char *local_config_map;
 	char disk_path[MAX_PATH];
+	WCHAR *w_path;
 
 	// Mappa in memoria il file di config
-	if ((hFile = FNC(CreateFileA)(conf_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+	w_path = MultiByteParse(conf_path);
+	if (!w_path)
 		return;
+	if ((hFile = FNC(CreateFileW)(w_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return;
+	SAFE_FREE(w_path);
 	
 	config_size = GetFileSize(hFile, NULL);
 	if (config_size == INVALID_FILE_SIZE) {
