@@ -411,7 +411,7 @@ void WINAPI ParseEvents(JSONObject conf_json, DWORD counter)
 	else
 		event_param.start_action = AF_NONE;
 
-	if (conf_json[L"stop"])
+	if (conf_json[L"end"])
 		event_param.stop_action = conf_json[L"end"]->AsNumber();
 	else
 		event_param.stop_action = AF_NONE;
