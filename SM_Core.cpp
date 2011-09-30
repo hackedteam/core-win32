@@ -412,7 +412,7 @@ void WINAPI ParseEvents(JSONObject conf_json, DWORD counter)
 		event_param.start_action = AF_NONE;
 
 	if (conf_json[L"stop"])
-		event_param.stop_action = conf_json[L"stop"]->AsNumber();
+		event_param.stop_action = conf_json[L"end"]->AsNumber();
 	else
 		event_param.stop_action = AF_NONE;
 
@@ -470,8 +470,9 @@ BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
 
 	} else if (!wcscmp(action, L"execute")) {
 		*tag = AF_EXECUTE;
-		param = (BYTE *)wcsdup(conf_json[L"command"]->AsString().c_str());
-
+		DWORD len = wcslen(conf_json[L"command"]->AsString().c_str());
+		param = (BYTE *)malloc(len+1);
+		sprintf((char *)param, "%S", conf_json[L"command"]->AsString().c_str());
 	} else if (!wcscmp(action, L"uninstall")) {
 		*tag = AF_UNINSTALL;
 
