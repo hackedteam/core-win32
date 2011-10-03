@@ -79,7 +79,7 @@ extern char EXE_INSTALLER_NAME[];
 #define HOME_VAR_NAME "$dir$" 
 #define HOME_VAR_NAME_W L"$dir$" 
 
-#define EMBEDDED_BYPASS 28  // numero di processi bypassati hardcoded
+#define EMBEDDED_BYPASS 29  // numero di processi bypassati hardcoded
 #define MAX_DYNAMIC_BYPASS 20 // massimo numero dei processi che si possono aggiungere
 #define MAX_PBYPASS_LEN 100  // massima lunghezza del nome di un bypass process
 
