@@ -139,7 +139,7 @@ BOOL MD5_Array(char *lpOutChecksum, char *array, int size)
 //	Output:
 //		sha256		: SHA256 in plain-text (lower case)
 //
-BOOL SHA256_Plugin(char *lpFileName, char *lpOutChecksum)
+BOOL SHA256_Plugin(char *lpFileName, char *lpOutChecksum, BOOL isOld)
 {
 	if (lpFileName == NULL || lpOutChecksum == NULL)
 		return FALSE;
@@ -174,9 +174,12 @@ BOOL SHA256_Plugin(char *lpFileName, char *lpOutChecksum)
 	Sha256_Final(&context, sha256_digest);
 
 	wchar_t unicodesha[32];
-	MultiByteToWideChar(CP_ACP, 0, (LPCSTR) sha256_digest, sizeof(sha256_digest), unicodesha, 32);
-	hex2ascii(lpOutChecksum, unicodesha, 32);
-
+	if (isOld) {
+		MultiByteToWideChar(CP_ACP, 0, (LPCSTR) sha256_digest, sizeof(sha256_digest), unicodesha, 32);
+		hex2ascii(lpOutChecksum, unicodesha, 32);
+	} else {
+		hex2ascii(lpOutChecksum, (char *)sha256_digest, 32);
+	}
 	return TRUE;
 }
 

