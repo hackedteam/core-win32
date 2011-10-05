@@ -27,15 +27,16 @@ void StrToLowerCase(char *lpOutString, char *lpInString)
 //		lpOutKey4	: Key4
 //		lpOutPath	: Path
 //
-BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath)
+BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath, BOOL isOld)
 {
 	char szPluginDigest_SHA256[(32*2) * 2];
 	char szPluginDigest_MD5[17 * 2];
 	char *szPassphrase1 = "Element'ry!penguiNs;-)SingingHarekrishna_";
+	char *szPassphrase2 = "Element'ry!penguiNs;-)SingingHareKrishna_";
 
 	const int username_len = strlen(lpUserName);
 
-	SHA256_Plugin(lpFileName, szPluginDigest_SHA256);
+	SHA256_Plugin(lpFileName, szPluginDigest_SHA256, isOld);
 	MD5_Plugin(lpFileName, szPluginDigest_MD5);
 	
 	char *szUSERNAME = (char *) malloc(strlen(lpUserName)+1);
@@ -65,11 +66,17 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 
 	MD5_Array(_md5_filename, szFILENAME, strlen(szFILENAME));
 
-	sprintf(tmp, "%s%s", _md5_filename, szPassphrase1);
-	MD5_Array(_md5_key1_0, tmp, strlen(tmp));
-	sprintf(tmp, "%s%s", szPluginDigest_MD5, szPassphrase1);
-	MD5_Array(_md5_key1_1, tmp, strlen(tmp));
-
+	if(isOld) {
+		sprintf(tmp, "%s%s", _md5_filename, szPassphrase1);
+		MD5_Array(_md5_key1_0, tmp, strlen(tmp));
+		sprintf(tmp, "%s%s", szPluginDigest_MD5, szPassphrase1);
+		MD5_Array(_md5_key1_1, tmp, strlen(tmp));
+	} else {
+		sprintf(tmp, "%s%s", _md5_filename, szPassphrase2);
+		MD5_Array(_md5_key1_0, tmp, strlen(tmp));
+		sprintf(tmp, "%s%s", szPluginDigest_MD5, szPassphrase2);
+		MD5_Array(_md5_key1_1, tmp, strlen(tmp));
+	}
 	sprintf(_md5_key1, "%s%s", _md5_key1_0, _md5_key1_1);
 
 	// Encrypt sha256 /Client/Key1

