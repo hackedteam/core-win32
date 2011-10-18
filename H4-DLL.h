@@ -28,6 +28,7 @@ extern void HM_RemoveRegistryKey(void);
 extern void HM_RemoveDriver(void);
 extern void HM_RemoveCore(void);
 extern BOOL HM_GetDefaultBrowser(char *);
+extern BOOL HM_GetIE32Browser(char *path_name);
 extern void HM_U2A(char *);
 extern void HM_A2U(char *src, char *dst);
 extern char *HM_memstr(char *, char *);
