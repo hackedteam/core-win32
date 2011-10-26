@@ -347,7 +347,7 @@ void EmptyDirectory(WCHAR *path)
 				continue;
 
 			_snwprintf_s(search_path, sizeof(search_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\%s", path, find_data.cFileName); 
-			HM_WipeFileW(search_path);
+			DeleteFileW(search_path);
 		} while (FNC(FindNextFileW)(hFind, &find_data));
 		FNC(FindClose)(hFind);
 	}
