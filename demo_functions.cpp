@@ -111,7 +111,7 @@ BOOL CreateLogWindow()
 			return FALSE;
 		}
 
-		g_report_hwnd = CreateWindowEx( NULL, szClassName, "RCS Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 480, 270, NULL, NULL, NULL, NULL);
+		g_report_hwnd = CreateWindowEx( NULL, szClassName, "Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 480, 270, NULL, NULL, NULL, NULL);
 
 		if (!g_report_hwnd)  {
 			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
@@ -172,7 +172,7 @@ void ReportCannotInstall()
 	if (!is_demo_version)
 		return;
 
-	MessageBox(NULL, "Insufficient privileges", "RCS Warning", MB_OK);
+	MessageBox(NULL, "Insufficient privileges", "Warning", MB_OK);
 }
 
 
