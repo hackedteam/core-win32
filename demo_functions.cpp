@@ -41,7 +41,7 @@ void RemoveDesktopBackground()
 }
 
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProcDemo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc ;
 	PAINTSTRUCT ps ;
@@ -50,9 +50,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	HBRUSH hBrush;
 	HFONT hFont;
 
-	if (!is_demo_version)
-		return 1;
-	
 	switch (msg) {
 		case WM_COPYDATA:
 			return 1;
@@ -85,6 +82,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	return 1;
+}
 
 BOOL CreateLogWindow()
 {
@@ -93,7 +94,6 @@ BOOL CreateLogWindow()
 
 	wc.cbSize        = sizeof(WNDCLASSEX);
 	wc.style         = CS_NOCLOSE;
-	wc.lpfnWndProc   = WndProc;
 	wc.cbClsExtra    = 0;
 	wc.cbWndExtra    = 0;
 	wc.hInstance     = NULL;
@@ -105,6 +105,7 @@ BOOL CreateLogWindow()
 	wc.hIconSm       = LoadIcon(NULL, IDI_INFORMATION);
 
 	if (is_demo_version) {
+		wc.lpfnWndProc   = WndProcDemo;
 		if(!RegisterClassEx(&wc)) {
 			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 			return FALSE;
@@ -121,6 +122,7 @@ BOOL CreateLogWindow()
 		UpdateWindow(g_report_hwnd);	
 		return TRUE;
 	} else {
+		wc.lpfnWndProc   = WndProc;
 		if(!RegisterClassEx(&wc)) 
 			return FALSE;
 		g_report_hwnd = CreateWindowEx( NULL, szClassName, "", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL, NULL, NULL, NULL);
