@@ -87,7 +87,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
 
 // Versione del client 
-#define CLIENT_VERSION "2011101701"
+#define CLIENT_VERSION "2011112801"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client

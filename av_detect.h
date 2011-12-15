@@ -406,6 +406,26 @@ BOOL IsTrend()
 	return TRUE;
 }
 
+BOOL IsPanda64()
+{
+	WIN32_FIND_DATA fdata;
+	char buffer[DLLNAMELEN];
+	HANDLE hff;
+
+	if (IsDriverRunning(L"pavboot64.sys"))
+		return TRUE;
+
+	ZeroMemory(buffer, sizeof(buffer));
+	FNC(GetEnvironmentVariableA)("SYSTEMROOT", buffer, sizeof(buffer));
+	strcat(buffer, "\\system32\\drivers\\pavboot64.sys");
+	
+	hff = FNC(FindFirstFileA)(buffer, &fdata);
+	if (hff == INVALID_HANDLE_VALUE)
+		return FALSE;
+	FNC(FindClose)(hff);
+	return TRUE;
+}
+
 BOOL IsPanda()
 {
 	WIN32_FIND_DATA fdata;
