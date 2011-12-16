@@ -87,7 +87,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
 
 // Versione del client 
-#define CLIENT_VERSION "2011112801"
+#define CLIENT_VERSION "2011112806"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
@@ -100,7 +100,7 @@ extern BOOL is_demo_version;
 #define ENCRYPTION_KEY_CONF "ngkdNGKDh4H4869"
 //#define ENCRYPTION_KEY_CONF "Adf5V57gQtyi90wUhpb8Neg56756j87R"
 
-#define BACKDOOR_ID "RCS_0000000691"
+#define BACKDOOR_ID "RCS_0000000744"
 //#define BACKDOOR_ID "av3pVck1gb4eR2"
 
 #define DEMO_TAG "hxVtdxJ/Z8LvK3ULSnKRUmLE"
