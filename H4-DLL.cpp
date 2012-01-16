@@ -112,9 +112,9 @@ void UnlockConfFile();
 #include "HM_Contacts.h" // XXX da modificare
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
-BYTE bin_patched_key[KEY_LEN*2] = ENCRYPTION_KEY;
+BYTE bin_patched_key[] = ENCRYPTION_KEY;
 // Qui finira' il binary patch con la chiave di cifratura per la conf
-BYTE bin_patched_key_conf[KEY_LEN*2] = ENCRYPTION_KEY_CONF;
+BYTE bin_patched_key_conf[] = ENCRYPTION_KEY_CONF;
 
 BYTE bin_patched_backdoor_id[] = BACKDOOR_ID;
 
