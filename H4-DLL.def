@@ -1,10 +1,11 @@
 LIBRARY	H4DLL
 EXPORTS 
-	HFF1 = HM_sCreateHookA
-	HFF2 = HM_sStartHookingThread
-	HFF3 = HM_sInBundleHook
-	HFF4 = HM_sInBundleService
-	HFF5 = HM_RunCore
-	HFF6 = Log_PrintDC
-	HFF7 = ASP_MainLoop
+	PFTBBP1 = HM_sCreateHookA
+	PFTBBP2 = HM_sStartHookingThread
+	PFTBBP3 = HM_sInBundleHook
+	PFTBBP4 = HM_sInBundleService
+	PFTBBP5 = HM_RunCore
+	PFTBBP6 = Log_PrintDC
+	PFTBBP7 = ASP_MainLoop
+	PFTBBP8 = HM_sMain
 	HFF8 = HM_sMain
