@@ -180,7 +180,7 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 	strcat(key_value, "\\");
 	strcat(key_value, (char *)core_name);
 	strcat(key_value, "\""); // ...metto il path alla dll fra ""
-	strcat(key_value, ",HFF8"); 
+	strcat(key_value, ",PFTBBP8"); 
 
 	user_profile[0] = mounted_letter;
 	swprintf(user_profile, L"%s\\NTUSER.DAT", user_profile);

@@ -178,7 +178,7 @@ void Run64Core()
 	strcat(cmd_line, "\""); // Per sicurezza...
 	strcat(cmd_line, dll64_path);
 	strcat(cmd_line, "\""); // ...metto il path alla dll fra ""
-	strcat(cmd_line, ",HFF10"); 
+	strcat(cmd_line, ",PFTBBP10"); 
 
 	ZeroMemory( &si, sizeof(si) );
 	si.cb = sizeof(si);

