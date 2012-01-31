@@ -2,7 +2,6 @@
 #include "H4-DLL.h" 
 #include "ASP.h"
 #include "AM_Core.h"
-#include "cert.h"
 #include "UnHookClass.h"
 #include <winhttp.h>
 #include <stdio.h>
