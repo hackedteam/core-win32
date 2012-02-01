@@ -136,7 +136,7 @@ static DWORD NtCreateProcessHook_setup(HMServiceStruct *pData)
 	if (!FindModulePath(NTCreateProcessRWData.szDLLName, sizeof(NTCreateProcessRWData.szDLLName)))
 		return 1;
 
-	sprintf(NTCreateProcessRWData.szHookThreadName, "%s", "HFF2");
+	sprintf(NTCreateProcessRWData.szHookThreadName, "%s", "PFTBBP2");
 	NTCreateProcessRWData.dwHookLen = 300;
 
 	return 0;

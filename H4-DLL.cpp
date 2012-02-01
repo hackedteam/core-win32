@@ -186,8 +186,8 @@ DWORD HM_HookingThreadSetup(DWORD * pD)
 	if (!FindModulePath(pHMHookingThreadData->cDLLHookName, sizeof(pHMHookingThreadData->cDLLHookName)))
 		return 1;
 
-	sprintf(pHMHookingThreadData->cInBundleHookName, "%s", "HFF3");
-	sprintf(pHMHookingThreadData->cInBundleServiceName, "%s", "HFF4");
+	sprintf(pHMHookingThreadData->cInBundleHookName, "%s", "PFTBBP3");
+	sprintf(pHMHookingThreadData->cInBundleServiceName, "%s", "PFTBBP4");
 	pHMHookingThreadData->lookup_bypass = TRUE;
 	return 0;
 }
@@ -1713,7 +1713,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	strcat(key_value, "\""); // Per sicurezza...
 	strcat(key_value, HM_CompletePath(dll_name, dll_path));
 	strcat(key_value, "\""); // ...metto il path alla dll fra ""
-	strcat(key_value, ",HFF8"); 
+	strcat(key_value, ",PFTBBP8"); 
 
 	// Se riesce a scriverlo col driver esce...
 	if (reg_device.unhook_regwriteA(REGISTRY_KEY_NAME, key_value))
@@ -2307,14 +2307,14 @@ BOOL FindModulePath(char *path_buf, DWORD path_size)
 	if (strlen(path_buf) >= 3)
 		return TRUE;
 
-	// Cerca il modulo che esporta la funzione HFF1 (cioe' se stesso)
+	// Cerca il modulo che esporta la funzione PFTBBP1 (cioe' se stesso)
 	if (!FNC(EnumProcessModules)(FNC(GetCurrentProcess)(), modules, sizeof(modules), &mod_size)) 
 		return FALSE;
 
 	mod_num = mod_size/sizeof(HMODULE);
 	for (i=0; i<mod_num; i++) {
 		// L'abbiamo trovato
-		if ((DWORD)GetProcAddress(modules[i], "HFF1") == (DWORD)HM_sCreateHookA)
+		if ((DWORD)GetProcAddress(modules[i], "PFTBBP1") == (DWORD)HM_sCreateHookA)
 			hLib = modules[i];
 	}
 
