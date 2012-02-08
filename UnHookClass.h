@@ -29,7 +29,6 @@ class HideDevice
 	BOOL HideDevice::unhook_func(char *func_name, BOOL is_fixup);	// Unhooka una funzione particolare
 	BOOL HideDevice::unhook_hidepid(DWORD PID, BOOL is_add);	// Aggiunge/toglie un pid alla lista di quelli da nascondere
 	BOOL HideDevice::unhook_getadmin();		// Su vista rende admin "figo" (non usare su XP)
-	BOOL HideDevice::unhook_uninstall(WCHAR *driver_name);	// Disinstalla il driver in maniera "lecita"
 	BOOL HideDevice::unhook_isdrv(WCHAR *driver_name);		// Dice se c'e' il driver che gira
 	BOOL HideDevice::unhook_getpath(WCHAR *driver_name, WCHAR *driver_path, DWORD size);	// Torna il path del driver
 	BOOL HideDevice::unhook_isdev();						// Dice se c'e' il device di unhooking

@@ -357,35 +357,6 @@ BOOL HideDevice::unhook_getadmin()
 	return ret_val;
 }
 
-BOOL HideDevice::unhook_uninstall(WCHAR *driver_name)
-{
-	SC_HANDLE sh=NULL, rh=NULL;
-	SERVICE_STATUS ss;
-	BOOL ret_val = FALSE;
-
-	if ( hFile != INVALID_HANDLE_VALUE ) {
-		CloseHandle(hFile);
-		hFile = INVALID_HANDLE_VALUE;
-	}
-
-	do {
-		if (! (sh = FNC(OpenSCManagerA)(NULL, NULL, SC_MANAGER_CREATE_SERVICE )) )
-			break;
-		if (! (rh = OpenServiceW(sh, driver_name, SERVICE_STOP | DELETE)) )
-			break;
-		if (! ControlService(rh, SERVICE_CONTROL_STOP, &ss) )
-			break;
-		if (! DeleteService(rh) )
-			break;
-		ret_val = TRUE;
-	} while(0);	
-	
-	if (rh)
-		FNC(CloseServiceHandle)(rh);
-	if (sh)
-		FNC(CloseServiceHandle)(sh);
-	return ret_val;
-}
 
 BOOL HideDevice::unhook_isdev()
 {
