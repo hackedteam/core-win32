@@ -230,7 +230,7 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param, DWORD dummy_len)
 	HM_RemoveCore();
 
 	//Il driver deve rimanere se ci sono backdoor per altri utenti
-	HM_RemoveDriver(DRIVER_NAME_W);
+	HM_RemoveDriver();
 
 	// Tenta l'uninstall dal disco reale in caso di deep freeze
 	if (IsDeepFreeze()) {

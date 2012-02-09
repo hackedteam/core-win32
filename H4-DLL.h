@@ -25,7 +25,7 @@ extern WCHAR *HM_CompletePathW(WCHAR *, WCHAR *);
 extern void HM_WipeFileA(char *);
 extern void HM_WipeFileW(WCHAR *);
 extern void HM_RemoveRegistryKey(void);
-extern void HM_RemoveDriver(WCHAR *);
+extern void HM_RemoveDriver();
 extern void HM_RemoveCore(void);
 extern BOOL HM_GetDefaultBrowser(char *);
 extern void HM_U2A(char *);

