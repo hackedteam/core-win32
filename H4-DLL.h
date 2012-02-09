@@ -25,7 +25,7 @@ extern WCHAR *HM_CompletePathW(WCHAR *, WCHAR *);
 extern void HM_WipeFileA(char *);
 extern void HM_WipeFileW(WCHAR *);
 extern void HM_RemoveRegistryKey(void);
-extern void HM_RemoveDriver(void);
+extern void HM_RemoveDriver();
 extern void HM_RemoveCore(void);
 extern BOOL HM_GetDefaultBrowser(char *);
 extern BOOL HM_GetIE32Browser(char *path_name);
@@ -46,6 +46,7 @@ extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, 
 extern void HM_CalcDateDelta(long long, nanosec_time *);
 extern void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
 extern BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime);
+extern BOOL IsLastInstance();
 extern BOOL HM_HourStringToMillisecond(const WCHAR *time_string, DWORD *millisecond);
 
 BOOL FindModulePath(char *, DWORD);

