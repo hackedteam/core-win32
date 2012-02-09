@@ -6,6 +6,7 @@
 extern BOOL IsDeepFreeze();
 extern void UnlockConfFile();
 extern BYTE bin_patched_backdoor_id[];
+extern BOOL g_remove_driver;
 
 // Codici delle action function
 #define AF_SYNCRONIZE 1
@@ -290,7 +291,7 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 	HM_RemoveCore();
 
 	//Cancella il driver sull'ultima istanza
-	if (IsLastInstance())
+	if (g_remove_driver && IsLastInstance())
 		HM_RemoveDriver();
 
 	// Tenta l'uninstall dal disco reale in caso di deep freeze

