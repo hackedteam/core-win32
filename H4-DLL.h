@@ -44,6 +44,7 @@ extern BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size);
 extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi);
 extern void HM_CalcDateDelta(long long, nanosec_time *);
 extern void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
+extern BOOL IsLastInstance();
 
 BOOL FindModulePath(char *, DWORD);
 char *GetDosAsciiName(WCHAR *orig_path);
