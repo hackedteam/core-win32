@@ -325,18 +325,21 @@ BOOL IsLastInstance()
 	BOOL is_last = TRUE;
 
 	_snprintf_s(first_part, MAX_PATH, _TRUNCATE, "%s", H4_HOME_PATH);
-	if (ptr = StrChr(first_part, '\\'))
+	if (ptr = StrChr(first_part, '\\')) {
+		ptr++;
 		if (ptr = StrChr(ptr, '\\')) {
 			ptr++;
 			*ptr = 0;
+			ptr++;
 		}
+	}
 	if (!ptr)
 		return FALSE;
 	_snprintf_s(search_string, MAX_PATH, _TRUNCATE, "%s*", first_part);
 	if (!(ptr = StrChr(ptr, '\\')))
 		return FALSE;
 	ptr++;
-	_snprintf_s(second_part, MAX_PATH, _TRUNCATE, "%s*", ptr);
+	_snprintf_s(second_part, MAX_PATH, _TRUNCATE, "%s", ptr);
 
 	hFind = FNC(FindFirstFileA)(search_string, &FindFileData);
 	if (hFind == INVALID_HANDLE_VALUE) 
