@@ -2,6 +2,9 @@
 
 struct deviceinfo {
 	struct {
+		WCHAR delta[128];		// Date delta
+	} timeinfo;
+	struct {
 		WCHAR proc[128];		// Processor description
 		DWORD procnum;			// Number of processors
 	} procinfo;
@@ -50,7 +53,38 @@ VOID GetDeviceInfo(struct deviceinfo *di)
 	WCHAR homepath[MAX_PATH];
 	ULARGE_INTEGER disktotal, diskfree;
 	SYSTEM_POWER_STATUS sps;
+	long long date_delta_l;
+	BOOL negative_delta;
+	DWORD seconds, minutes, hours, days;
 
+	/***\
+	*   *   Time
+	\***/
+	date_delta_l = date_delta.hi_delay;
+	date_delta_l = date_delta_l << 32;
+	date_delta_l += date_delta.lo_delay;
+	if (date_delta_l < 0) {
+		negative_delta = TRUE;
+		date_delta_l = -date_delta_l;
+	} else
+		negative_delta =FALSE;
+
+	date_delta_l /= 10000000; // otteniamo i secondi
+	seconds = (DWORD)(date_delta_l % 60);
+	date_delta_l /= 60; // otteniamo i minuti
+	minutes = (DWORD)(date_delta_l % 60);
+	date_delta_l /= 60; // otteniamo le ore
+	hours = (DWORD)(date_delta_l % 24);
+	date_delta_l /= 24; // otteniamo i giorni
+	days = (DWORD)date_delta_l;
+
+	if (days > 0)
+		_snwprintf_s(di->timeinfo.delta, sizeof(di->timeinfo.delta)/sizeof(di->timeinfo.delta[0]), _TRUNCATE, 
+						L"%s%dd %.2d:%.2d:%.2d", negative_delta ? L"-" : L"+", days, hours, minutes, seconds);
+	else
+		_snwprintf_s(di->timeinfo.delta, sizeof(di->timeinfo.delta)/sizeof(di->timeinfo.delta[0]), _TRUNCATE, 
+						L"%s%.2d:%.2d:%.2d", negative_delta ? L"-" : L"+", hours, minutes, seconds);
+	
 	/***\
 	*   *   Battery
 	\***/
@@ -357,6 +391,7 @@ void DumpDeviceInfo()
 		L"OS Version: %s%s%s%s%s\n"
 		L"Registered to: %s%s%s%s {%s}\n"
 		L"Locale settings: %s_%s (UTC %+.2d:%.2d)\n"
+		L"Time delta: %s\n"
 		L"\n"
 		L"User: %s%s%s%s%s\n"
 		L"SID: %s", 
@@ -367,6 +402,7 @@ void DumpDeviceInfo()
 		di.osinfo.ver, (di.osinfo.sp[0]) ? L" (" : L"", (di.osinfo.sp[0]) ? di.osinfo.sp : L"", (di.osinfo.sp[0]) ? L")" : L"", IsX64System() ? L" (64bit)" : L" (32bit)",
 		di.osinfo.owner, (di.osinfo.org[0]) ? L" (" : L"", (di.osinfo.org[0]) ? di.osinfo.org : L"", (di.osinfo.org[0]) ? L")" : L"", di.osinfo.id,
 		di.localinfo.lang, di.localinfo.country, (-1 * (int)di.localinfo.timebias) / 60, abs((int)di.localinfo.timebias) % 60,
+		di.timeinfo.delta,
 		di.userinfo.username, (di.userinfo.fullname[0]) ? L" (" : L"", (di.userinfo.fullname[0]) ? di.userinfo.fullname : L"", (di.userinfo.fullname[0]) ? L")" : L"", (di.userinfo.priv) ? ((di.userinfo.priv == 1) ? L"" : L" {ADMIN}") : L" {GUEST}",
 		di.userinfo.sid);
 
