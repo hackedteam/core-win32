@@ -70,7 +70,6 @@ DWORD HttpSocialRequest(WCHAR *Host, WCHAR *verb, WCHAR *resource, DWORD port, B
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 	}
 
-	// Alcuni hanno bisogno di seguire i redirect????
 	if (dwStatusCode != HTTP_STATUS_OK) {
 		WinHttpCloseHandle(hRequest);
 		WinHttpCloseHandle(hConnect);

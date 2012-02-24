@@ -1,13 +1,18 @@
 /////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
-// - Faccio un test a casa per vedere la velocita' di ricezione winhttp
 //
+// - VERIFICARE PERCHE' SCORRA IN DUMP COOKIES!!!!!!!!!!!!!
+//
+// - Faccio un test a casa per vedere la velocita' di ricezione winhttp
 // - Nei vari handler faccio dumpare solo se c'e' l'agente corrispondente attivo. 
 //
 // - Controllo le XXX in questi sorgenti
 // - Provo a fare uninstall di RCS col social agent attivo (deve cancellare la dll)
-// - Provare memory leak e handle leak
-// - Verificare che legga correttamente il json dei cookie di firefox da dentro RCS
 // - Verificare che vada in pausa e RIPRENDA durante la sync
+//   anche quando riceve una nuova configurazione <====
+// - Implementare CONFOK per evitare che mi venga rimandata sempre!
+// - Verificare che mi uploadi sqlite.dll
+// - Far mettere "social" come agente nella conf
+//
 //
 /////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
 

