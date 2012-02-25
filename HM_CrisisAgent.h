@@ -2,8 +2,8 @@ HANDLE hCrisisThread = NULL;
 BOOL bPM_CrisisAgentStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 BOOL bPM_crcp = FALSE; // Semaforo per l'uscita del thread
 
-extern BOOL network_crisis; // Se deve fermare le sync
-extern BOOL system_crisis;  // Se deve fermare i comandi e l'hiding
+//extern BOOL network_crisis; // Se deve fermare le sync
+//extern BOOL system_crisis;  // Se deve fermare i comandi e l'hiding
 
 BOOL cr_check_system = FALSE;
 BOOL cr_check_network = FALSE;
