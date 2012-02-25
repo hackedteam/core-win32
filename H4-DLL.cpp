@@ -61,6 +61,7 @@ char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; /
 DWORD social_process_control = SOCIAL_PROCESS_CONTINUE; // Semaforo per controllare il processo "social"
 BOOL network_crisis = NULL; // Se deve fermare le sync
 BOOL system_crisis = NULL;  // Se deve fermare i comandi e l'hiding
+BOOL bPM_IMStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 

