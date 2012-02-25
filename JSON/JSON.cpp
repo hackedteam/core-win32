@@ -49,6 +49,8 @@ extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 JSONValue *JSON::Parse(const char *data)
 {
 	wchar_t *w_data = UTF8_2_UTF16((char *)data);
+	if (!w_data)
+		return NULL;
 	JSONValue *value = JSON::Parse(w_data);
 	free(w_data);
 	return value;
