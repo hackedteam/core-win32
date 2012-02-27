@@ -756,6 +756,9 @@ WCHAR *GetFFProfilePath()
 	WCHAR profilePath[MAX_PATH];
 	DWORD pathSize = MAX_PATH;
 
+	memset(appPath, 0, sizeof(appPath));
+	memset(profilePath, 0, sizeof(profilePath));
+
 	FNC(GetEnvironmentVariableW)(L"APPDATA", appPath, MAX_PATH);
 
 	// Get firefox profile directory

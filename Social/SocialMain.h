@@ -14,10 +14,10 @@ typedef struct {
 	social_handler RequestHandler;
 } social_entry_struct;
 
-#define FACEBOOK_DOMAIN L".facebook.com"
-#define GMAIL_DOMAIN L".google.com"
-#define FACEBOOK_DOMAINA ".facebook.com"
-#define GMAIL_DOMAINA ".google.com"
+#define FACEBOOK_DOMAIN L"facebook.com"
+#define GMAIL_DOMAIN L"google.com"
+#define FACEBOOK_DOMAINA "facebook.com"
+#define GMAIL_DOMAINA "google.com"
 
 extern social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
 extern void urldecode(char *src);
