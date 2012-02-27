@@ -58,10 +58,10 @@ DWORD log_free_space;   // Spazio a disposizione per i log
 DWORD log_active_queue; // Quale coda e' attiva 1 o 0
 DWORD process_bypassed; //Numero di processi da bypassare
 char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
-DWORD social_process_control = SOCIAL_PROCESS_CONTINUE; // Semaforo per controllare il processo "social"
-BOOL network_crisis = NULL; // Se deve fermare le sync
-BOOL system_crisis = NULL;  // Se deve fermare i comandi e l'hiding
-BOOL bPM_IMStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
+DWORD social_process_control;	// Semaforo per controllare il processo "social"
+BOOL network_crisis;			// Se deve fermare le sync
+BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
+BOOL bPM_IMStarted;				// Flag che indica se il monitor e' attivo o meno
 
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 

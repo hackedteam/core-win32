@@ -422,5 +422,6 @@ DWORD __stdcall PM_IMInit(JSONObject elem)
 
 void PM_IMRegister()
 {
+	bPM_IMStarted = FALSE;
 	AM_MonitorRegister(L"chat", PM_IMAGENT, (BYTE *)PM_IMDispatch, (BYTE *)PM_IMStartStop, (BYTE *)PM_IMInit, NULL);
 }

