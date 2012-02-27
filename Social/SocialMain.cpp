@@ -1,12 +1,3 @@
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
-//
-// - Verificare che vada in pausa e RIPRENDA durante la sync
-//   anche quando riceve una nuova configurazione <====
-//
-// - Verificare che mi uploadi sqlite.dll
-// - Far mettere "social" come agente nella conf
-//
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
 
 #define SLEEP_COOKIE 30 // In secondi
 #define SOCIAL_LONG_IDLE 20 // In multipli di SLEEP_COOKIE (10 minuti)
