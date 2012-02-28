@@ -147,6 +147,7 @@ WCHAR *GetCHProfilePath()
 	WCHAR appPath[MAX_PATH];
 	static WCHAR FullPath[MAX_PATH];
 
+	memset(appPath, 0, sizeof(appPath));
 	if (!FNC(SHGetSpecialFolderPathW)(NULL, appPath, CSIDL_LOCAL_APPDATA, TRUE))
 		return NULL;
 
