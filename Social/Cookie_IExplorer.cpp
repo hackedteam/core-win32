@@ -57,6 +57,7 @@ void ParseIECookieFile(WCHAR *file)
 		if (!(ptr = strstr(ptr, "*\n")))
 			break;
 		ptr+=2;
+		NormalizeDomainA(host);
 		if (host && name && value && IsInterestingDomainA(host))
 			AddCookieA(host, name, value);
 	} 

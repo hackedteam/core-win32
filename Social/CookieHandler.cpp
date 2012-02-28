@@ -15,10 +15,8 @@ DWORD g_cookie_count = 0;
 
 BOOL IsInterestingDomainW(WCHAR *domain)
 {
-	if (domain[0] == L'.')
-		domain++;
 	for (int i=0; i<SOCIAL_ENTRY_COUNT; i++)
-		if (!wcsncmp(domain, social_entry[i].domain, wcslen(social_entry[i].domain)))
+		if (!wcscmp(domain, social_entry[i].domain))
 			return TRUE;
 	return FALSE;
 }
@@ -48,10 +46,45 @@ void ResetNewCookie()
 		social_entry[i].is_new_cookie = FALSE;
 }
 
+void NormalizeDomainA(char *domain)
+{
+	char *src, *dst;
+	if (!domain)
+		return;
+	src = dst = domain;
+	for(; *src=='.'; src++);
+	for (;;) {
+		if (*src == '/' || *src==NULL)
+			break;
+		*dst = *src;
+		dst++;
+		src++;
+	}
+	*dst = NULL;
+}
+
+void NormalizeDomainW(WCHAR *domain)
+{
+	WCHAR *src, *dst;
+	if (!domain)
+		return;
+	src = dst = domain;
+	for(; *src==L'.'; src++);
+	for (;;) {
+		if (*src == L'/' || *src==NULL)
+			break;
+		*dst = *src;
+		dst++;
+		src++;
+	}
+	*dst = NULL;
+}
+
 BOOL AddCookieW(WCHAR *domain, WCHAR *name, WCHAR *value)
 {
 	char *domain_a, *name_a, *value_a;
 	DWORD d_len, n_len, v_len;
+	BOOL ret_val;
 
 	if (!domain || !name || !value)
 		return FALSE;
@@ -73,8 +106,14 @@ BOOL AddCookieW(WCHAR *domain, WCHAR *name, WCHAR *value)
 	_snprintf_s(domain_a, d_len, _TRUNCATE, "%S", domain);		
 	_snprintf_s(name_a, n_len, _TRUNCATE, "%S", name);		
 	_snprintf_s(value_a, v_len, _TRUNCATE, "%S", value);		
+	
+	ret_val = AddCookieA(domain_a, name_a, value_a);
 
-	return AddCookieA(domain_a, name_a, value_a);
+	SAFE_FREE(domain_a);
+	SAFE_FREE(name_a);
+	SAFE_FREE(value_a);
+	
+	return ret_val;
 }
 
 BOOL AddCookieA(char *domain, char *name, char *value)
@@ -122,7 +161,7 @@ char *GetCookieString(char *domain)
 		return NULL;
 
 	for (i=0; i<g_cookie_count; i++) {
-		if (g_cookie_list[i].domain && strstr(g_cookie_list[i].domain, domain) &&
+		if (g_cookie_list[i].domain && !strcmp(g_cookie_list[i].domain, domain) &&
 			g_cookie_list[i].name && g_cookie_list[i].value) {
 			len += strlen(g_cookie_list[i].name);
 			len += strlen(g_cookie_list[i].value);
@@ -138,7 +177,7 @@ char *GetCookieString(char *domain)
 	sprintf_s(cookie_string, len, "Cookie:");
 
 	for (i=0; i<g_cookie_count; i++) {
-		if (g_cookie_list[i].domain && strstr(g_cookie_list[i].domain, domain)) {
+		if (g_cookie_list[i].domain && !strcmp(g_cookie_list[i].domain, domain)) {
 			if (g_cookie_list[i].name && g_cookie_list[i].value) {
 				strcat_s(cookie_string, len, " ");
 				strcat_s(cookie_string, len, g_cookie_list[i].name);

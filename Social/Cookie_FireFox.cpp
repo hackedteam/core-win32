@@ -60,6 +60,7 @@ int parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azColName)
 			value = _strdup(argv[i]);
 	}	
 
+	NormalizeDomainA(host);
 	if (host && name && value && IsInterestingDomainA(host))
 		AddCookieA(host, name, value);
 
@@ -161,6 +162,7 @@ int DumpSessionCookies(WCHAR *profilePath)
 							if (jcookie.find(L"value") != jcookie.end() && jcookie[L"value"]->IsString()) 
 								cvalue = _wcsdup(jcookie[L"value"]->AsString().c_str());
 
+							NormalizeDomainW(host);
 							if (host && name && cvalue && IsInterestingDomainW(host))
 								AddCookieW(host, name, cvalue);
 
