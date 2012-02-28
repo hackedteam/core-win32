@@ -238,10 +238,20 @@ DWORD LOG_GetActualLogSize()
 	return log_total_size;
 }
 
+void LOG_InitSequentialLogs()
+{
+	DWORD i;
+
+	// Inizializza la tabella dei log
+	for (i=0; i<MAX_LOG_ENTRIES; i++) {
+		log_table[i].agent_tag = NO_TAG_ENTRY;
+		log_table[i].h_file = INVALID_HANDLE_VALUE;
+	}
+}
+
 // Inizializza l'utilizzo dei log
 void LOG_InitLog()
 {
-	DWORD i;
 	ULARGE_INTEGER temp_free_space;
 	char disk_path[DLLNAMELEN];
 	DWORD temp_log_space;
@@ -253,11 +263,7 @@ void LOG_InitLog()
 	// Legge la configurazione dei log
 	UpdateLogConf();
 
-	// Inizializza la tabella dei log
-	for (i=0; i<MAX_LOG_ENTRIES; i++) {
-		log_table[i].agent_tag = NO_TAG_ENTRY;
-		log_table[i].h_file = INVALID_HANDLE_VALUE;
-	}
+	LOG_InitSequentialLogs();
 
 	// Inizializza lo spazio rimanente sul disco
 	// dove e' la directory di lavoro

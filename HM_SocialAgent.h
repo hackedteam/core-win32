@@ -138,13 +138,11 @@ void StartSocialCapture()
 
 DWORD __stdcall PM_SocialAgentStartStop(BOOL bStartFlag, BOOL bReset)
 {	
-	if (bStartFlag) {
-		LOG_InitAgentLog(PM_IMAGENT_SOCIAL);
+	if (bStartFlag) 
 		social_process_control = SOCIAL_PROCESS_CONTINUE;
-	} else {
+	else
 		social_process_control = SOCIAL_PROCESS_PAUSE;
-		LOG_StopAgentLog(PM_IMAGENT_SOCIAL);
-	}
+		
 	return 1;
 }
 
