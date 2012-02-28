@@ -718,7 +718,7 @@ WCHAR *GetFFLibPath()
 		return NULL;
 
 	// Read the firefox path
-	if( FNC(RegQueryValueExA)(rkey, NULL, 0,  &valueType, (unsigned char*)&path, &pathSize) != ERROR_SUCCESS ) {
+	if( FNC(RegQueryValueExA)(rkey, NULL, 0,  &valueType, (unsigned char*)path, &pathSize) != ERROR_SUCCESS ) {
         FNC(RegCloseKey)(rkey);
         return NULL;
     }
