@@ -342,13 +342,11 @@ void FireFoxUnInitFunc()
 	if ( libnspr4 != NULL )
 		FreeLibrary(libnspr4); 
 
-#ifndef DEMO_VERSION
 	if ( libcrt != NULL ) {
 		FreeLibrary(libcrt);
 		Sleep(100);
 		FreeLibrary(libcrt);
 	}
-#endif
 
 	libnss = NULL;
 	libplc = NULL;

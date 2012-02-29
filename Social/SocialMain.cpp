@@ -6,6 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <windows.h>
 #include <stdio.h>
+#include <time.h>
 #include "..\common.h"
 #include "..\LOG.h"
 #include "..\bin_string.h"
@@ -76,7 +77,7 @@ void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *auth
 	DWORD delimiter = ELEM_DELIMITER;
 
 	if (program && topic && peers && body && author) {
-		tolog.add(&tstamp, sizeof(tstamp));
+		tolog.add(tstamp, sizeof(struct tm));
 		tolog.add(program, (wcslen(program)+1)*sizeof(WCHAR));
 		tolog.add(topic, (wcslen(topic)+1)*sizeof(WCHAR));
 		tolog.add(peers, (wcslen(peers)+1)*sizeof(WCHAR));
