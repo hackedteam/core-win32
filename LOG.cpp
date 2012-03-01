@@ -1427,7 +1427,7 @@ BOOL LOG_ReceiveNewConf()
 	// e cancella la copia di backup. altrimenti cancella 
 	// la copia non integra e basta. Torna TRUE se 
 	// ha copiato con successo.
-	if (!HM_CheckNewConf())
+	if (!HM_CheckNewConf(H4_CONF_BU))
 		return FALSE;
 
 	return TRUE; 
