@@ -490,7 +490,7 @@ BYTE *ParseActionParameter(JSONObject conf_json, DWORD *tag)
 		}
 
 	} else if (!wcscmp(action, L"event")) {
-		if (!wcscmp(conf_json[L"status"]->AsString().c_str(), L"enabled"))
+		if (!wcscmp(conf_json[L"status"]->AsString().c_str(), L"enable"))
 			*tag = AF_STARTEVENT;
 		else
 			*tag = AF_STOPEVENT;
