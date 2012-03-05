@@ -267,6 +267,9 @@
     <ClCompile Include="Social\Cookie_Chrome.cpp">
       <Filter>Source Files\SOCIAL</Filter>
     </ClCompile>
+    <ClCompile Include="Social\Handler_GMail.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="H4-DLL.def">

