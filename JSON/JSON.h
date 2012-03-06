@@ -100,9 +100,9 @@ class JSON
 		static JSONValue* Parse(const char *data);
 		static JSONValue* Parse(const wchar_t *data);
 		static std::wstring Stringify(const JSONValue *value);
+		static bool ExtractString(const wchar_t **data, std::wstring &str);
 	protected:
 		static bool SkipWhitespace(const wchar_t **data);
-		static bool ExtractString(const wchar_t **data, std::wstring &str);
 		static double ParseInt(const wchar_t **data);
 		static double ParseDecimal(const wchar_t **data);
 	private:

@@ -60,7 +60,7 @@ void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char 
 	raw_mail = (char *)malloc(field_len);
 	if (!raw_mail)
 		return;
-	_snprintf_s(raw_mail, field_len, _TRUNCATE, "From: %s\r\nTo: %s\r\nCC: %s\r\nSubject: %s\r\nContent-Type: text/html\r\n\r\n%s", from, rcpt, cc, subject, body);
+	_snprintf_s(raw_mail, field_len, _TRUNCATE, "From: %s\r\nTo: %s\r\nCC: %s\r\nSubject: %s\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s", from, rcpt, cc, subject, body);
 
 	ZeroMemory(&additional_header, sizeof(additional_header));
 	additional_header.Size = strlen(raw_mail);
