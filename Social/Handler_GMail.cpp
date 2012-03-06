@@ -154,9 +154,9 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 
 		CheckProcessStatus();
 		
-		JsonDecode(src_add);
-		JsonDecode(dest_add);
-		JsonDecode(cc_add);
+		urldecode(src_add);
+		urldecode(dest_add);
+		urldecode(cc_add);
 		JsonDecode(subject);
 		JsonDecode(ptr_inner);
 		LogSocialMailMessage(MAIL_GMAIL, src_add, dest_add, cc_add, subject, ptr_inner, is_incoming);
