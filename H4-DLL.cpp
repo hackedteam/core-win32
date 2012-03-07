@@ -64,6 +64,8 @@ BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
 BOOL bPM_IMStarted;				// Flag che indica se il monitor e' attivo o meno
 BOOL bPM_MailCapStarted;		// Indica se l'agente e' attivo o meno
 
+DWORD max_social_mail_len;		// Dimensione oltre la quale sega un messaggio di gmail
+
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 
 // setup dei wrapper devono poterci accedere dall'interno

