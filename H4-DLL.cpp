@@ -63,6 +63,7 @@ BOOL network_crisis;			// Se deve fermare le sync
 BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
 BOOL bPM_IMStarted;				// Flag che indica se il monitor e' attivo o meno
 BOOL bPM_MailCapStarted;		// Indica se l'agente e' attivo o meno
+BOOL bPM_ContactsStarted;
 
 DWORD max_social_mail_len;		// Dimensione oltre la quale sega un messaggio di gmail
 

