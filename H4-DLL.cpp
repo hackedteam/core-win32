@@ -2181,6 +2181,11 @@ BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back)
 		return FALSE;
 	}
 	root = value->AsObject();
+
+	if (!root[L"globals"]->IsObject()) {
+		delete value;
+		return FALSE;
+	}
 	obj = root[L"globals"]->AsObject();
 	call_back(obj, 0);
 

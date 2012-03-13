@@ -422,6 +422,9 @@ JSONValue::~JSONValue()
  */
 bool JSONValue::IsNull() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_Null;
 }
 
@@ -434,6 +437,9 @@ bool JSONValue::IsNull() const
  */
 bool JSONValue::IsString() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_String;
 }
 
@@ -446,6 +452,9 @@ bool JSONValue::IsString() const
  */
 bool JSONValue::IsBool() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_Bool;
 }
 
@@ -458,6 +467,9 @@ bool JSONValue::IsBool() const
  */
 bool JSONValue::IsNumber() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_Number;
 }
 
@@ -470,6 +482,9 @@ bool JSONValue::IsNumber() const
  */
 bool JSONValue::IsArray() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_Array;
 }
 
@@ -482,6 +497,9 @@ bool JSONValue::IsArray() const
  */
 bool JSONValue::IsObject() const
 {
+	if (this == NULL)
+		return false;
+
 	return type == JSONType_Object;
 }
 
@@ -495,6 +513,12 @@ bool JSONValue::IsObject() const
  */
 const std::wstring &JSONValue::AsString() const
 {
+	static std::wstring empty_string = L"";
+	// Se non e' una stringa almeno non scorra e torna una
+	// stringa vuota...
+	if (this == NULL || type != JSONType_String)
+		return empty_string;
+
 	return string_value;
 }
 
@@ -508,6 +532,10 @@ const std::wstring &JSONValue::AsString() const
  */
 bool JSONValue::AsBool() const
 {
+	// Se non e' un bool torna di default FALSE
+	if (this == NULL || type != JSONType_Bool)
+		return false;
+
 	return bool_value;
 }
 
@@ -521,6 +549,10 @@ bool JSONValue::AsBool() const
  */
 double JSONValue::AsNumber() const
 {
+	// Se non e' un numero torna di default 0
+	if (this == NULL || type != JSONType_Number)
+		return 0;
+
 	return number_value;
 }
 
@@ -534,6 +566,13 @@ double JSONValue::AsNumber() const
  */
 const JSONArray &JSONValue::AsArray() const
 {
+	static JSONArray empty_array;
+
+	if (this == NULL || type != JSONType_Array) {
+		empty_array.clear();
+		return empty_array;
+	}
+
 	return array_value;
 }
 

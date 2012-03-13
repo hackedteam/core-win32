@@ -428,9 +428,11 @@ void WINAPI ParseEvents(JSONObject conf_json, DWORD counter)
 	else
 		event_param.count = 0xFFFFFFFF;
 
-	if (conf_json[L"delay"])
+	if (conf_json[L"delay"]) {
 		event_param.delay = (conf_json[L"delay"]->AsNumber() * 1000);
-	else
+		if (event_param.delay == 0)
+			event_param.delay = 1;
+	} else
 		event_param.delay = 1;
 
 	EventMonitorAddLine(conf_json[L"event"]->AsString().c_str(), conf_json, &event_param, counter, conf_json[L"enabled"]->AsBool());
@@ -522,7 +524,10 @@ void WINAPI ParseActions(JSONObject conf_json, DWORD counter)
 	subaction_array = conf_json[L"subactions"]->AsArray();
 
 	for (i=0; i<subaction_array.size(); i++) {
-		JSONObject subaction = subaction_array[i]->AsObject();
+		JSONObject subaction;
+		if (!subaction_array[i]->IsObject())
+			continue;
+		subaction = subaction_array[i]->AsObject();
 		conf_ptr = ParseActionParameter(subaction, &tag);
 		// Se ha aggiunto una subaction "slow" marca tutta l'action come slow
 		// Basta una subaction slow per marcare tutto l'action
