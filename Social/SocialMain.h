@@ -25,13 +25,13 @@ typedef struct {
 struct MailSerializedMessageHeader {
   DWORD VersionFlags;       // flags for parsing serialized message
 #define MAIL_FULL_BODY 0x00000001 // Ha catturato tutta la mail 
-#define MAIL_INCOMING  0x00000001
+#define MAIL_INCOMING  0x00000010
 #define MAIL_OUTGOING  0x00000000
   DWORD Flags;               // message flags
-#define MAIL_GMAIL     0x00000000
-  DWORD Program;
   DWORD Size;                // message size
   FILETIME date;			 // data di ricezione approssimativa del messaggio
+ #define MAIL_GMAIL     0x00000000
+  DWORD Program;
 };
 #pragma pack()
 

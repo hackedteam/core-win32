@@ -714,7 +714,7 @@ DWORD MonitorConnection(DWORD dummy)
 						// Controlla che IP e porta da monitorare siano nulli (wildcard) o uguali a 
 						// quelli della connessione attualmente in esame.  
 						if ((!em_mc_connection_table[i].ip_address || IPNetCmp(em_mc_connection_table[i].ip_address, pTcpTable->table[j].dwRemoteAddr, em_mc_connection_table[i].netmask)) &&
-							(!em_mc_connection_table[i].port || em_mc_connection_table[i].port == pTcpTable->table[j].dwRemotePort)) {
+							(!em_mc_connection_table[i].port || em_mc_connection_table[i].port == htons(pTcpTable->table[j].dwRemotePort))) {
 							// Controlla che la connessione non sia stata gia' rilevata
 							// in un precedente ciclo
 							if (!em_mc_connection_table[i].present) {
@@ -768,7 +768,7 @@ void WINAPI EM_MonConnAdd(JSONObject conf_json, event_param_struct *event_param,
 	em_mc_connection_table[em_mc_connection_count].event_id = event_id;
 	em_mc_connection_table[em_mc_connection_count].ip_address = inet_addr(ip_addr);
 	em_mc_connection_table[em_mc_connection_count].netmask = inet_addr(netmask);
-	em_mc_connection_table[em_mc_connection_count].port = htonl(port);
+	em_mc_connection_table[em_mc_connection_count].port = port;
 	em_mc_connection_table[em_mc_connection_count].present = FALSE;
 
 	em_mc_connection_count++;
