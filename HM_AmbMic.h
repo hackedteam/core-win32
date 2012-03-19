@@ -45,6 +45,7 @@ DWORD __stdcall PM_AmbMicInit(JSONObject elem)
 {
 	amb_mic_voice_tsld = (DWORD) (elem[L"threshold"]->AsNumber() * 1000);
 	amb_mic_silence_time = (DWORD) elem[L"silence"]->AsNumber();
+	amb_mic_silence_time /= 5; // E' in blocchi da 5 secondi
 	amb_mic_calibration = (BOOL) elem[L"autosense"]->AsBool();
 
 	return 1;
