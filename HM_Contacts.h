@@ -67,7 +67,7 @@ BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR 
 	ADD_CONTACT_STRING(phone_mob, 0x7);
 	ADD_CONTACT_STRING(phone_hom, 0xC);
 	ADD_CONTACT_STRING(skype_name, 0x33);
-	ADD_CONTACT_STRING(facebook_page, 0x34);
+	ADD_CONTACT_STRING(facebook_page, 0x38);
 
 	Log_WriteFile(hfile, tolog.get_buf(), tolog.get_len());
 
