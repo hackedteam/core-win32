@@ -57,7 +57,7 @@ DWORD HttpSocialRequest(WCHAR *Host, WCHAR *verb, WCHAR *resource, DWORD port, B
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 	}
 
-	if (!FNC(WinHttpSendRequest)(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, s_buffer, sbuf_len, 0, NULL))  {
+	if (!FNC(WinHttpSendRequest)(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, s_buffer, sbuf_len, sbuf_len, NULL))  {
 		SAFE_FREE(cookies_w);
 		WinHttpCloseHandle(hRequest);
 		WinHttpCloseHandle(hConnect);
