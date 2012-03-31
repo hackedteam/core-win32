@@ -603,9 +603,7 @@ static DWORD CreateDCA_setup(HMServiceStruct *pData)
 
 DWORD __stdcall PM_PrintAgentStartStop(BOOL bStartFlag, BOOL bReset)
 {
-	if (bReset)
-		AM_IPCAgentStartStop(PM_PRINTAGENT, bStartFlag);
-	
+	AM_IPCAgentStartStop(PM_PRINTAGENT, bStartFlag);	
 	return 1;
 }
 

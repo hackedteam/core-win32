@@ -357,6 +357,18 @@ DWORD AM_MonitorSuspendAll()
 	return 1;
 }
 
+DWORD AM_MonitorStopAll()
+{
+	DWORD i;
+
+	for(i=0; i<dwDispatchCnt; i++) {
+		aDispatchArray[i].started = FALSE;
+		if (aDispatchArray[i].pStartStop)
+			aDispatchArray[i].pStartStop(FALSE, TRUE);
+	}
+	return 1;
+}
+
 // Rimette gli agent nello stato in cui erano al momento
 // della SuspendAll (usato quando c'e' una sync e uno scambio
 // di code dei log).
@@ -466,6 +478,7 @@ void AM_SuspendRestart(DWORD action)
 	} else if (action == AM_RESET) {
 		// Attiva gli agent e inizializza il thread
 		// riportandoli nello stato del file di configuazione.
+		AM_MonitorStopAll();
 		UpdateAgentConf();
 		hAMThread = HM_SafeCreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE) AM_Main, (LPVOID) NULL, 0, &dwThid);		
 	} else if (action == AM_RESTART) {
