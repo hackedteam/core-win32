@@ -1852,7 +1852,9 @@ void EndCall()
 			SaveWav(wave_array[i], sample_size[i], sample_channels[i], additional_data, additional_len);
 			sample_size[i] = 0;
 		}
+	}
 
+	for (i=0; i<2; i++) {
 		// Aggiunge il chunk di fine chiamata
 		// Forza la marcatura temporale alla fine dell'ultimo chunk della chiamata
 		channel_time_start[i].dwHighDateTime = channel_time_last[i].dwHighDateTime;
