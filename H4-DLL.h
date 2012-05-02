@@ -42,7 +42,7 @@ extern char *HM_ReadClearConf(char *);
 extern BOOL HM_ExpandStrings(char *source, char *dest, DWORD dsize);
 extern BOOL HM_ExpandStringsW(WCHAR *source, WCHAR *dest, DWORD dsize);
 extern BOOL GetUserUniqueHash(BYTE *user_hash, DWORD hash_size);
-extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi);
+extern void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, BOOL inherit);
 extern void HM_CalcDateDelta(long long, nanosec_time *);
 extern void *memmem (const void *haystack, size_t haystack_len, const void *needle, size_t needle_len);
 extern BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime);

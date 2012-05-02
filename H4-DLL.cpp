@@ -1541,7 +1541,7 @@ BOOL HM_GuessNames()
 }
 
 
-void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi)
+void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, BOOL inherit)
 {
 	HMODULE hmod = NULL;
 	CreateProcess_t pCreateProcess = NULL;
@@ -1550,7 +1550,7 @@ void IndirectCreateProcess(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS
 	if (hmod)
 		pCreateProcess = (CreateProcess_t)HM_SafeGetProcAddress(hmod, "CreateProcessA");
 	if (pCreateProcess)
-		pCreateProcess(NULL, cmd_line, 0, 0, FALSE, flags, 0, 0, si, pi);
+		pCreateProcess(NULL, cmd_line, 0, 0, inherit, flags, 0, 0, si, pi);
 }
 
 void IndirectCreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_INFORMATION *pi, HANDLE hToken)
@@ -1559,7 +1559,7 @@ void IndirectCreateProcessAsUser(char *cmd_line, DWORD flags, STARTUPINFO *si, P
 	CreateProcessAsUser_t pCreateProcessAsUser = NULL;
 
 	if (!hToken)
-		return IndirectCreateProcess(cmd_line, flags, si, pi);
+		return IndirectCreateProcess(cmd_line, flags, si, pi, FALSE);
 
 	hmod = GetModuleHandle("advapi32.dll");
 	if (hmod)

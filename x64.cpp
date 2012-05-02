@@ -186,7 +186,7 @@ void Run64Core()
 
 	// Lancia rundll32 a 64bit
     if(pWow64DisableWow64FsRedirection(&OldValue))  {
-		IndirectCreateProcess(cmd_line, 0, &si, &pi);
+		IndirectCreateProcess(cmd_line, 0, &si, &pi, FALSE);
         pWow64RevertWow64FsRedirection(OldValue);
 	}
 

