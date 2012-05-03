@@ -286,7 +286,8 @@ BOOL WINAPI DA_Execute(BYTE *command)
 	// Lo aggiunge alla lista dei processi eseguiti
 	if (pi.dwProcessId) 
 		SM_AddExecutedProcess(pi.dwProcessId);
-	
+
+	Sleep(300);
 	return FALSE;
 }
 
