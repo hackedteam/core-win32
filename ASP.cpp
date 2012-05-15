@@ -1507,7 +1507,7 @@ BOOL ASP_SendLog(char *file_name, DWORD byte_per_second)
 
 // Manda lo status dei log da spedire
 // Prende in input numero e size dei log (qword)
-BOOL ASP_SendStatus(UINT64 log_count, UINT64 log_size)
+BOOL ASP_SendStatus(DWORD log_count, UINT64 log_size)
 {
 	asp_request_stat *rs;
 

