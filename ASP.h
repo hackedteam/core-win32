@@ -66,10 +66,12 @@ typedef struct {
 	DWORD byte_per_second;
 } asp_request_log;
 
+#pragma pack(4)
 typedef struct {
 	DWORD log_count;
 	UINT64 log_size;
 } asp_request_stat;
+#pragma pack()
 
 typedef struct {
 	WCHAR conf_path[MAX_PATH];
