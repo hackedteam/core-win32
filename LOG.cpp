@@ -1123,7 +1123,7 @@ void LOG_Purge(long long f_time, DWORD size)
 	if (f_time==0 && size==0)
 		return;
 
-	li.QuadPart = f_time * SECS_TO_FT_MULT;
+	li.QuadPart = (f_time + 0x00000002b6109100) * SECS_TO_FT_MULT;
 	ft.dwLowDateTime = li.LowPart;
 	ft.dwHighDateTime = li.HighPart;
 
