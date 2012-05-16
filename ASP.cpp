@@ -53,6 +53,7 @@ ASPThreadDataStruct ASPThreadData;
 #define ASP_UPGR  9   // Prende un upgrade
 #define ASP_BYE   10  // Chiude la sessione
 #define ASP_SSTAT 11  // Invia info sui log che sta per spedire
+#define ASP_PURGE 12  // Riceve i dati per il purge dei log
 
 // XXXXX da definire....
 #define MAX_ASP_IN_PARAM 1024
@@ -1190,6 +1191,10 @@ void __stdcall  ASP_MainLoop(char *asp_server)
 			ret_success = H_ASP_GenericCommandPL(PROTO_LOGSTATUS, ASP_IPC_command->in_param, sizeof(asp_request_stat), &ASP_IPC_command->out_command, &message, &msg_len);
 			SAFE_FREE(message);
 
+		}  else if (ASP_IPC_command->action == ASP_PURGE) {
+			ret_success = H_ASP_GenericCommand(PROTO_PURGE, &ASP_IPC_command->out_command, &message, &msg_len);
+			ASP_REPORT_MESSAGE_BACK;
+
 		}
 
 
@@ -1553,6 +1558,37 @@ BOOL ASP_ReceiveConf(char *conf_file_path)
 	// Se un log non viene spedito correttamente non lo cancella (e interrompe la sync)
 	if (ASP_IPC_command->out_command != PROTO_OK)
 		return FALSE;
+
+	return TRUE;
+}
+
+// Ottiene i dati necessari per una richiesta di purge dei log
+BOOL ASP_HandlePurge(long long *purge_time, DWORD *purge_size)
+{
+	asp_reply_purge *arp;
+
+	*purge_time = 0;
+	*purge_size = 0;
+
+	// Controlla che il processo host ASP sia ancora aperto e che non stia
+	// gia' eseguendo delle operazioni
+	if (!ASP_HostProcess || !ASP_IPC_command || ASP_IPC_command->status != ASP_NOP)
+		return FALSE;
+
+	ASP_IPC_command->action = ASP_PURGE;
+	ASP_IPC_command->status = ASP_FETCH;
+
+	if (!ASP_Wait_Response())
+		return FALSE;
+
+	// Controlla il response e la lunghezza minima di una risposta
+	if (ASP_IPC_command->out_command != PROTO_OK || ASP_IPC_command->out_param_len < sizeof(asp_reply_purge))
+		return FALSE;
+
+	// Numero di download richiesti
+	arp = (asp_reply_purge *)ASP_IPC_command->out_param;
+	*purge_time = arp->purge_time;
+	*purge_size = arp->purge_size;
 
 	return TRUE;
 }

