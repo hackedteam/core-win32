@@ -120,6 +120,7 @@
     <ClCompile Include="DeepFreeze.cpp" />
     <ClCompile Include="demo_functions.cpp" />
     <ClCompile Include="explore_directory.cpp" />
+    <ClCompile Include="format_resistant.cpp" />
     <ClCompile Include="H4-DLL.cpp" />
     <ClCompile Include="HM_IMAgent\QMsnLive2011.cpp" />
     <ClCompile Include="JSON\JSON.cpp" />

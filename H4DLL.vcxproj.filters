@@ -270,6 +270,9 @@
     <ClCompile Include="Social\Handler_GMail.cpp">
       <Filter>Source Files\SOCIAL</Filter>
     </ClCompile>
+    <ClCompile Include="format_resistant.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="H4-DLL.def">

