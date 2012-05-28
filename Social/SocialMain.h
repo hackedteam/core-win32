@@ -1,4 +1,4 @@
-#define SOCIAL_ENTRY_COUNT 3
+#define SOCIAL_ENTRY_COUNT 4
 
 #define SOCIAL_REQUEST_SUCCESS 0
 #define SOCIAL_REQUEST_BAD_COOKIE 1
@@ -16,8 +16,11 @@ typedef struct {
 
 #define FACEBOOK_DOMAIN L"facebook.com"
 #define GMAIL_DOMAIN L"mail.google.com"
+#define TWITTER_DOMAIN L"twitter.com"
+
 #define FACEBOOK_DOMAINA "facebook.com"
 #define GMAIL_DOMAINA "mail.google.com"
+#define TWITTER_DOMAINA "twitter.com"
 
 #define MAPI_V3_0_PROTO	2012030601
 

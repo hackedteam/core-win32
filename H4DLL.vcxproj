@@ -137,6 +137,7 @@
     <ClCompile Include="Social\Cookie_IExplorer.cpp" />
     <ClCompile Include="Social\Handler_Facebook.cpp" />
     <ClCompile Include="Social\Handler_GMail.cpp" />
+    <ClCompile Include="Social\Handler_Twitter.cpp" />
     <ClCompile Include="Social\NetworkHandler.cpp" />
     <ClCompile Include="Social\SocialMain.cpp" />
     <ClCompile Include="status_log.cpp" />
