@@ -108,7 +108,6 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 			_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser_inner1);
 			parser_inner1 = parser_inner2 + 1;
 
-			MessageBox(NULL, contact_name, screen_name, MB_OK);
 			contact_name_w = UTF8_2_UTF16(contact_name);
 			screen_name_w = UTF8_2_UTF16(screen_name);
 
