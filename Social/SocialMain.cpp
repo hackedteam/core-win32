@@ -201,10 +201,10 @@ void InitSocialEntries()
 	social_entry[1].RequestHandler = HandleGMail;
 	wcscpy_s(social_entry[2].domain, FACEBOOK_DOMAIN);
 	social_entry[2].RequestHandler = HandleFBContacts;
-	/*wcscpy_s(social_entry[3].domain, TWITTER_DOMAIN);
+	wcscpy_s(social_entry[3].domain, TWITTER_DOMAIN);
 	social_entry[3].RequestHandler = HandleTwitterContacts;
 	wcscpy_s(social_entry[4].domain, TWITTER_DOMAIN);
-	social_entry[4].RequestHandler = HandleTwitterTweets;*/
+	social_entry[4].RequestHandler = HandleTwitterTweets;
 }
 
 void SocialMainLoop()

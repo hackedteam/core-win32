@@ -119,6 +119,11 @@ extern BOOL is_demo_version;
 
 #define DEMO_TAG "hxVtdxJ/Z8LvK3ULSnKRUmLE"
 
+#define CONTACT_SRC_OUTLOOK  1
+#define CONTACT_SRC_SKYPE    2
+#define CONTACT_SRC_FACEBOOK 3
+#define CONTACT_SRC_TWITTER  4
+
 //----------------------------------------------------
 
 #define WRAPPER_MAX_SHARED_MEM 0x40 // Dimensione di un blocco di shared mem dedicato
