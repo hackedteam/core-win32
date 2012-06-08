@@ -1442,7 +1442,7 @@ void UpdateDriver(char *source_path)
 	char sys_path[DLLNAMELEN];
 	char comp_path[DLLNAMELEN*2];
 	PVOID old_value;
-
+	
 	if (!IsDriverRunning(DRIVER_NAME_W))
 		return;
 	
@@ -1451,7 +1451,7 @@ void UpdateDriver(char *source_path)
 	sprintf(comp_path, "%s%s%s", sys_path, "\\system32\\drivers\\", DRIVER_NAME);
 	
 	old_value = DisableWow64Fs();
-	FNC(MoveFileExA)(source_path, comp_path, MOVEFILE_DELAY_UNTIL_REBOOT);
+	CopyFile(source_path, comp_path, FALSE);	
 	RevertWow64Fs(old_value);
 }
 

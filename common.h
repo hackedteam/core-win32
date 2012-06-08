@@ -63,7 +63,7 @@ extern BOOL is_demo_version;
 #define COMMON_MOBILE_CORE_NAME "wmcore.001"
 #define COMMON_MOBILE_ZOO_NAME "wmcore.002"
 #define COMMON_EXE_INSTALLER_NAME "installer"
-#define COMMON_DRV32_NAME "driver32"
+#define COMMON_DRV32_NAME "driver"
 #define COMMON_DRV64_NAME "driver64"
 
 #define BB_INSTALL_NAME1 "bb_in.exe"
