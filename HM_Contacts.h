@@ -15,9 +15,9 @@ HANDLE hCnSkypePMThread = NULL;
 typedef struct _ContactHeader{
         DWORD           dwSize;
         DWORD           dwVersion;
+        LONG            lOid;
 		DWORD			program;
 		DWORD			flags;
-        LONG            lOid;
 } ContactHeaderStruct, *pContactHeaderStruct;
 
 DWORD CalcEntryLen(WCHAR *string)
