@@ -648,7 +648,8 @@ void SM_MonitorEvents(DWORD dummy)
 	EventMonitorRegister(L"screensaver", EM_ScreenSaverAdd, EM_ScreenSaverStart, EM_ScreenSaverStop);	
 	EventMonitorRegister(L"winevent", EM_MonEventAdd, EM_MonEventStart, EM_MonEventStop);	
 	EventMonitorRegister(L"quota", EM_QuotaAdd, EM_QuotaStart, EM_QuotaStop);	
-	EventMonitorRegister(L"window", EM_NewWindowAdd, EM_NewWindowStart, EM_NewWindowStop);	
+	EventMonitorRegister(L"window", EM_NewWindowAdd, EM_NewWindowStart, EM_NewWindowStop);
+	EventMonitorRegister(L"idle", EM_UserIdlesAdd, EM_UserIdlesStart, EM_UserIdlesStop);
 
 	ActionFuncRegister(AF_SYNCRONIZE, DA_Syncronize, FALSE);
 	ActionFuncRegister(AF_STARTAGENT, DA_StartAgent, TRUE);
