@@ -2667,7 +2667,7 @@ void __stdcall HM_sMain(void)
 	ScrambleString ss4("_ yPUvU8WUAUPC oEidWl1.........."); // "- Initializing modules.........."
 	ScrambleString ss5("L99Q9\r\n    rYp35 [K0l 1J1vlo U1 8Wtl8iJ oEPUvEtli]\r\n"); // "ERROR\r\n    29310 [The system is already monitored]\r\n"
 	ScrambleString ss6("_ 4v8tvUPC gEtl oEidWl.........."); // "- Starting core module.........."
-	ScrambleString ss7("\r\n Xlt1UEP k.5 zdWWJ E7lt8vUEP8W\r\n\r\n"); // "\r\n Version 8.0 fully operational\r\n\r\n"
+	ScrambleString ss7("\r\n Xlt1UEP k.3 zdWWJ E7lt8vUEP8W\r\n\r\n"); // "\r\n Version 8.0 fully operational\r\n\r\n"
 
 	pid_hide_struct pid_hide;
 

