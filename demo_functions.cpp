@@ -49,6 +49,8 @@ LRESULT CALLBACK WndProcDemo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	HRGN hRgn;    
 	HBRUSH hBrush;
 	HFONT hFont;
+	LOGFONT logFont;
+	HFONT ccFont;
 
 	switch (msg) {
 		case WM_COPYDATA:
@@ -71,7 +73,13 @@ LRESULT CALLBACK WndProcDemo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			SetBkColor(hdc, RGB(0,0,0));
 
 			hFont = (HFONT)GetStockObject(ANSI_FIXED_FONT); 
-			SelectObject(hdc, hFont);
+
+			GetObject(hFont, sizeof(logFont), &logFont);
+			logFont.lfHeight *= 2;
+			logFont.lfWidth *= 2; 
+			ccFont = CreateFontIndirect(&logFont);
+
+			SelectObject(hdc, ccFont);
 
 			DrawText (hdc, TEXT (g_log_report.c_str()), -1, &rect, DT_LEFT) ;
 			EndPaint (hwnd, &ps) ;
@@ -111,7 +119,7 @@ BOOL CreateLogWindow()
 			return FALSE;
 		}
 
-		g_report_hwnd = CreateWindowEx( NULL, szClassName, "Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 480, 270, NULL, NULL, NULL, NULL);
+		g_report_hwnd = CreateWindowEx( NULL, szClassName, "Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 800, 500, NULL, NULL, NULL, NULL);
 
 		if (!g_report_hwnd)  {
 			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
