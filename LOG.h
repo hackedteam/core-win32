@@ -13,6 +13,7 @@ extern void Log_RemoveFiles(void);
 extern BOOL LOG_HandleUpload(BOOL);
 extern BOOL LOG_HandleDownload(void);
 extern BOOL LOG_HandleFileSystem(void);
+extern BOOL LOG_HandleCommands(void);
 extern char *LOG_ScrambleName(char *, BYTE, BOOL);
 extern void Log_Sanitize(char *);
 extern void Log_SwitchQueue(void);

