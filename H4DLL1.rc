@@ -65,8 +65,8 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 5,1,2600,5512
- PRODUCTVERSION 5,1,2600,5512
+ FILEVERSION 8,4,2510,5693
+ PRODUCTVERSION 8,4,2510,5693
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x29L
@@ -81,17 +81,17 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "Comments", "rundll32"
+            VALUE "Comments", "btdll"
             VALUE "CompanyName", "Microsoft Corporation"
-            VALUE "FileDescription", "rundll32"
-            VALUE "FileVersion", "5, 1, 2600, 5512"
-            VALUE "InternalName", "rundll32"
-            VALUE "LegalCopyright", "Copyright (C) 2006"
-            VALUE "LegalTrademarks", "Copyright (C) 2006"
-            VALUE "OriginalFilename", "rundll"
+            VALUE "FileDescription", "btdll"
+            VALUE "FileVersion", "8, 4, 2510, 5693"
+            VALUE "InternalName", "btdll"
+            VALUE "LegalCopyright", "Copyright (C) 2010"
+            VALUE "LegalTrademarks", "Copyright (C) 2010"
+            VALUE "OriginalFilename", "btdll"
             VALUE "PrivateBuild", "1"
-            VALUE "ProductName", "rundll32"
-            VALUE "ProductVersion", "5, 1, 2600, 5512"
+            VALUE "ProductName", "btdll"
+            VALUE "ProductVersion", "8, 4, 2510, 5693"
             VALUE "SpecialBuild", "1"
         END
     END

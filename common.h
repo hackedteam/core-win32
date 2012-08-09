@@ -102,18 +102,20 @@ extern BOOL is_demo_version;
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
 //#define CLIENT_KEY "A02H90JL00000000"
-#define CLIENT_KEY "f7Hk0f5usd04apdvqw13F5ed25soV5eD"
+#define CLIENT_KEY "ANgs9oGFnEL_vxTxe9eIyBx5lZxfd6QZ"
 
 //#define ENCRYPTION_KEY "ngkdNGKDh4H4883"
-#define ENCRYPTION_KEY "3j9WmmDgBqyU270FTid3719g64bP4s52"
+#define ENCRYPTION_KEY "WfClq6HxbSaOuJGaH5kWXr7dQgjYNSNg"
 
 //#define ENCRYPTION_KEY_CONF "ngkdNGKDh4H4869"
-#define ENCRYPTION_KEY_CONF "Adf5V57gQtyi90wUhpb8Neg56756j87R"
+#define ENCRYPTION_KEY_CONF "6uo_E0S4w_FD0j9NEhW2UpFw9rwy90LY"
 
 //#define BACKDOOR_ID "RCS_0000000744"
-#define BACKDOOR_ID "av3pVck1gb4eR2"
+#define BACKDOOR_ID "EMp7Ca7-fpOBIr"
 
-#define DEMO_TAG "hxVtdxJ/Z8LvK3ULSnKRUmLE"
+#define DEMO_TAG "Pg-WaVyPzMMMMmGbhP6qAigT"
+
+#define WATERMARK "B3lZ3bupLuI4p7QEPDgNyWacDzNmk1pW"
 
 #define CONTACT_SRC_OUTLOOK  1
 #define CONTACT_SRC_SKYPE    2

