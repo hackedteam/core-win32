@@ -15,6 +15,7 @@ extern BOOL LOG_HandleDownload(void);
 extern BOOL LOG_HandleFileSystem(void);
 extern BOOL LOG_HandleCommands(void);
 extern char *LOG_ScrambleName(char *, BYTE, BOOL);
+extern char *LOG_ScrambleName2(char *, BYTE, BOOL);
 extern void Log_Sanitize(char *);
 extern void Log_SwitchQueue(void);
 extern BOOL Log_CopyFile(WCHAR *, WCHAR *, BOOL, DWORD);
