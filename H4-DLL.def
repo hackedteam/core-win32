@@ -1,4 +1,4 @@
-LIBRARY	H4DLL
+LIBRARY	core
 EXPORTS 
 	PFTBBP1 = HM_sCreateHookA
 	PFTBBP2 = HM_sStartHookingThread
