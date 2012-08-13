@@ -545,8 +545,18 @@ WCHAR *GetLocalSettings(WCHAR *tmp_dir, char *curr_home)
 		}
 	}
 
-	if (ptr && ptr2)
+	if (ptr && ptr2) {
 		_snwprintf_s(ret_string, MAX_PATH, _TRUNCATE, L"%s%S", temp_string, ptr2);		
+		len = wcslen(ret_string); 
+		if (len>0) {
+			if (ret_string[len-1] == L'\\')
+				ret_string[len-1] = 0;
+
+			ptr = wcsrchr(ret_string, L'\\');
+			if (ptr)
+				*ptr = 0;
+		}
+	}
 
 	SAFE_FREE(temp_string);
 	return ret_string;
