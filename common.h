@@ -124,6 +124,7 @@ extern BOOL is_demo_version;
 #define CONTACT_SRC_SKYPE    2
 #define CONTACT_SRC_FACEBOOK 3
 #define CONTACT_SRC_TWITTER  4
+#define CONTACT_SRC_GMAIL    5
 
 #define CONTACTS_MYACCOUNT 0x80000000
 
