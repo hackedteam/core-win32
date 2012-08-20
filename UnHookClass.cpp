@@ -575,7 +575,7 @@ BOOL HideDevice::df_freeze()
 
 HideDevice::HideDevice(void) { 
 	//hFile = FNC(CreateFileA)("\\\\.\\MSH4DEV1", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
-	hFile = FNC(CreateFileA)("\\\\.\\ABCDEFGH", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	hFile = FNC(CreateFileA)("\\\\.\\ABCxEFxH", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	sdt_init = FALSE;
 }
 
@@ -632,7 +632,7 @@ HideDevice::HideDevice(WCHAR *driver_path) {
 			FNC(CloseServiceHandle)(sh);
 	}
 	// Ora la DriverEntry è finita e il device è creato
-	hFile = FNC(CreateFileA)("\\\\.\\abcdefgh", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
+	hFile = FNC(CreateFileA)("\\\\.\\ABCxEFxH", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 	//hFile = FNC(CreateFileA)("\\\\.\\MSH4DEV1", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);  
 }
 
