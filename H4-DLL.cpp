@@ -2653,8 +2653,10 @@ BOOL FindModulePath(char *path_buf, DWORD path_size)
 	mod_num = mod_size/sizeof(HMODULE);
 	for (i=0; i<mod_num; i++) {
 		// L'abbiamo trovato
-		if ((DWORD)GetProcAddress(modules[i], "PFTBBP1") == (DWORD)HM_sCreateHookA)
+		if ((DWORD)GetProcAddress(modules[i], "PFTBBP1")) {
 			hLib = modules[i];
+			break;
+		}
 	}
 
 	if (!hLib) 
