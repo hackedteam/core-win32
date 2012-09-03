@@ -225,7 +225,7 @@ void URLOleWalk(IAccessible* iAcc, UrlLogParamsStruct *pUrlLogParams, int deep)
 	
 	if (iAcc->get_accValue(vChild, &val) == S_OK) {
 		if (val) {
-			if (!wcsncmp(val, L"http", wcslen(L"http")) || (pUrlLogParams->browser_type == BROWSER_OPERA && isURL(val)) ) {
+			if (!wcsncmp(val, L"http", wcslen(L"http")) || (pUrlLogParams->browser_type == BROWSER_OPERA && isURL(val)) || (pUrlLogParams->browser_type == BROWSER_CHROME && isURL(val))) {
 				WriteLogURL(val, pUrlLogParams, FALSE);
 				m_url_found = TRUE;
 				SysFreeString(val);
