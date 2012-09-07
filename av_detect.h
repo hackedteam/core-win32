@@ -336,7 +336,7 @@ BOOL IsBitDefenderAVPlus()
 	char buffer[DLLNAMELEN];
 	HANDLE hff;
 
-	ScrambleString ss1("Iiz1zWvt.1J1"); // "bdfsfltr.sys"
+	ScrambleString ss1("8Rg0R.1J1"); // "avchv.sys"
 	ScrambleString ss2("8Rgp.1J1"); // "avc3.sys"
 
 	if (IsDriverRunning(ss1.get_wstr()) && IsDriverRunning(ss2.get_wstr()))
