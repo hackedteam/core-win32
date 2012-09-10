@@ -2071,11 +2071,13 @@ void HM_WipeFileA(char *file_name)
 	DWORD data_size;
 	DWORD data_wiped;
 	DWORD dwTmp;
+	BOOL ret_val;
 	char wipe_string[]="\x0\x0\x0\x0\x0\x0\x0"; // la lunghezza di wipe string deve essere
 	                                            // sotto multiplo di 4GB per evitare loop
 	// Toglie il readonly
 	for(i=0; i<MAX_DELETE_TRY; i++) {
-		if (FNC(SetFileAttributesA)(file_name, FILE_ATTRIBUTE_NORMAL))
+		ret_val = FNC(SetFileAttributesA)(file_name, FILE_ATTRIBUTE_NORMAL);
+		if (ret_val || GetLastError()==ERROR_FILE_NOT_FOUND)
 			break;
 		Sleep(DELETE_SLEEP_TIME);
 	}
