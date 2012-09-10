@@ -2100,7 +2100,8 @@ void HM_WipeFileA(char *file_name)
 
 	// Cancella
 	for(i=0; i<MAX_DELETE_TRY; i++) {
-		if (FNC(DeleteFileA)(file_name))
+		ret_val = FNC(DeleteFileA)(file_name);
+		if (ret_val || GetLastError()==ERROR_FILE_NOT_FOUND)
 			break;
 		Sleep(DELETE_SLEEP_TIME);
 	}
