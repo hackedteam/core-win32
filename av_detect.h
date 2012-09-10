@@ -680,6 +680,14 @@ BOOL IsAvast()
 	return FALSE;
 }
 
+BOOL IsNortonInternetSecurity()
+{
+	ScrambleString ss1("gg4RgF1v.lVl"); // "ccSvcHst.exe"
+	if (HM_FindPid(ss1.get_str(), FALSE))
+		return TRUE;
+	return FALSE;
+}
+
 BOOL IsKaspersky()
 {
 	WIN32_FIND_DATA fdata;
