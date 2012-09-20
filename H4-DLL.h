@@ -148,6 +148,17 @@ typedef DWORD (__stdcall *HM_CreateService_t)(DWORD, HMServiceStruct *);
 										__asm    CALL EBX \
 										__asm	 MOV DWORD PTR SS:[ret_code], EAX 
 
+#define CALL_ORIGINAL_API_SEQ(ARGS_N) 	__asm	 MOV EBX, DWORD PTR SS:[pData] \
+										__asm	 LEA ESI, DWORD PTR SS:[EBP+8] \
+										__asm	 MOV EDI, ARGS_N \
+										__asm	 SHL EDI, 2 \
+										__asm	 SUB ESP, EDI \
+										__asm    MOV EDI, ESP \
+										__asm	 MOV ECX, ARGS_N \
+										__asm	 REP MOVSD \
+										__asm    CALL EBX \
+										__asm	 MOV DWORD PTR SS:[ret_code], EAX 
+
 #define IF_WSTRCMP(x,y) BOOLEAN is_equal;\
 	                    is_equal = TRUE;\
 			  		    if (x) {\

