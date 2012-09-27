@@ -100,7 +100,7 @@ WCHAR *wRequest_array[] = {
 
 #define REQUEST_ARRAY_LEN 1
 WCHAR *wRequest_array[] = {
-		L"/"
+		L"/index.html"
 	};
 
 HANDLE ASP_HostProcess = NULL; // Processo che gestisce ASP
