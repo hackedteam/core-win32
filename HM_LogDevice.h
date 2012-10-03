@@ -314,16 +314,19 @@ void GetDriveList(HANDLE hfile)
 }
 
 #define APPLICATION_HEADER_TEXT L"\n\nApplication List:\n"
-VOID GetApplicationInfo(HANDLE hfile)
+VOID GetApplicationInfo(HANDLE hfile, BOOL bX64View)
 {
 	HKEY hKeyUninstall = NULL, hKeyProgram = NULL;
 	DWORD dwordval, index, len;
 	WCHAR stringval[128], product[256];
+	ULONG uSamDesidered = KEY_READ;
+     if (bX64View)
+         uSamDesidered |= KEY_WOW64_64KEY;
 
 	do {
 		index = 0;
 
-		if(FNC(RegOpenKeyExW)(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", 0, KEY_READ, &hKeyUninstall) != ERROR_SUCCESS) {
+		if(FNC(RegOpenKeyExW)(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", 0, uSamDesidered, &hKeyUninstall) != ERROR_SUCCESS) {
 			break;
 		}
 
@@ -412,7 +415,8 @@ void DumpDeviceInfo()
 	// Enumera i drive presenti
 	GetDriveList(hfile);
 
-	GetApplicationInfo(hfile);
+	GetApplicationInfo(hfile, FALSE);
+	GetApplicationInfo(hfile, TRUE);
 	
 	// NULL termina tutta la stringa
 	Log_WriteFile(hfile, (BYTE *)&null_wchar, sizeof(WCHAR));
