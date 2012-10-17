@@ -97,7 +97,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "FSD"
 
 // Versione del client 
-#define CLIENT_VERSION "2012063006"
+#define CLIENT_VERSION "2012102901"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
