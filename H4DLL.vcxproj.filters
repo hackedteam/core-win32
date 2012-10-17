@@ -283,11 +283,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="procedures.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="aes_alg.h">
       <Filter>Source Files\CRYPT</Filter>
     </ClInclude>
@@ -563,5 +558,10 @@
     <ResourceCompile Include="H4DLL1.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="procedures.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

@@ -194,7 +194,11 @@
     <None Include="H4-DLL.def" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="procedures.asm" />
+    <CustomBuild Include="procedures.asm">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml.exe /c /nologo /Zi /Fo"Release\procedures.obj" /W3 /errorReport:prompt  /Taprocedures.asm</Command>
+      <FileType>Document</FileType>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\procedures.obj;%(Outputs)</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aes_alg.h" />
