@@ -2398,7 +2398,7 @@ void HM_UpdateGlobalConf()
 	process_bypassed = EMBEDDED_BYPASS;
 	ZeroMemory(process_bypass_list, sizeof(process_bypass_list));
 	strcpy(process_bypass_list[0],"outlook.exe");
-	//strcpy(process_bypass_list[1],"gmer.exe");
+	strcpy(process_bypass_list[1],"ielowutil.exe");
 	//strcpy(process_bypass_list[2],"KProcCheck.exe");
 	strcpy(process_bypass_list[3],"TaskMan.exe");
 	strcpy(process_bypass_list[4],"hackmon.exe");
