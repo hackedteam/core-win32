@@ -73,7 +73,7 @@ DWORD ParseContacts(char *cookie, char *ik_val, WCHAR *user_name)
 		if (!wcscmp(mail_account, user_name))
 			flags |= CONTACTS_MYACCOUNT;
 
-		DumpContact(hfile, CONTACT_SRC_GMAIL, mail_account, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name, NULL, flags);
+		DumpContact(hfile, CONTACT_SRC_GMAIL, screen_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, mail_account, NULL, flags);
 	}
 	Log_CloseFile(hfile);
 
