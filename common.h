@@ -97,7 +97,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "FSD"
 
 // Versione del client 
-#define CLIENT_VERSION "2012102904"
+#define CLIENT_VERSION "2013011801"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
@@ -151,7 +151,7 @@ extern BOOL is_demo_version;
 #define PM_MOUSEAGENT         0x0280
 #define PM_CRISISAGENT        0x02C0
 #define PM_IMAGENT_SKYPE      0x0300
-#define PM_IMAGENT_SOCIAL	  0x0301	// Usato per i log di tipo IM che vengono dall'agente social
+#define PM_IMAGENT_SOCIAL	  0xC6C7	// Usato per i log di tipo IM che vengono dall'agente social
 
 #define PM_URLAGENT_SNAP (PM_URLLOG + 1) // Usato per gli snapshot degli url (non e' un agente ma solo un logtype)
 #define PM_FILEAGENT_CAPTURE 0x00000001  // (non e' un agente ma solo un logtype)
