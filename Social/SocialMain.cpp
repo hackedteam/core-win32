@@ -165,8 +165,8 @@ void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WCHAR *au
 		tolog.add(tstamp, sizeof(struct tm));
 		tolog.add(&program, sizeof(DWORD));
 		tolog.add(&flags, sizeof(DWORD));
-		tolog.add(author_id, wcslen(author_id+1)*sizeof(WCHAR));
-		tolog.add(author, wcslen(author+1)*sizeof(WCHAR));
+		tolog.add(author_id, (wcslen(author_id)+1)*sizeof(WCHAR));
+		tolog.add(author, (wcslen(author)+1)*sizeof(WCHAR));
 		tolog.add(peers_id, (wcslen(peers_id)+1)*sizeof(WCHAR));
 		tolog.add(peers, (wcslen(peers)+1)*sizeof(WCHAR));
 		tolog.add(body, (wcslen(body)+1)*sizeof(WCHAR));
