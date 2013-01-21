@@ -297,7 +297,7 @@ DWORD ParseTweet(char *user, char *cookie)
 
 		// XXX Sistemare il timestamp
 		GET_TIME(tstamp);
-		LogSocialIMMessageA(CHAT_PROGRAM_TWITTER, "Twitter", "", screen_name, "", tweet_body, &tstamp, FALSE); 	
+		LogSocialIMMessageA(CHAT_PROGRAM_TWITTER, "", "", screen_name, "", tweet_body, &tstamp, FALSE); 	
 
 		parser1 = strstr(parser1, TW_TWEET_TS);
 		if (!parser1)
