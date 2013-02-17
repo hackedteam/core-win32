@@ -69,10 +69,10 @@ extern BOOL is_demo_version;
 #define BB_INSTALL_NAME1 "bb_in.exe"
 #define BB_INSTALL_NAME2 "javaloader.exe"
 
-#define DRIVER_NAME_OLD "MSDRV1.SYS" 
-#define DRIVER_NAME_OLD_W L"MSDRV1.SYS"
-#define DRIVER_NAME "ndisk.sys" 
-#define DRIVER_NAME_W L"ndisk.sys"
+#define DRIVER_NAME_OLD "b57xdata.SYS" 
+#define DRIVER_NAME_OLD_W L"b57xdata.SYS"
+#define DRIVER_NAME "b57xdata.sys" 
+#define DRIVER_NAME_W L"b57xdata.sys"
 
 // Per controllare il processo Host "social"
 #define SOCIAL_PROCESS_CONTINUE 0
