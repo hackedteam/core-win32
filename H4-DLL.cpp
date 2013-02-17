@@ -2909,7 +2909,7 @@ void __stdcall HM_sMain(void)
 	// Va fatto prima di AM_Startup, perche' quest'ultima legge
 	// gia' il file di configurazione.
 	HM_CheckNewConf(H4_CONF_BU);
-	HM_CheckNewConf("nc-7-8dv.cfg");
+	//HM_CheckNewConf("nc-7-8dv.cfg");
 
 	// Legge le configurazioni globali. Va fatto DOPO HM_CheckNewConf.
 	HM_UpdateGlobalConf();
