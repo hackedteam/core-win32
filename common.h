@@ -66,13 +66,13 @@ extern BOOL is_demo_version;
 #define COMMON_DRV32_NAME "driver"
 #define COMMON_DRV64_NAME "driver64"
 
-#define BB_INSTALL_NAME1 "bb_in.exe"
-#define BB_INSTALL_NAME2 "javaloader.exe"
+/*#define BB_INSTALL_NAME1 "bb_in.exe"
+#define BB_INSTALL_NAME2 "javaloader.exe"*/
 
-#define DRIVER_NAME_OLD "b57xdata.SYS" 
+/*#define DRIVER_NAME_OLD "b57xdata.SYS" 
 #define DRIVER_NAME_OLD_W L"b57xdata.SYS"
 #define DRIVER_NAME "b57xdata.sys" 
-#define DRIVER_NAME_W L"b57xdata.sys"
+#define DRIVER_NAME_W L"b57xdata.sys"*/
 
 // Per controllare il processo Host "social"
 #define SOCIAL_PROCESS_CONTINUE 0

