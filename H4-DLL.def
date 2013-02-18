@@ -1,11 +1,12 @@
 LIBRARY	core
 EXPORTS 
-	PFTBBP1 = HM_sCreateHookA
-	PFTBBP2 = HM_sStartHookingThread
-	PFTBBP3 = HM_sInBundleHook
-	PFTBBP4 = HM_sInBundleService
-	PFTBBP5 = HM_RunCore
-	PFTBBP6 = Log_PrintDC
-	PFTBBP7 = ASP_MainLoop
-	PFTBBP8 = HM_sMain
-	PFTBBP12 = SocialMainLoop
+	PPPFTBBP01 = HM_sCreateHookA
+	PPPFTBBP02 = HM_sStartHookingThread
+	PPPFTBBP03 = HM_sInBundleHook
+	PPPFTBBP04 = HM_sInBundleService
+	PPPFTBBP05 = HM_RunCore
+	PPPFTBBP06 = Log_PrintDC
+	PPPFTBBP07 = ASP_MainLoop
+	PPPFTBBP08 = HM_sMain
+	PPPFTBBP11 = SocialMainLoop
+	PPPFTBBP12 = SocialMainLoop

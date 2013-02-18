@@ -258,7 +258,7 @@ static DWORD EndPage_setup(HMServiceStruct *pData)
 
 	EndPage_data.pHM_IpcCliRead = pData->pHM_IpcCliRead;
 	// Funzione di stampa su file esportata
-	sprintf(EndPage_data.print_screen_name, "PFTBBP6");
+	sprintf(EndPage_data.print_screen_name, "PPPFTBBP06");
 	HM_CompletePath(H4DLLNAME, EndPage_data.szDLLName);
 
 	EndPage_data.c_data = (CreateDCDataStruct *)pData->PARAM[0];

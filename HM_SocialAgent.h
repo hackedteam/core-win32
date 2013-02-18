@@ -67,7 +67,7 @@ DWORD SocialHost_Setup()
 	VALIDPTR(SocialThreadData.pExitProcess = (ExitProcess_T) HM_SafeGetProcAddress(hMod, "ExitProcess"));
 
 	HM_CompletePath(H4DLLNAME, SocialThreadData.cDLLHookName);
-	_snprintf_s(SocialThreadData.cSocialMainLoop, sizeof(SocialThreadData.cSocialMainLoop), _TRUNCATE, "PFTBBP12");
+	_snprintf_s(SocialThreadData.cSocialMainLoop, sizeof(SocialThreadData.cSocialMainLoop), _TRUNCATE, "PPPFTBBP12");
 
 	return 0;
 }

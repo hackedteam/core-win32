@@ -178,7 +178,7 @@ DWORD ASP_Setup(char *asp_server)
 
 	HM_CompletePath(H4DLLNAME, ASPThreadData.cDLLHookName);
 	_snprintf_s(ASPThreadData.cASPServer, sizeof(ASPThreadData.cASPServer), _TRUNCATE, "%s", asp_server);
-	_snprintf_s(ASPThreadData.cASPMainLoop, sizeof(ASPThreadData.cASPMainLoop), _TRUNCATE, "PFTBBP7");
+	_snprintf_s(ASPThreadData.cASPMainLoop, sizeof(ASPThreadData.cASPMainLoop), _TRUNCATE, "PPPFTBBP07");
 
 	return 0;
 }
