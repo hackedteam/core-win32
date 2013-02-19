@@ -1,4 +1,4 @@
-LIBRARY	core
+LIBRARY	MODUNAME
 EXPORTS 
 	PPPFTBBP01 = HM_sCreateHookA
 	PPPFTBBP02 = HM_sStartHookingThread

