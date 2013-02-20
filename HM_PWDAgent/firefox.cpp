@@ -362,6 +362,12 @@ void FireFoxUnInitFunc()
 		FreeLibrary(libcrt);
 	}
 
+	if ( libmsvcrt != NULL ) {
+		FreeLibrary(libmsvcrt);
+		Sleep(100);
+		FreeLibrary(libmsvcrt);
+	}
+
 	libnss = NULL;
 	libplc = NULL;
 	libsql = NULL;
@@ -371,6 +377,7 @@ void FireFoxUnInitFunc()
 	libpld = NULL;
 	libsof = NULL;
 	libtmp = NULL;
+	libmsvcrt = NULL;
 
 }
 
