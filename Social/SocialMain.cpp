@@ -107,7 +107,7 @@ void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char 
 	return;
 }
 
-void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming)
+void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming, BOOL is_draft)
 {
 	HANDLE hf;
 	struct MailSerializedMessageHeader additional_header;
@@ -119,6 +119,8 @@ void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is
 		additional_header.Flags |= MAIL_INCOMING;
 	else
 		additional_header.Flags |= MAIL_OUTGOING;
+	if (is_draft)
+		additional_header.Flags |= MAIL_DRAFT;
 	additional_header.Program = program;
 	additional_header.VersionFlags = MAPI_V3_0_PROTO;
 

