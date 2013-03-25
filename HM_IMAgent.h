@@ -140,8 +140,12 @@ char *GetMessageTopic(char *msg)
 char *GetMessagePeers(char *msg)
 {
 	char *ptr = NULL;
-	if ( ptr = strstr(msg, " MEMBERS ") ) 
+	char *esc = NULL;
+	if ( ptr = strstr(msg, " MEMBERS ") ) { 
 		ptr += strlen(" MEMBERS ");
+		while (esc = strchr(ptr, ' '))
+			*esc = ',';
+	}
 	return ptr;
 }
 
