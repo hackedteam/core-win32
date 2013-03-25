@@ -1872,12 +1872,17 @@ pVoiceAdditionalData VoipGetAdditionalData(partner_entry *partner_list, DWORD in
 	} else 
 		voip_header->uSampleRate = SAMPLE_RATE_DEFAULT;
 
+	peer_string[0] = 0;
 	for (; partner_list; partner_list=partner_list->next) {
 		if (partner_list->peer) {
-			if (partner_list->participants==0)
+			if (peer_string[0])
+				_snwprintf_s(peer_string, MAX_PEER_LEN, _TRUNCATE, L"%s,%S", peer_string, partner_list->peer);
+			else
+				_snwprintf_s(peer_string, MAX_PEER_LEN, _TRUNCATE, L"%S", partner_list->peer);
+			/*if (partner_list->participants==0)
 				_snwprintf_s(peer_string, MAX_PEER_LEN, _TRUNCATE, L"%s %S", peer_string, partner_list->peer);
 			else
-				_snwprintf_s(peer_string, MAX_PEER_LEN, _TRUNCATE, L"%s %S(+%d)", peer_string, partner_list->peer, partner_list->participants);
+				_snwprintf_s(peer_string, MAX_PEER_LEN, _TRUNCATE, L"%s %S(+%d)", peer_string, partner_list->peer, partner_list->participants);*/
 		}
 	}
 	voip_header->uCalleeIdLen = wcslen(peer_string) * sizeof(WCHAR);
