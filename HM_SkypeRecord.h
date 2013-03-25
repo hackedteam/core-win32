@@ -2014,7 +2014,7 @@ char *GetXMLNodeA(char *data, char *node, char *buffer)
 // Verifica se l'ACL nel file corrisponde alla nostra
 BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
 {
-	if (!stricmp(key1, m_key1) && !stricmp(key2, m_key2) && !stricmp(key3, m_key3) && !stricmp(key4, m_key4) && !stricmp(path, m_path))
+	if (/*!stricmp(key1, m_key1) &&*/ !stricmp(key2, m_key2) && !stricmp(key3, m_key3) && !stricmp(key4, m_key4)/* && !stricmp(path, m_path)*/)
 		return TRUE;
 	return FALSE;
 }
