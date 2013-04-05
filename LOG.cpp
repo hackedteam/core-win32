@@ -16,6 +16,7 @@
 #include "format_resistant.h"
 
 extern BOOL IsDriverRunning(WCHAR *driver_name);
+extern char SHARE_MEMORY_READ_NAME[MAX_RAND_NAME];
 
 typedef struct {
 	DWORD agent_tag;
@@ -393,6 +394,18 @@ BYTE *Log_CreateHeader(DWORD agent_tag, BYTE *additional_data, DWORD additional_
 }
 
 
+void PrintBinary(WORD number, char *output)
+{
+	DWORD i = 0;
+	sprintf(output, "0000000000000000");
+	while (number) {
+		if (number & 1)
+			output[i] = '1';
+		i++;
+		number >>= 1;
+	}
+}
+
 // Inizializza l'uso dei log per un agente
 // (non e' thread safe)
 // Torna TRUE se ha successo
@@ -402,6 +415,7 @@ BOOL LOG_InitAgentLog(DWORD agent_tag)
 	HANDLE h_file;
 	char log_wout_path[128];
 	char file_name[DLLNAMELEN];
+	char binary_tag[64];
 	char *scrambled_name;
 	BOOL newly_created;
 
@@ -414,7 +428,10 @@ BOOL LOG_InitAgentLog(DWORD agent_tag)
 	// riesce ad aprire il file)
 	for(i=0; i<MAX_LOG_ENTRIES; i++) 
 		if (log_table[i].agent_tag == NO_TAG_ENTRY) {
-			sprintf(log_wout_path, "%.1XLOG%.4Xseq.log", log_active_queue, agent_tag);
+			ZeroMemory(binary_tag, sizeof(binary_tag));
+			PrintBinary(agent_tag, binary_tag);
+			sprintf(log_wout_path, "%.1XLOG%s%s.log", log_active_queue, binary_tag, SHARE_MEMORY_READ_NAME);
+
 			if ( ! (scrambled_name = LOG_ScrambleName2(log_wout_path, crypt_key[0], TRUE)) )
 				return FALSE;			
 			HM_CompletePath(scrambled_name, file_name);
