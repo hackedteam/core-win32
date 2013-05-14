@@ -217,7 +217,7 @@ void URLOleWalk(IAccessible* iAcc, UrlLogParamsStruct *pUrlLogParams, int deep)
 	BSTR val;
 	LONG childCount, returnCount;
 
-	if (iAcc == NULL || m_url_found == TRUE)
+	if (iAcc == NULL || m_url_found == TRUE || deep >= 100)
 		return;
 
 	vChild.vt = VT_I4;
