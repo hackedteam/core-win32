@@ -276,6 +276,9 @@
     <ClCompile Include="Social\Handler_Twitter.cpp">
       <Filter>Source Files\SOCIAL</Filter>
     </ClCompile>
+    <ClCompile Include="Social\Handler_Outlook.cpp">
+      <Filter>Source Files\SOCIAL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="H4-DLL.def">
