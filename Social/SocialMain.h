@@ -51,10 +51,10 @@ extern void LogSocialIMMessageW(DWORD program, WCHAR *peers, WCHAR *peers_id, WC
 extern void LogSocialMailMessage(DWORD program, char *from, char *rcpt, char *cc, char *subject, char *body, BOOL is_incoming);
 extern void LogSocialMailMessageFull(DWORD program, BYTE *raw_mail, DWORD size, BOOL is_incoming, BOOL is_draft);
 
-extern char FACEBOOK_IE_COOKIE[4096];
-extern char GMAIL_IE_COOKIE[4096];
-extern char TWITTER_IE_COOKIE[4096];
-extern char OUTLOOK_IE_COOKIE[4096];
+extern char FACEBOOK_IE_COOKIE[1024];
+extern char GMAIL_IE_COOKIE[1024];
+extern char TWITTER_IE_COOKIE[1024];
+extern char OUTLOOK_IE_COOKIE[1024];
 
 #define CHAT_PROGRAM_FACEBOOK 0x02
 #define CHAT_PROGRAM_TWITTER  0x03
