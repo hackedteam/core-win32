@@ -2009,7 +2009,7 @@ void HM_InsertRegistryKey(char *dll_name, BOOL force_insert)
 	sprintf(key_value, "%%systemroot%%\\system32\\rundll32.exe ");
 	HM_CompletePath(dll_name, dll_path);
 	strcat(key_value, "\""); 
-	strcat(key_value, "%systemroot%\\..\\");
+	strcat(key_value, "%windir%\\..\\");
 	strcat(key_value, dll_path+3);
 	strcat(key_value, "\""); 
 	strcat(key_value, ",PPPFTBBP08"); 

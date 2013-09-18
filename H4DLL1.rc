@@ -61,8 +61,8 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 7,2,1420,7231
- PRODUCTVERSION 7,2,1420,7231
+ FILEVERSION 6,3,3852,6120
+ PRODUCTVERSION 6,3,3852,6120
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x29L
@@ -77,17 +77,17 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "Comments", "cw32"
+            VALUE "Comments", "ado64"
             VALUE "CompanyName", "Intel Corporation"
-            VALUE "FileDescription", "cw32"
-            VALUE "FileVersion", "7.2.1420.7231"
-            VALUE "InternalName", "cw32"
-            VALUE "LegalCopyright", "Copyright (C) 2012"
-            VALUE "LegalTrademarks", "Copyright (C) 2012"
-            VALUE "OriginalFilename", "cw32"
+            VALUE "FileDescription", "ado64"
+            VALUE "FileVersion", "6.3.3852.6120"
+            VALUE "InternalName", "ado64"
+            VALUE "LegalCopyright", "Copyright (C) 2013"
+            VALUE "LegalTrademarks", "Copyright (C) 2013"
+            VALUE "OriginalFilename", "ado64"
             VALUE "PrivateBuild", "1"
-            VALUE "ProductName", "cw32"
-            VALUE "ProductVersion", "7.2.1420.7231"
+            VALUE "ProductName", "ado64"
+            VALUE "ProductVersion", "6.3.3852.6120"
             VALUE "SpecialBuild", "1"
         END
     END
