@@ -2067,7 +2067,7 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 		FNC(UnmapViewOfFile)(config_map);
 		ptr = local_config_map;
 		// Vede se ce una chiave che matcha
-		while (ptr = GetXMLNodeA(ptr, "Key1", key1)) {
+		/*while (ptr = GetXMLNodeA(ptr, "Key1", key1)) {
 			ptr_k = GetXMLNodeA(ptr, "Key2", key2);
 			ptr_k = GetXMLNodeA(ptr_k, "Key3", key3);
 			ptr_k = GetXMLNodeA(ptr_k, "Key4", key4);
@@ -2079,7 +2079,9 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 				break;
 			}
 			ptr++;
-		}
+		}*/
+		if (strstr(ptr, "<Client97>") || strstr(ptr, "<Client98>")) 
+			acl_found = TRUE;
 	}
 	SAFE_FREE(local_config_map);
 	CloseHandle(hMap);
