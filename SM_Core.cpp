@@ -632,7 +632,7 @@ DWORD WINAPI FastActionsThread(DWORD dummy)
 }
 
 /*
-#define EVERY_N_CYCLES(x) DWORD i=0; i++; if (i%x == 0)
+#define EVERY_N_CYCLES(x) static DWORD i=0; i++; if (i%x == 0)
 void RegistryWatchdog()
 {
 	static char key_value[DLLNAMELEN*3] = "";
