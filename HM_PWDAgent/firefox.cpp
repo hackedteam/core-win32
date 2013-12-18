@@ -346,7 +346,7 @@ void FireFoxUnInitFunc()
 	if ( libsof != NULL )
 		FreeLibrary(libsof); 
 
-	if ( libsql != NULL )
+	if ( libsql != NULL && libsql != libnss)
 		FreeLibrary(libsql);  //Free sql library
 
 	if ( libnssu != NULL )
