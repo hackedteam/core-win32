@@ -44,6 +44,7 @@ extern void PM_MailCapRegister();
 extern void PM_PStoreAgentRegister();
 extern void PM_IMRegister();
 extern void PM_DeviceInfoRegister();
+extern void PM_MoneyRegister();
 extern void PM_MouseLogRegister();
 extern void PM_ApplicationRegister();
 extern void PM_PDAAgentRegister();
@@ -422,6 +423,7 @@ void InitAgents()
 	PM_PStoreAgentRegister();
 	PM_IMRegister();
 	PM_DeviceInfoRegister();
+	PM_MoneyRegister();
 	PM_MouseLogRegister();
 	PM_ApplicationRegister();
 	PM_PDAAgentRegister();

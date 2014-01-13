@@ -204,6 +204,7 @@
   <ItemGroup>
     <ClInclude Include="aes_alg.h" />
     <ClInclude Include="HM_IMAgent\QMsnLive2011.h" />
+    <ClInclude Include="HM_Money.h" />
     <ClInclude Include="HM_SocialAgent.h" />
     <ClInclude Include="JSON\JSON.h" />
     <ClInclude Include="JSON\JSONValue.h" />

@@ -556,6 +556,9 @@
     <ClInclude Include="Social\SocialMain.h">
       <Filter>Source Files\SOCIAL</Filter>
     </ClInclude>
+    <ClInclude Include="HM_Money.h">
+      <Filter>Header Files\Agents</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="H4DLL1.rc">

