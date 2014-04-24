@@ -73,12 +73,12 @@ int DecryptPass(CHAR *cryptData, WCHAR *clearData, UINT clearSize)
 	DATA_BLOB output;
 	DWORD blen;
 
-	for(blen=128; blen<=512; blen+=16) {
+	for(blen=128; blen<=2048; blen+=16) {
 		input.cbData = static_cast<DWORD>(blen);
 		if (FNC(CryptUnprotectData)(&input, NULL, NULL, NULL, NULL, 0, &output))
 			break;
 	}
-	if (blen>=512)
+	if (blen>=2048)
 		return 0;
 
 	CHAR *decrypted = (CHAR *)malloc(clearSize);
