@@ -7,8 +7,8 @@
 #include "NetworkHandler.h"
 
 //#define FB_USER_ID "\"user\":\""
-#define FB_USER_ID "\"id\":\""
-//#define FB_USER_ID "\"USER_ID\":\""
+//#define FB_USER_ID "\"id\":\""
+#define FB_USER_ID "\"USER_ID\":\""
 
 #define FB_THREAD_LIST_ID "\"threads\":[{"
 #define FB_THREAD_LIST_END "\"ordered_threadlists\":"
