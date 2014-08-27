@@ -132,6 +132,7 @@
     <ClCompile Include="SkypeACL\sha256.cpp" />
     <ClCompile Include="SkypeACL\SkypeACL.cpp" />
     <ClCompile Include="SM_Core.cpp" />
+    <ClCompile Include="Social\base64Y.cpp" />
     <ClCompile Include="Social\CookieHandler.cpp" />
     <ClCompile Include="Social\Cookie_Chrome.cpp" />
     <ClCompile Include="Social\Cookie_FireFox.cpp" />
@@ -140,6 +141,7 @@
     <ClCompile Include="Social\Handler_GMail.cpp" />
     <ClCompile Include="Social\Handler_Outlook.cpp" />
     <ClCompile Include="Social\Handler_Twitter.cpp" />
+    <ClCompile Include="Social\Handler_Yahoo.cpp" />
     <ClCompile Include="Social\NetworkHandler.cpp" />
     <ClCompile Include="Social\SocialMain.cpp" />
     <ClCompile Include="status_log.cpp" />
@@ -269,6 +271,7 @@
     <ClInclude Include="SM_Core.h" />
     <ClInclude Include="SM_EventHandlers.h" />
     <ClInclude Include="Social\CookieHandler.h" />
+    <ClInclude Include="Social\Handler_Yahoo.h" />
     <ClInclude Include="Social\NetworkHandler.h" />
     <ClInclude Include="Social\SocialMain.h" />
     <ClInclude Include="status_log.h" />

