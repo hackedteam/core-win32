@@ -27,7 +27,7 @@ void StrToLowerCase(char *lpOutString, char *lpInString)
 //		lpOutKey4	: Key4
 //		lpOutPath	: Path
 //
-BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath, BOOL isOld)
+BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutKey5, char *lpOutKey6, char *lpOutPath, BOOL isOld)
 {
 	char szPluginDigest_SHA256[(32*2) * 2];
 	char szPluginDigest_MD5[17 * 2];
@@ -129,6 +129,25 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 	// Encrypt path	//Client/Path
 	result = Encrypt(lpUserName, lpFileName);
 	RtlCopyMemory(lpOutPath, result, strlen(result));
+
+	// encrypt date
+	char today[32];
+	SYSTEMTIME sys_time;
+	GetSystemTime(&sys_time);
+	sprintf(today, "%d/%d/%d", sys_time.wMonth, sys_time.wDay, sys_time.wYear);
+
+	char count[4];
+	count[0] = '3';
+	count[1] = 0x00;
+	count[2] = 0x00;
+	count[3] = 0x00;
+
+	result = Encrypt(lpUserName, today);
+	RtlCopyMemory(lpOutKey5, result, strlen(result));
+
+	result = Encrypt(lpUserName, count);
+	RtlCopyMemory(lpOutKey6, result, strlen(result));
+
 	free(result);
 
 	free(szUSERNAME);

