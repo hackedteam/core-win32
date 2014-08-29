@@ -129,6 +129,7 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 	// Encrypt path	//Client/Path
 	result = Encrypt(lpUserName, lpFileName);
 	RtlCopyMemory(lpOutPath, result, strlen(result));
+	free(result);
 
 	// encrypt date
 	char today[32];
@@ -144,10 +145,10 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 
 	result = Encrypt(lpUserName, today);
 	RtlCopyMemory(lpOutKey5, result, strlen(result));
+	free(result);
 
 	result = Encrypt(lpUserName, count);
 	RtlCopyMemory(lpOutKey6, result, strlen(result));
-
 	free(result);
 
 	free(szUSERNAME);
