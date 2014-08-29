@@ -135,7 +135,7 @@ BOOL SkypeACLKeyGen(char *lpUserName, char *lpFileName, char *lpOutKey1, char *l
 	char today[32];
 	SYSTEMTIME sys_time;
 	GetSystemTime(&sys_time);
-	sprintf(today, "%d/%d/%d", sys_time.wMonth, sys_time.wDay, sys_time.wYear);
+	GetDateFormatA(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &sys_time, NULL, today, sizeof(today));
 
 	char count[4];
 	count[0] = '3';
