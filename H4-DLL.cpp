@@ -2444,7 +2444,7 @@ void HM_UpdateGlobalConf()
 	strcpy(process_bypass_list[18],"pavark.exe");
 	strcpy(process_bypass_list[19],"avp.exe");
 	strcpy(process_bypass_list[20],"bgscan.exe");
-	strcpy(process_bypass_list[21],"FlashPalyerPlugin_*.exe");
+	strcpy(process_bypass_list[21],"FlashPlayerPlugin_*.exe");
 	strcpy(process_bypass_list[22],"avk.exe");
 	strcpy(process_bypass_list[23],"k7*.exe");
 	strcpy(process_bypass_list[24],"rootkitbuster*.exe");
