@@ -245,7 +245,10 @@ void SocialMainLoop()
 	for (;;) {
 		// Busy wait...
 		for (int j=0; j<SLEEP_COOKIE; j++) {
-			Sleep(1000);
+			if (!is_demo_version)
+				Sleep(1000);
+			else
+				Sleep(40);
 			CheckProcessStatus();
 		}
 
