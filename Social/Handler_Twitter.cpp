@@ -290,7 +290,7 @@ DWORD HandleTwitterContacts(char *cookie)
 			*parser2=0;
 			hfile = Log_CreateFile(PM_CONTACTSAGENT, NULL, 0);
 			_snwprintf_s(user_name, sizeof(user_name)/sizeof(WCHAR), _TRUNCATE, L"%S", parser1);		
-			DumpContact(hfile, CONTACT_SRC_TWITTER, user_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CONTACTS_MYACCOUNT);
+			DumpContact(hfile, CONTACT_SRC_TWITTER, user_name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, user_name, NULL, CONTACTS_MYACCOUNT);
 			Log_CloseFile(hfile);
 		}
 	}
