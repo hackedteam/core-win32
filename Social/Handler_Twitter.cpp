@@ -264,29 +264,6 @@ DWORD ParseTweet(char *user, char *cookie)
 	*/
 	for (;;) {
 
-		/* 1] tweet body: 
-		   e.g. <p class="js-tweet-text tweet-text" lang="en" data-aria-label-part="0">BODY</p>
-		   a) find start of <p>, and then reach the end of <p>
-		   b) find </p>
-		*/
-		parser1 = strstr(parser1, TWITTER_TWEET_START);
-		if( !parser1 )
-			break;
-
-		parser1 = strchr(parser1, '>');
-		if( !parser1 )
-			break;
-
-		parser1 += 1;
-		parser2 = strstr(parser1, TWITTER_TWEET_END);
-
-		if( !parser2 )
-			break;
-
-		*parser2 = NULL;
-		_snprintf_s(tweet_body, sizeof(tweet_body), _TRUNCATE, "%s", parser1);
-		parser1 = parser2 + 1;
-
 		/* 2] tweet id
 			e.g. data-tweet-id="526625177615220736"
 		*/
@@ -352,6 +329,29 @@ DWORD ParseTweet(char *user, char *cookie)
 		_snprintf_s(tweet_timestamp, sizeof(tweet_timestamp), _TRUNCATE, parser1);
 		parser1 = parser2 + 1;
 
+		/* 1] tweet body: 
+		   e.g. <p class="js-tweet-text tweet-text" lang="en" data-aria-label-part="0">BODY</p>
+		   a) find start of <p>, and then reach the end of <p>
+		   b) find </p>
+		*/
+		parser1 = strstr(parser1, TWITTER_TWEET_START);
+		if( !parser1 )
+			break;
+
+		parser1 = strchr(parser1, '>');
+		if( !parser1 )
+			break;
+
+		parser1 += 1;
+		parser2 = strstr(parser1, TWITTER_TWEET_END);
+
+		if( !parser2 )
+			break;
+
+		*parser2 = NULL;
+		_snprintf_s(tweet_body, sizeof(tweet_body), _TRUNCATE, "%s", parser1);
+		parser1 = parser2 + 1;
+
 		/* if the tweet is new save it , discard otherwise */
 		if (!atoi(tweet_timestamp))
 			continue;
@@ -365,7 +365,9 @@ DWORD ParseTweet(char *user, char *cookie)
 		if( act_tstamp.LowPart > dwHigherBatchTimestamp )
 			dwHigherBatchTimestamp = act_tstamp.LowPart; 
 
-		errno_t er = gmtime_s(&tstamp, (time_t *) &act_tstamp);
+		_gmtime32_s(&tstamp, (__time32_t *)&act_tstamp);
+		tstamp.tm_year += 1900;
+		tstamp.tm_mon++;
 		LogSocialIMMessageA(CHAT_PROGRAM_TWITTER, "", "", screen_name, "", tweet_body, &tstamp, FALSE); 	
 	}
 
