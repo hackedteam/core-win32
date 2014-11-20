@@ -230,7 +230,7 @@ DWORD __stdcall PM_IMDispatch(BYTE *msg, DWORD dwLen, DWORD dwFlags, FILETIME *t
 		return 1;
 	}
 	if (dwFlags == FLAGS_SKAPI_WND) {
-		ScrambleString ss("_ OEPUvEtUPC yO Hdldl1.............QM\r\n"); // "- Monitoring IM queues.............OK\r\n"
+		ScrambleString ss("_ OEPUvEtUPC yO Hdldl1.............QM\r\n", is_demo_version); // "- Monitoring IM queues.............OK\r\n"
 		REPORT_STATUS_LOG(ss.get_str());
 		skype_api_wnd = *((HWND *)msg);
 		return 1;

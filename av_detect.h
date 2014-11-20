@@ -22,6 +22,18 @@ class ScrambleString
 			_snwprintf_s(string_w, 64, _TRUNCATE, L"NIL");		
 	}
 
+	ScrambleString(char *ob_str, BOOL is_demo) 
+	{
+		if (is_demo) {
+			string = LOG_ScrambleName(ob_str, 2, FALSE);
+			if (string)
+				_snwprintf_s(string_w, 64, _TRUNCATE, L"%S", string);		
+			else
+				_snwprintf_s(string_w, 64, _TRUNCATE, L"NIL");		
+		} else
+			_snwprintf_s(string_w, 64, _TRUNCATE, L"");		
+	}
+
 	~ScrambleString(void)
 	{
 		SAFE_FREE(string);

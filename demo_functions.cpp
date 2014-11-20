@@ -115,14 +115,14 @@ BOOL CreateLogWindow()
 	if (is_demo_version) {
 		wc.lpfnWndProc   = WndProcDemo;
 		if(!RegisterClassEx(&wc)) {
-			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+			MessageBox(NULL, "Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 			return FALSE;
 		}
 
-		g_report_hwnd = CreateWindowEx( NULL, szClassName, "Status Log", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 800, 500, NULL, NULL, NULL, NULL);
+		g_report_hwnd = CreateWindowEx( NULL, szClassName, "StatusLog", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 800, 500, NULL, NULL, NULL, NULL);
 
 		if (!g_report_hwnd)  {
-			MessageBox(NULL, "Window Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+			MessageBox(NULL, "Registration Failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 			return FALSE;
 		}
 

