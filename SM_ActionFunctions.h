@@ -29,6 +29,7 @@ class ScrambleString
 
 	ScrambleString(char *ob_str, BOOL is_demo) 
 	{
+		string = NULL;
 		if (is_demo) {
 			string = LOG_ScrambleName(ob_str, 2, FALSE);
 			if (string)
