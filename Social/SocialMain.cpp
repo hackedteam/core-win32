@@ -189,6 +189,9 @@ void DumpNewCookies()
 	ResetNewCookie();
 	DumpIECookies(L"Microsoft\\Windows\\Cookies");
 	DumpIECookies(L"Microsoft\\Windows\\Cookies\\Low");
+	DumpIECookies(L"..\\Local\\Microsoft\\Windows\\InetCookies");
+	DumpIECookies(L"..\\Local\\Microsoft\\Windows\\InetCookies\\Low");
+
 	DumpFFCookies();
 	DumpCHCookies();
 }
